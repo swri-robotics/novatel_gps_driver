@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="novatel_oem628" type="novatel_nmea_node" name="novatel_tester_node" output="screen">
+    <param name="serial_port" value="/dev/ttyUSB0" />
+    <param name="use_usb" value="true"/>
+  </node>
+
+</launch>

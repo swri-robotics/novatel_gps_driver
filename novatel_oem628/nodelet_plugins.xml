@@ -1,0 +1,7 @@
+<library path="lib/libnovatel_oem628_nodelets">
+  <class name="novatel_oem628/novatel_gps_nodelet" type="novatel_oem628::NovatelGpsNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for reading data from Novatel GPS devices.
+    </description>
+  </class>
+</library>

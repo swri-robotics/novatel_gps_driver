@@ -1,0 +1,31 @@
+<package>
+  <description brief="novatel_oem628">
+
+     novatel_oem628
+
+  </description>
+  <author>SwRI</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/novatel_oem628</url>
+  <depend package="roscpp"/>
+  <depend package="nodelet"/>
+  <depend package="tf"/>
+  <depend package="nav_msgs"/>
+  <depend package="gps_common"/>
+  <depend package="marti_sensor_msgs"/>
+  <depend package="diagnostic_msgs"/>
+  <depend package="diagnostic_updater"/>
+  <depend package="serial_util"/>
+  <depend package="math_util"/>
+  <depend package="string_util"/>
+
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml" />
+    
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -lnovatel_oem628 -Wl,-rpath,${prefix}/lib" />
+  </export>
+
+</package>
+
+
