@@ -3,3 +3,7 @@
 .pydevproject
 novatel_oem628/src/novatel_oem628
 version.txt
+bin/
+msg_gen/
+lib/
+build/
