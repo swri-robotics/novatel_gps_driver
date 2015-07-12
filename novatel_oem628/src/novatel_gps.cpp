@@ -31,6 +31,8 @@
 
 #include <boost/make_shared.hpp>
 
+#include <ros/ros.h>
+
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628

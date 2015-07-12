@@ -31,6 +31,8 @@
 
 #include <limits>
 
+#include <ros/ros.h>
+
 #include <string_util/string_util.h>
 
 namespace novatel_oem628
