@@ -121,7 +121,8 @@ namespace novatel_oem628
       gps_insufficient_data_warnings_(0),
       publish_rate_warnings_(0),
       measurement_count_(0),
-      last_published_(ros::TIME_MIN)
+      last_published_(ros::TIME_MIN),
+      frame_id_("")
     {
     }
 
@@ -147,6 +148,8 @@ namespace novatel_oem628
       priv.param("connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
 
+      priv.param("frame_id", frame_id_, std::string(""));
+      
       sync_sub_ = node.subscribe("gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
       std::string gps_topic = node.resolveName("gps");
@@ -298,12 +301,14 @@ namespace novatel_oem628
               for (size_t i = 0; i < gpgga_msgs.size(); i++)
               {
                 gpgga_msgs[i]->header.stamp += sync_offset;
+                gpgga_msgs[i]->header.frame_id = frame_id_;
                 gpgga_pub_.publish(gpgga_msgs[i]);
               }
 
               for (size_t i = 0; i < gprmc_msgs.size(); i++)
               {
                 gprmc_msgs[i]->header.stamp += sync_offset;
+                gprmc_msgs[i]->header.frame_id = frame_id_;
                 gprmc_pub_.publish(gprmc_msgs[i]);
               }
             }
@@ -313,6 +318,7 @@ namespace novatel_oem628
               for (size_t i = 0; i < position_msgs.size(); i++)
               {
                 position_msgs[i]->header.stamp += sync_offset;
+                position_msgs[i]->header.frame_id = frame_id_;
                 novatel_position_pub_.publish(position_msgs[i]);
               }
             }
@@ -320,6 +326,7 @@ namespace novatel_oem628
             for (size_t i = 0; i < fix_msgs.size(); i++)
             {
               fix_msgs[i]->header.stamp += sync_offset;
+              fix_msgs[i]->header.frame_id = frame_id_;
               gps_pub_.publish(fix_msgs[i]);
 
               // If the time between GPS message stamps is greater than 1.5
@@ -429,6 +436,8 @@ namespace novatel_oem628
     ros::Time last_published_;
     NovatelPositionPtr last_novatel_position_;
 
+    std::string frame_id_;
+    
     /**
      * Updates the time sync offsets by matching up timesync messages to gps
      * messages and calculating the time offset between them.
