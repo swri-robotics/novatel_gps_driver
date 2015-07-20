@@ -63,12 +63,17 @@ target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
 )
+# Add dependency so that library does not build until messages are built
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
 
 ### Nodelets ###
 add_library(${PROJECT_NAME}_nodelets src/nodelets/novatel_gps_nodelet.cpp)
 target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
   ${PROJECT_NAME})
+# Add dependency so that library does not build until messages are built
+add_dependencies(${PROJECT_NAME}_nodelets ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
 ### Nodes ###
 add_executable(novatel_gps_node src/nodes/novatel_gps_node.cpp)
