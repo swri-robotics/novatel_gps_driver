@@ -40,7 +40,7 @@
  *
  * <b>Topics Subscribed:</b>
  *
- * \e gps_sync <tt>marti_sensor_msgs/TimeSync<tt> - Timestamped sync pulses
+ * \e gps_sync <tt>std_msgs/Time<tt> - Timestamped sync pulses
  *    from a DIO module (optional). These are used to improve the accuracy of
  *    the time stamps of the messages published.
  *
@@ -88,7 +88,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <gps_common/GPSFix.h>
-#include <marti_sensor_msgs/TimeSync.h>
+#include <std_msgs/Time.h>
 #include <math_util/math_util.h>
 
 #include <novatel_oem628/NovatelPosition.h>
@@ -194,10 +194,10 @@ namespace novatel_oem628
       NODELET_INFO("%s initialized", hw_id_.c_str());
     }
 
-    void SyncCallback(const marti_sensor_msgs::TimeSyncConstPtr& sync)
+    void SyncCallback(const std_msgs::TimeConstPtr& sync)
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      sync_times_.push_back(sync->header.stamp);
+      sync_times_.push_back(sync->data);
     }
 
     /**

@@ -1,38 +1,91 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+cmake_minimum_required(VERSION 2.8.3)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+project(novatel_oem628)
 
-rosbuild_init()
-rosbuild_find_ros_package(build_tools)
-include(${build_tools_PACKAGE_PATH}/scripts/build_common.cmake)
+set(MSG_DEPS 
+  std_msgs)
 
-#uncomment if you have defined messages
-rosbuild_genmsg()
+set(BUILD_DEPS
+  ${MSGS_DEPS} 
+  diagnostic_msgs 
+  diagnostic_updater 
+  gps_common 
+  math_util 
+  message_generation 
+  nav_msgs 
+  nodelet 
+  roscpp 
+  serial_util 
+  string_util 
+  tf)
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+set(RUNTIME_DEPS
+  ${MSGS_DEPS} 
+  diagnostic_msgs 
+  diagnostic_updater 
+  gps_common 
+  math_util 
+  message_runtime 
+  nav_msgs 
+  nodelet 
+  roscpp 
+  serial_util 
+  string_util 
+  tf)
 
-#common commands for building c++ executables and libraries
+find_package(catkin REQUIRED COMPONENTS ${BUILD_DEPS})
 
-rosbuild_add_boost_directories()
+find_package(Boost REQUIRED COMPONENTS system)
 
-rosbuild_add_library(${PROJECT_NAME} 
+add_message_files(DIRECTORY msg FILES
+  Gpgga.msg
+  Gpgsa.msg
+  Gprmc.msg
+  NovatelExtendedSolutionStatus.msg
+  NovatelMessageHeader.msg
+  NovatelPosition.msg
+  NovatelReceiverStatus.msg
+  NovatelSignalMask.msg)
+
+generate_messages(DEPENDENCIES ${MSG_DEPS})
+
+include_directories(include
+  ${catkin_INCLUDE_DIRS})
+
+catkin_package(CATKIN_DEPENDS ${RUNTIME_DEPS}
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME} ${PROJECT_NAME}_nodelets)
+
+add_library(${PROJECT_NAME} 
   src/novatel_gps.cpp
 	src/novatel_message_parser.cpp)
-rosbuild_link_boost(${PROJECT_NAME} system)
-
-rosbuild_add_library(${PROJECT_NAME}_nodelets
-    src/nodelets/novatel_gps_nodelet.cpp
+target_link_libraries(${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  ${Boost_LIBRARIES}
 )
-target_link_libraries(${PROJECT_NAME}_nodelets ${PROJECT_NAME})
+# Add dependency so that library does not build until messages are built
+add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS})
 
-rosbuild_add_executable(novatel_gps_node src/nodes/novatel_gps_node.cpp)
+
+### Nodelets ###
+add_library(${PROJECT_NAME}_nodelets src/nodelets/novatel_gps_nodelet.cpp)
+target_link_libraries(${PROJECT_NAME}_nodelets
+  ${catkin_LIBRARIES}
+  ${PROJECT_NAME})
+# Add dependency so that library does not build until messages are built
+add_dependencies(${PROJECT_NAME}_nodelets ${${PROJECT_NAME}_EXPORTED_TARGETS})
+
+### Nodes ###
+add_executable(novatel_gps_node src/nodes/novatel_gps_node.cpp)
+target_link_libraries(novatel_gps_node ${catkin_LIBRARIES})
+
+### Install Libraries and Headers ###
+install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_nodelets novatel_gps_node
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)
+
