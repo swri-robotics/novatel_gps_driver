@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(novatel_oem628)
 
-set(MSG_DEPS 
+set(MSGS_DEPS 
   std_msgs)
 
 set(BUILD_DEPS
@@ -47,7 +47,7 @@ add_message_files(DIRECTORY msg FILES
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg)
 
-generate_messages(DEPENDENCIES ${MSG_DEPS})
+generate_messages(DEPENDENCIES ${MSGS_DEPS})
 
 include_directories(include
   ${catkin_INCLUDE_DIRS})
@@ -89,3 +89,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
+### Install plugin XML ###
+install(FILES nodelet_plugins.xml
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)

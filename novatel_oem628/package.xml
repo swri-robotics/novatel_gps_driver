@@ -19,6 +19,7 @@
   <depend>nodelet</depend>
   <depend>roscpp</depend>
   <depend>serial_util</depend>
+  <depend>std_msgs</depend>
   <depend>string_util</depend>
   <depend>tf</depend>
   <build_depend>message_generation</build_depend>
