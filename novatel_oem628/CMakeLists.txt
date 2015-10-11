@@ -93,3 +93,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 install(FILES nodelet_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+### Install Launch Files ###
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
