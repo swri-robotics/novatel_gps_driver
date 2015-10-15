@@ -33,7 +33,7 @@
 
 #include <ros/ros.h>
 
-#include <string_util/string_util.h>
+#include <swri_string_util/string_util.h>
 
 namespace novatel_oem628
 {
@@ -253,7 +253,7 @@ namespace novatel_oem628
       return false;
     }
 
-    return string_util::ToDouble(sentence.body[3], utc_offset);
+    return swri_string_util::ToDouble(sentence.body[3], utc_offset);
   }
 
   bool parse_novatel_pos_msg(
@@ -519,7 +519,7 @@ namespace novatel_oem628
           else
           {
             float utc_float;
-            if (string_util::ToFloat(sentences[i].body[1], utc_float))
+            if (swri_string_util::ToFloat(sentences[i].body[1], utc_float))
             {
               return UtcFloatToSeconds(utc_float);
             }
@@ -576,7 +576,7 @@ namespace novatel_oem628
     else
     {
       float utc_float;
-      if (string_util::ToFloat(vec[1], utc_float))
+      if (swri_string_util::ToFloat(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
@@ -655,7 +655,7 @@ namespace novatel_oem628
     else
     {
       float utc_float;
-      if (string_util::ToFloat(vec[1], utc_float))
+      if (swri_string_util::ToFloat(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
@@ -756,22 +756,22 @@ namespace novatel_oem628
 
   bool ParseDouble(const std::string& string, double& value)
   {
-    return string_util::ToDouble(string, value) || string.empty();
+    return swri_string_util::ToDouble(string, value) || string.empty();
   }
 
   bool ParseFloat(const std::string& string, float& value)
   {
-    return string_util::ToFloat(string, value) || string.empty();
+    return swri_string_util::ToFloat(string, value) || string.empty();
   }
 
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base)
   {
-    return string_util::ToInt32(string, value, base) || string.empty();
+    return swri_string_util::ToInt32(string, value, base) || string.empty();
   }
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base)
   {
-    return string_util::ToUInt32(string, value, base) || string.empty();
+    return swri_string_util::ToUInt32(string, value, base) || string.empty();
   }
 
   bool ParseUInt8(const std::string& string, uint8_t& value, int32_t base)
@@ -783,7 +783,7 @@ namespace novatel_oem628
     }
 
     uint32_t tmp;
-    if (string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
+    if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
     {
       value = tmp;
       return true;

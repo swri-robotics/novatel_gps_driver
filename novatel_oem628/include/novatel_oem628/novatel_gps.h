@@ -36,7 +36,7 @@
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <serial_util/serial_port.h>
+#include <swri_serial_util/serial_port.h>
 
 #include <gps_common/GPSFix.h>
 #include <novatel_oem628/NovatelPosition.h>
@@ -96,7 +96,7 @@ namespace novatel_oem628
       int32_t utc_offset_;
 
       // Serial
-      serial_util::SerialPort serial_;
+      swri_serial_util::SerialPort serial_;
 
       // TCP / UDP
       boost::asio::io_service io_service_;
