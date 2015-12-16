@@ -10,13 +10,13 @@ set(BUILD_DEPS
   diagnostic_msgs 
   diagnostic_updater 
   gps_common 
-  math_util 
+  swri_math_util 
   message_generation 
   nav_msgs 
   nodelet 
   roscpp 
-  serial_util 
-  string_util 
+  swri_serial_util 
+  swri_string_util 
   tf)
 
 set(RUNTIME_DEPS
@@ -24,13 +24,13 @@ set(RUNTIME_DEPS
   diagnostic_msgs 
   diagnostic_updater 
   gps_common 
-  math_util 
+  swri_math_util 
   message_runtime 
   nav_msgs 
   nodelet 
   roscpp 
-  serial_util 
-  string_util 
+  swri_serial_util 
+  swri_string_util 
   tf)
 
 find_package(catkin REQUIRED COMPONENTS ${BUILD_DEPS})
