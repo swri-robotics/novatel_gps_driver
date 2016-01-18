@@ -89,7 +89,7 @@
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <gps_common/GPSFix.h>
 #include <std_msgs/Time.h>
-#include <math_util/math_util.h>
+#include <swri_math_util/math_util.h>
 
 #include <novatel_oem628/NovatelPosition.h>
 #include <novatel_oem628/NovatelMessageHeader.h>
@@ -271,7 +271,7 @@ namespace novatel_oem628
             {
               if (gpgga_msgs[i]->utc_seconds != 0)
               {
-                int64_t second = math_util::Round(gpgga_msgs[i]->utc_seconds);
+                int64_t second = swri_math_util::Round(gpgga_msgs[i]->utc_seconds);
                 double difference = std::fabs(gpgga_msgs[i]->utc_seconds - second);
 
                 if (difference < 0.02)

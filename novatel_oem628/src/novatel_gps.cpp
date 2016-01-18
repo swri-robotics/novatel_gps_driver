@@ -393,9 +393,9 @@ namespace novatel_oem628
 
   bool NovatelGps::CreateSerialConnection(const std::string& device)
   {
-    serial_util::SerialConfig config;
+    swri_serial_util::SerialConfig config;
     config.baud = 115200;
-    config.parity = serial_util::SerialConfig::NO_PARITY;
+    config.parity = swri_serial_util::SerialConfig::NO_PARITY;
     config.flow_control = false;
     config.data_bits = 8;
     config.stop_bits = 1;
@@ -449,20 +449,20 @@ namespace novatel_oem628
   {
     if (connection_ == SERIAL)
     {
-      serial_util::SerialPort::Result result =
+      swri_serial_util::SerialPort::Result result =
           serial_.ReadBytes(data_buffer_, 0, 1000);
 
-      if (result == serial_util::SerialPort::ERROR)
+      if (result == swri_serial_util::SerialPort::ERROR)
       {
         error_msg_ = serial_.ErrorMsg();
         return READ_ERROR;
       }
-      else if (result == serial_util::SerialPort::TIMEOUT)
+      else if (result == swri_serial_util::SerialPort::TIMEOUT)
       {
         error_msg_ = "Timed out waiting for serial device.";
         return READ_TIMEOUT;
       }
-      else if (result == serial_util::SerialPort::INTERRUPTED)
+      else if (result == swri_serial_util::SerialPort::INTERRUPTED)
       {
         error_msg_ = "Interrupted during read from serial device.";
         return READ_INTERRUPTED;
