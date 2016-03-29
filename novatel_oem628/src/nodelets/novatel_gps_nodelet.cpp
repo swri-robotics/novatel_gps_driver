@@ -90,6 +90,9 @@
 #include <gps_common/GPSFix.h>
 #include <std_msgs/Time.h>
 #include <swri_math_util/math_util.h>
+#include <swri_roscpp/parameters.h>
+#include <swri_roscpp/subscriber.h>
+#include <swri_roscpp/publisher.h>
 
 #include <novatel_oem628/NovatelPosition.h>
 #include <novatel_oem628/NovatelMessageHeader.h>
@@ -140,30 +143,30 @@ namespace novatel_oem628
       ros::NodeHandle &node = getNodeHandle();
       ros::NodeHandle &priv = getPrivateNodeHandle();
 
-      priv.param("device", device_, device_);
-      priv.param("publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
-      priv.param("publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
-      priv.param("publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
+      swri::param(priv,"device", device_, device_);
+      swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
+      swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
+      swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
 
-      priv.param("connection_type", connection_type_, connection_type_);
+      swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
 
-      priv.param("frame_id", frame_id_, std::string(""));
+      swri::param(priv,"frame_id", frame_id_, std::string(""));
       
-      sync_sub_ = node.subscribe("gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
+      sync_sub_ = swri::Subscriber(node,"gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
       std::string gps_topic = node.resolveName("gps");
-      gps_pub_ = node.advertise<gps_common::GPSFix>(gps_topic, 100);
+      gps_pub_ = swri::advertise<gps_common::GPSFix>(node,gps_topic, 100);
 
       if (publish_nmea_messages_)
       {
-        gpgga_pub_ = node.advertise<Gpgga>("gpgga", 100);
-        gprmc_pub_ = node.advertise<Gprmc>("gprmc", 100);
+        gpgga_pub_ = swri::advertise<Gpgga>(node,"gpgga", 100);
+        gprmc_pub_ = swri::advertise<Gprmc>(node,"gprmc", 100);
       }
 
       if (publish_novatel_positions_)
       {
-        novatel_position_pub_ = node.advertise<NovatelPosition>("bestpos", 100);
+        novatel_position_pub_ = swri::advertise<NovatelPosition>(node,"bestpos", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -405,7 +408,7 @@ namespace novatel_oem628
     boost::mutex mutex_;
 
     /// Subscriber to listen for sync times from a DIO
-    ros::Subscriber sync_sub_;
+    swri::Subscriber sync_sub_;
     ros::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<ros::Time> sync_times_;
