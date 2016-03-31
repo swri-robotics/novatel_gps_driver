@@ -17,6 +17,7 @@ set(BUILD_DEPS
   roscpp 
   swri_serial_util 
   swri_string_util 
+  swri_roscpp
   tf)
 
 set(RUNTIME_DEPS
@@ -31,6 +32,7 @@ set(RUNTIME_DEPS
   roscpp 
   swri_serial_util 
   swri_string_util 
+  swri_roscpp
   tf)
 
 find_package(catkin REQUIRED COMPONENTS ${BUILD_DEPS})

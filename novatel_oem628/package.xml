@@ -21,6 +21,7 @@
   <depend>swri_serial_util</depend>
   <depend>std_msgs</depend>
   <depend>swri_string_util</depend>
+  <depend>swri_roscpp</depend>
   <depend>tf</depend>
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
