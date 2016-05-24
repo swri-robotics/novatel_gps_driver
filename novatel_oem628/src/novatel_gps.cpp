@@ -316,7 +316,7 @@ namespace novatel_oem628
 
           // If the message is more than 10 ms behind the gpgga time, discard
           // it and continue
-          if (gpgga_time - position_time > 0.01)
+          if (gpgga_time - position_time > 0.1)
           {
             position_sync_buffer_.pop_front();
           }
@@ -327,7 +327,7 @@ namespace novatel_oem628
         }
 
         // If a synced position message was found, set has_position true
-        bool has_position = std::fabs(gpgga_time - position_time) < 0.01;
+        bool has_position = std::fabs(gpgga_time - position_time) < 0.1;
 
         if (has_position || !wait_for_position)
         {
