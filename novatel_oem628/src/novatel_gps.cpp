@@ -400,12 +400,7 @@ namespace novatel_oem628
     config.data_bits = 8;
     config.stop_bits = 1;
     config.low_latency_mode = false;
-
-    if (device.find("ttyUSB") != std::string::npos ||
-        device.find("ttyAMC") != std::string::npos)
-    {
-      config.writable = true;
-    }
+    config.writable = true; // Assume that we can write to this port
 
     bool success = serial_.Open(device, config);
 
@@ -418,9 +413,12 @@ namespace novatel_oem628
     {
       if (!Configure())
       {
-        ROS_ERROR("Failed to configure GPS");
-        serial_.Close();
-        return false;
+        // We will not kill the connection here, because the device may already
+        // be setup to communicate correctly, but we will print a warning         
+        ROS_WARN("Failed to configure GPS. This port may be read only, or the "
+                 "device may not be functioning as expected; however, the "
+                 "driver may still function correctly if the port has already "
+                 "been pre-configured.");
       }
     }
 
