@@ -308,11 +308,9 @@ namespace novatel_oem628
         {
           // Calculate UTC position time from GPS seconds by subtracting out
           // full days and applying the UTC offset
-          // TODO(evenator): Should UTC offset be applied *before* calculating
-          //   days?
-          double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds;
+          double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds + utc_offset_;
           int32_t days = gps_seconds / 86400.0;
-          position_time = gps_seconds - days * 86400.0 + utc_offset_;
+          position_time = gps_seconds - days * 86400.0;
 
           // If the message is more than 10 ms behind the gpgga time, discard
           // it and continue
