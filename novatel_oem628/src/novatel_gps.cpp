@@ -296,7 +296,7 @@ namespace novatel_oem628
         // If there are no messages left in either buffer, we do not need to
         // wait for a position message
         bool wait_for_position = true;
-        if (gpgga_sync_buffer_.size() > 0 && gprmc_sync_buffer_.size() > 0)
+        if (gpgga_sync_buffer_.empty() && gprmc_sync_buffer_.empty())
         {
           wait_for_position = false;
         }
@@ -316,7 +316,7 @@ namespace novatel_oem628
 
           // If the message is more than 10 ms behind the gpgga time, discard
           // it and continue
-          if (gpgga_time - position_time > 0.1)
+          if (gpgga_time - position_time > 0.01)
           {
             position_sync_buffer_.pop_front();
           }
@@ -327,7 +327,7 @@ namespace novatel_oem628
         }
 
         // If a synced position message was found, set has_position true
-        bool has_position = std::fabs(gpgga_time - position_time) < 0.1;
+        bool has_position = std::fabs(gpgga_time - position_time) < 0.01;
 
         if (has_position || !wait_for_position)
         {
