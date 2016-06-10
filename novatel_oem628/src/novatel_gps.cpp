@@ -279,13 +279,13 @@ namespace novatel_oem628
 
       // Check if the gppga time at the front of the queue is synced with the
       // gprmc time at the front of the queue to within 10 ms
-      if (gpgga_time - gprmc_time > 0.01)
+      if ((gpgga_time - gprmc_time) > 0.01)
       {
         // The gprmc message is more then 10ms older than the gppga message,
         // so discard it and try again
         gprmc_sync_buffer_.pop_front();
       }
-      else if (gprmc_time - gpgga_time > 0.01)
+      else if ((gprmc_time - gpgga_time) > 0.01)
       {
         // The gppga message is more than 10ms older than the gprmc message, so
         // discard it and try again
@@ -296,7 +296,7 @@ namespace novatel_oem628
         // If there are no messages left in either buffer, we do not need to
         // wait for a position message
         bool wait_for_position = true;
-        if (gpgga_sync_buffer_.size() > 0 && gprmc_sync_buffer_.size() > 0)
+        if (gpgga_sync_buffer_.empty() && gprmc_sync_buffer_.empty())
         {
           wait_for_position = false;
         }

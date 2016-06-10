@@ -518,8 +518,8 @@ namespace novatel_oem628
           }
           else
           {
-            float utc_float;
-            if (swri_string_util::ToFloat(sentences[i].body[1], utc_float))
+            double utc_float;
+            if (swri_string_util::ToDouble(sentences[i].body[1], utc_float))
             {
               return UtcFloatToSeconds(utc_float);
             }
@@ -575,8 +575,8 @@ namespace novatel_oem628
     }
     else
     {
-      float utc_float;
-      if (swri_string_util::ToFloat(vec[1], utc_float))
+      double utc_float;
+      if (swri_string_util::ToDouble(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
@@ -654,8 +654,8 @@ namespace novatel_oem628
     }
     else
     {
-      float utc_float;
-      if (swri_string_util::ToFloat(vec[1], utc_float))
+      double utc_float;
+      if (swri_string_util::ToDouble(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
