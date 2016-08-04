@@ -296,7 +296,7 @@ namespace novatel_oem628
         // If there are no messages left in either buffer, we do not need to
         // wait for a position message
         bool wait_for_position = true;
-        if (gpgga_sync_buffer_.empty() && gprmc_sync_buffer_.empty())
+        if (!gpgga_sync_buffer_.empty() && !gprmc_sync_buffer_.empty())
         {
           wait_for_position = false;
         }
