@@ -153,6 +153,14 @@ namespace novatel_oem628
 
       swri::param(priv,"frame_id", frame_id_, std::string(""));
       
+      //set NovatelGps parameters
+      swri::param(priv,"gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol, 0.01);
+      swri::param(priv,"gpgga_position_sync_tol", gps_.gpgga_position_sync_tol, 0.01);
+      swri::param(priv,"wait_for_position", gps_.wait_for_position, false);
+      int buffer_capacity;
+      swri::param(priv,"buffer_capacity", buffer_capacity, 10);
+      gps_.setBufferCapacity(buffer_capacity);
+
       sync_sub_ = swri::Subscriber(node,"gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
       std::string gps_topic = node.resolveName("gps");
