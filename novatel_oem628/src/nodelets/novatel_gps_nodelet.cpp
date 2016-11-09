@@ -113,6 +113,7 @@ namespace novatel_oem628
       publish_novatel_positions_(false),
       publish_nmea_messages_(false),
       publish_diagnostics_(true),
+      ignore_sync_diagnostic(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -147,6 +148,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
+      swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
 
       swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
@@ -196,9 +198,12 @@ namespace novatel_oem628
         diagnostic_updater_.add("GPS Fix",
             this,
             &NovatelGpsNodelet::FixDiagnostic);
-        diagnostic_updater_.add("Sync",
-            this,
-            &NovatelGpsNodelet::SyncDiagnostic);
+        if (!ignore_sync_diagnostic)
+        {
+          diagnostic_updater_.add("Sync",
+              this,
+              &NovatelGpsNodelet::SyncDiagnostic);
+        }
       }
 
       thread_ = boost::thread(&NovatelGpsNodelet::Spin, this);
@@ -403,6 +408,7 @@ namespace novatel_oem628
     bool publish_novatel_positions_;
     bool publish_nmea_messages_;
     bool publish_diagnostics_;
+    bool ignore_sync_diagnostic;
 
     ros::Publisher gps_pub_;
     ros::Publisher novatel_position_pub_;
