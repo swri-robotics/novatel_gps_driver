@@ -1,0 +1,34 @@
+image: ivs-git.dyn.datasys.swri.edu:4567/uss/indigo_builder:master
+
+variables:
+    TERM: "xterm"
+    ROS_PACKAGE_SERVER: "deb http://repoman.dyn.datasys.swri.edu/ros/ubuntu trusty main"
+
+before_script: 
+    - echo "$ROS_PACKAGE_SERVER" > /etc/apt/sources.list.d/ros-latest.list
+    - locale-gen en_US.UTF-8
+    - apt-get update -qq
+    - catkin init
+    - catkin config --install
+    - wstool init src
+    - cd src
+    - git clone ../.git $CI_PROJECT_NAME
+    - find -name deps.rosinstall -exec wstool merge -y {} \;
+    - while [ -e .rosinstall.bak ]; do wstool update -j `nproc`; rm .rosinstall.bak; find -name deps.rosinstall -exec wstool merge -y {} \;; done
+    - rosdep update && rosdep install . -q -y --from-paths -i 
+
+.build: &build
+    script:
+        - catkin build --no-status -c
+        - catkin run_tests --no-status
+
+build_released-deps:
+    allow_failure: true
+    stage: build
+    <<: *build
+
+build_shadow-fixed-deps:
+    stage: build
+    variables:
+        ROS_PACKAGE_SERVER: "deb http://packages.ros.org/ros-shadow-fixed/ubuntu trusty main"
+    <<: *build
