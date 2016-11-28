@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.7.2 (2016-11-28)
+------------------
 * fixes issue caused by previous commit - no gps fix msgs being published
   previous commit caused no gps fix msgs to be published because msg buffers
   were small, and position msg arrived > 1 sec later than gpgga and gprmc msgs
