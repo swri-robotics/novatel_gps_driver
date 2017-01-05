@@ -38,6 +38,9 @@
 namespace novatel_oem628
 {
   NovatelGps::NovatelGps() :
+      gpgga_gprmc_sync_tol(0.01),
+      gpgga_position_sync_tol(0.01),
+      wait_for_position(false),
       connection_(SERIAL),
       utc_offset_(0),
       tcp_socket_(io_service_),
@@ -47,10 +50,7 @@ namespace novatel_oem628
       gprmc_msgs_(100),
       gpgga_sync_buffer_(10),
       gprmc_sync_buffer_(10),
-      position_sync_buffer_(10),
-      gpgga_gprmc_sync_tol(0.01),
-      gpgga_position_sync_tol(0.01),
-      wait_for_position(false)
+      position_sync_buffer_(10)
   {
 
   }
@@ -405,21 +405,11 @@ namespace novatel_oem628
     config.data_bits = 8;
     config.stop_bits = 1;
     config.low_latency_mode = false;
-
-    if (device.find("ttyUSB") != std::string::npos ||
-        device.find("ttyAMC") != std::string::npos)
-    {
-      config.writable = true;
-    }
+    config.writable = true;
 
     bool success = serial_.Open(device, config);
 
-    if (!success)
-    {
-      error_msg_ = serial_.ErrorMsg();
-    }
-
-    if (success && config.writable)
+    if (success)
     {
       if (!Configure())
       {
@@ -427,6 +417,10 @@ namespace novatel_oem628
         serial_.Close();
         return false;
       }
+    }
+    else
+    {
+      error_msg_ = serial_.ErrorMsg();
     }
 
     return success;
