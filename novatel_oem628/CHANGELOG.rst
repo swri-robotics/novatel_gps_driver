@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.8.0 (2017-01-05)
+------------------
 * Remove explicit serial device name check
 * Add param to not publish sync diagnostic
 * Contributors: Jason Gassaway, P. J. Reed
