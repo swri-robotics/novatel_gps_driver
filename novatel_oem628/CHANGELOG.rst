@@ -2,6 +2,12 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Remove explicit serial device name check
+* Add param to not publish sync diagnostic
+* Contributors: Jason Gassaway, P. J. Reed
+
 2.7.2 (2016-11-28)
 ------------------
 * fixes issue caused by previous commit - no gps fix msgs being published
