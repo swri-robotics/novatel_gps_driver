@@ -84,18 +84,21 @@
 #include <ros/ros.h>
 #include <nodelet/nodelet.h>
 
+#include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
-#include <diagnostic_msgs/DiagnosticStatus.h>
 #include <gps_common/GPSFix.h>
 #include <std_msgs/Time.h>
 #include <swri_math_util/math_util.h>
+#include <swri_roscpp/parameters.h>
+#include <swri_roscpp/publisher.h>
+#include <swri_roscpp/subscriber.h>
 
-#include <novatel_oem628/NovatelPosition.h>
-#include <novatel_oem628/NovatelMessageHeader.h>
 #include <novatel_oem628/Gpgga.h>
 #include <novatel_oem628/Gprmc.h>
 #include <novatel_oem628/novatel_gps.h>
+#include <novatel_oem628/NovatelMessageHeader.h>
+#include <novatel_oem628/NovatelPosition.h>
 
 namespace stats = boost::accumulators;
 
@@ -110,6 +113,7 @@ namespace novatel_oem628
       publish_novatel_positions_(false),
       publish_nmea_messages_(false),
       publish_diagnostics_(true),
+      ignore_sync_diagnostic(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -140,30 +144,39 @@ namespace novatel_oem628
       ros::NodeHandle &node = getNodeHandle();
       ros::NodeHandle &priv = getPrivateNodeHandle();
 
-      priv.param("device", device_, device_);
-      priv.param("publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
-      priv.param("publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
-      priv.param("publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
+      swri::param(priv,"device", device_, device_);
+      swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
+      swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
+      swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
+      swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
 
-      priv.param("connection_type", connection_type_, connection_type_);
+      swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
 
-      priv.param("frame_id", frame_id_, std::string(""));
+      swri::param(priv,"frame_id", frame_id_, std::string(""));
       
-      sync_sub_ = node.subscribe("gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
+      //set NovatelGps parameters
+      swri::param(priv,"gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol, 0.01);
+      swri::param(priv,"gpgga_position_sync_tol", gps_.gpgga_position_sync_tol, 0.01);
+      swri::param(priv,"wait_for_position", gps_.wait_for_position, false);
+      int buffer_capacity;
+      swri::param(priv,"buffer_capacity", buffer_capacity, 10);
+      gps_.setBufferCapacity(buffer_capacity);
+
+      sync_sub_ = swri::Subscriber(node,"gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
       std::string gps_topic = node.resolveName("gps");
-      gps_pub_ = node.advertise<gps_common::GPSFix>(gps_topic, 100);
+      gps_pub_ = swri::advertise<gps_common::GPSFix>(node,gps_topic, 100);
 
       if (publish_nmea_messages_)
       {
-        gpgga_pub_ = node.advertise<Gpgga>("gpgga", 100);
-        gprmc_pub_ = node.advertise<Gprmc>("gprmc", 100);
+        gpgga_pub_ = swri::advertise<Gpgga>(node,"gpgga", 100);
+        gprmc_pub_ = swri::advertise<Gprmc>(node,"gprmc", 100);
       }
 
       if (publish_novatel_positions_)
       {
-        novatel_position_pub_ = node.advertise<NovatelPosition>("bestpos", 100);
+        novatel_position_pub_ = swri::advertise<NovatelPosition>(node,"bestpos", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -185,9 +198,12 @@ namespace novatel_oem628
         diagnostic_updater_.add("GPS Fix",
             this,
             &NovatelGpsNodelet::FixDiagnostic);
-        diagnostic_updater_.add("Sync",
-            this,
-            &NovatelGpsNodelet::SyncDiagnostic);
+        if (!ignore_sync_diagnostic)
+        {
+          diagnostic_updater_.add("Sync",
+              this,
+              &NovatelGpsNodelet::SyncDiagnostic);
+        }
       }
 
       thread_ = boost::thread(&NovatelGpsNodelet::Spin, this);
@@ -392,6 +408,7 @@ namespace novatel_oem628
     bool publish_novatel_positions_;
     bool publish_nmea_messages_;
     bool publish_diagnostics_;
+    bool ignore_sync_diagnostic;
 
     ros::Publisher gps_pub_;
     ros::Publisher novatel_position_pub_;
@@ -405,7 +422,7 @@ namespace novatel_oem628
     boost::mutex mutex_;
 
     /// Subscriber to listen for sync times from a DIO
-    ros::Subscriber sync_sub_;
+    swri::Subscriber sync_sub_;
     ros::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<ros::Time> sync_times_;

@@ -81,6 +81,13 @@ namespace novatel_oem628
 
       std::string ErrorMsg() const { return error_msg_; }
 
+      //parameters
+      double gpgga_gprmc_sync_tol; //seconds
+      double gpgga_position_sync_tol; //seconds
+      bool wait_for_position; //if false, do not require position message to make gps fix message
+      //added this because position message is sometimes > 1 s late.
+      void setBufferCapacity(const size_t buffer_size);
+
     private:
       bool CreateSerialConnection(const std::string& device);
       bool CreateTcpConnection(const std::string& device);

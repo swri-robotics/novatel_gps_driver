@@ -17,6 +17,7 @@ set(BUILD_DEPS
   roscpp 
   swri_serial_util 
   swri_string_util 
+  swri_roscpp
   tf)
 
 set(RUNTIME_DEPS
@@ -31,6 +32,7 @@ set(RUNTIME_DEPS
   roscpp 
   swri_serial_util 
   swri_string_util 
+  swri_roscpp
   tf)
 
 find_package(catkin REQUIRED COMPONENTS ${BUILD_DEPS})
@@ -93,3 +95,6 @@ install(DIRECTORY include/${PROJECT_NAME}/
 install(FILES nodelet_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+### Install Launch Files ###
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
