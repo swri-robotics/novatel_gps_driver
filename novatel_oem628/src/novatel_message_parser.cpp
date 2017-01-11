@@ -31,7 +31,9 @@
 
 #include <limits>
 
-#include <string_util/string_util.h>
+#include <ros/ros.h>
+
+#include <swri_string_util/string_util.h>
 
 namespace novatel_oem628
 {
@@ -39,11 +41,11 @@ namespace novatel_oem628
   {
     int32_t j;
     uint32_t ulCRC;
-    ulCRC = i;
+    ulCRC = static_cast<uint32_t>(i);
     for ( j = 8 ; j > 0; j-- )
     {
       if ( ulCRC & 1 )
-        ulCRC = ( ulCRC >> 1 ) ^ NOVATEL_CRC32_POLYNOMIAL;
+        ulCRC = static_cast<uint32_t>(( ulCRC >> 1 ) ^ NOVATEL_CRC32_POLYNOMIAL);
       else
         ulCRC >>= 1;
     }
@@ -59,7 +61,7 @@ namespace novatel_oem628
     uint32_t ulCRC = 0;
     while ( ulCount-- != 0 )
     {
-      ulTemp1 = ( ulCRC >> 8 ) & 0x00FFFFFFL;
+      ulTemp1 = static_cast<uint32_t>(( ulCRC >> 8 ) & 0x00FFFFFFL);
       ulTemp2 = CRC32Value( ((int32_t) ulCRC ^ *ucBuffer++ ) & 0xff );
       ulCRC = ulTemp1 ^ ulTemp2;
     }
@@ -233,7 +235,7 @@ namespace novatel_oem628
     valid = valid && ParseUInt32(header[5], msg.gps_week_num);
     valid = valid && ParseDouble(header[6], msg.gps_seconds);
 
-    uint32_t receiver_status_code;
+    uint32_t receiver_status_code = 0;
     valid = valid && ParseUInt32(header[7], receiver_status_code, 16);
     get_novatel_receiver_status_msg(receiver_status_code, msg.receiver_status);
 
@@ -251,7 +253,7 @@ namespace novatel_oem628
       return false;
     }
 
-    return string_util::ToDouble(sentence.body[3], utc_offset);
+    return swri_string_util::ToDouble(sentence.body[3], utc_offset);
   }
 
   bool parse_novatel_pos_msg(
@@ -289,13 +291,13 @@ namespace novatel_oem628
     valid = valid && ParseUInt8(sentence.body[16], msg->num_gps_and_glonass_l1_and_l2_used_in_solution);
 
     // skip reserved field
-    uint32_t extended_solution_status;
+    uint32_t extended_solution_status = 0;
     valid = valid && ParseUInt32(sentence.body[18], extended_solution_status, 16);
     get_extended_solution_status_msg(
         extended_solution_status, msg->extended_solution_status);
 
     // skip reserved field
-    uint32_t signal_mask;
+    uint32_t signal_mask = 0;
     valid = valid && ParseUInt32(sentence.body[20], signal_mask, 16);
     get_signals_used(signal_mask, msg->signal_mask);
 
@@ -332,8 +334,8 @@ namespace novatel_oem628
         return 1;
       }
       else if(static_cast<uint32_t>(checksum) == CalculateBlockCRC32(
-                            sentence.size(),
-                            (const uint8_t*)sentence.c_str()))
+           static_cast<uint32_t>(sentence.size()),
+           reinterpret_cast<const uint8_t*>(sentence.c_str())))
       {
         return 0;
       }
@@ -504,20 +506,21 @@ namespace novatel_oem628
 
   double GetMostRecentUtcTime(const std::vector<NmeaSentence>& sentences)
   {
-    for (int32_t i = sentences.size() - 1; i >= 0; i--)
+    std::vector<NmeaSentence>::const_reverse_iterator iter;
+    for (iter = sentences.rbegin(); iter != sentences.rend(); iter++)
     {
-      if (sentences[i].id == "GPGGA" || sentences[i].id == "GPRMC")
+      if (iter->id == "GPGGA" || iter->id == "GPRMC")
       {
-        if (sentences[i].body.size() > 1)
+        if (iter->body.size() > 1)
         {
-          if (sentences[i].body[1].empty() || sentences[i].body[1] == "0")
+          if (iter->body[1].empty() || iter->body[1] == "0")
           {
             return 0;
           }
           else
           {
-            float utc_float;
-            if (string_util::ToFloat(sentences[i].body[1], utc_float))
+            double utc_float;
+            if (swri_string_util::ToDouble(iter->body[1], utc_float))
             {
               return UtcFloatToSeconds(utc_float);
             }
@@ -573,8 +576,8 @@ namespace novatel_oem628
     }
     else
     {
-      float utc_float;
-      if (string_util::ToFloat(vec[1], utc_float))
+      double utc_float;
+      if (swri_string_util::ToDouble(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
@@ -586,11 +589,11 @@ namespace novatel_oem628
 
     bool valid = true;
 
-    double latitude;
+    double latitude = 0.0;
     valid = valid && ParseDouble(vec[2], latitude);
     msg->lat = convert_dms_to_degrees(latitude);
 
-    double longitude;
+    double longitude = 0.0;
     valid = valid && ParseDouble(vec[4], longitude);
     msg->lon = convert_dms_to_degrees(longitude);
 
@@ -652,8 +655,8 @@ namespace novatel_oem628
     }
     else
     {
-      float utc_float;
-      if (string_util::ToFloat(vec[1], utc_float))
+      double utc_float;
+      if (swri_string_util::ToDouble(vec[1], utc_float))
       {
         msg->utc_seconds = UtcFloatToSeconds(utc_float);
       }
@@ -670,11 +673,11 @@ namespace novatel_oem628
 
     bool valid = true;
 
-    double latitude;
+    double latitude = 0.0;
     valid = valid && ParseDouble(vec[3], latitude);
     msg->lat = convert_dms_to_degrees(latitude);
 
-    double longitude;
+    double longitude = 0.0;
     valid = valid && ParseDouble(vec[5], longitude);
     msg->lon = convert_dms_to_degrees(longitude);
 
@@ -748,28 +751,28 @@ namespace novatel_oem628
     // gps_fix.vdop = ERR_INIT_HIGH;
 
     gps_fix->status.status = gps_common::GPSStatus::STATUS_FIX;
-    gps_fix->status.satellites_used = gpgga.num_sats;
+    gps_fix->status.satellites_used = static_cast<uint16_t>(gpgga.num_sats);
 
   }
 
   bool ParseDouble(const std::string& string, double& value)
   {
-    return string_util::ToDouble(string, value) || string.empty();
+    return swri_string_util::ToDouble(string, value) || string.empty();
   }
 
   bool ParseFloat(const std::string& string, float& value)
   {
-    return string_util::ToFloat(string, value) || string.empty();
+    return swri_string_util::ToFloat(string, value) || string.empty();
   }
 
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base)
   {
-    return string_util::ToInt32(string, value, base) || string.empty();
+    return swri_string_util::ToInt32(string, value, base) || string.empty();
   }
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base)
   {
-    return string_util::ToUInt32(string, value, base) || string.empty();
+    return swri_string_util::ToUInt32(string, value, base) || string.empty();
   }
 
   bool ParseUInt8(const std::string& string, uint8_t& value, int32_t base)
@@ -781,9 +784,9 @@ namespace novatel_oem628
     }
 
     uint32_t tmp;
-    if (string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
+    if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
     {
-      value = tmp;
+      value = static_cast<uint8_t>(tmp);
       return true;
     }
 

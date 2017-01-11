@@ -36,7 +36,7 @@
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <serial_util/serial_port.h>
+#include <swri_serial_util/serial_port.h>
 
 #include <gps_common/GPSFix.h>
 #include <novatel_oem628/NovatelPosition.h>
@@ -81,6 +81,13 @@ namespace novatel_oem628
 
       std::string ErrorMsg() const { return error_msg_; }
 
+      //parameters
+      double gpgga_gprmc_sync_tol; //seconds
+      double gpgga_position_sync_tol; //seconds
+      bool wait_for_position; //if false, do not require position message to make gps fix message
+      //added this because position message is sometimes > 1 s late.
+      void setBufferCapacity(const size_t buffer_size);
+
     private:
       bool CreateSerialConnection(const std::string& device);
       bool CreateTcpConnection(const std::string& device);
@@ -96,7 +103,7 @@ namespace novatel_oem628
       int32_t utc_offset_;
 
       // Serial
-      serial_util::SerialPort serial_;
+      swri_serial_util::SerialPort serial_;
 
       // TCP / UDP
       boost::asio::io_service io_service_;

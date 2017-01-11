@@ -1,0 +1,32 @@
+<?xml version="1.0" ?>
+<package format="2">
+  <name>novatel_oem628</name>
+  <version>2.8.0</version>
+  <description>
+
+     novatel_oem628
+
+  </description>
+  <maintainer email="swri@swri.org">SwRI</maintainer>
+  <license>United States Government Purpose</license>
+  <license>SwRI Proprietary</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>diagnostic_updater</depend>
+  <depend>gps_common</depend>
+  <depend>nav_msgs</depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>nodelet</depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>swri_math_util</depend>
+  <depend>swri_roscpp</depend>
+  <depend>swri_serial_util</depend>
+  <depend>swri_string_util</depend>
+  <depend>tf</depend>
+  <export>
+    <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
+  </export>
+</package>
+

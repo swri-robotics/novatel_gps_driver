@@ -31,11 +31,16 @@
 
 #include <boost/make_shared.hpp>
 
+#include <ros/ros.h>
+
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628
 {
   NovatelGps::NovatelGps() :
+      gpgga_gprmc_sync_tol(0.01),
+      gpgga_position_sync_tol(0.01),
+      wait_for_position(false),
       connection_(SERIAL),
       utc_offset_(0),
       tcp_socket_(io_service_),
@@ -113,6 +118,13 @@ namespace novatel_oem628
     {
       udp_socket_.close();
     }
+  }
+
+  void NovatelGps::setBufferCapacity(const size_t buffer_size)
+  {
+    gpgga_sync_buffer_.set_capacity(buffer_size);
+    gprmc_sync_buffer_.set_capacity(buffer_size);
+    position_sync_buffer_.set_capacity(buffer_size);
   }
 
   NovatelGps::ReadResult NovatelGps::ProcessData()
@@ -262,70 +274,60 @@ namespace novatel_oem628
     // Clear out the fix_messages list before filling it
     fix_messages.clear();
 
-    // We need both a gpgga and a gprmc message to fill the GPSFix message
-    if (gpgga_sync_buffer_.empty() || gprmc_sync_buffer_.empty())
-    {
-      return;
-    }
-
-    // Loop through all the messages in the buffer, using them to fill GPSFix
-    // messages
+    // both a gpgga and a gprmc message are required to fill the GPSFix message
     while (!gpgga_sync_buffer_.empty() && !gprmc_sync_buffer_.empty())
     {
       double gpgga_time = gpgga_sync_buffer_.front().utc_seconds;
       double gprmc_time = gprmc_sync_buffer_.front().utc_seconds;
 
-      // Check if the gppga time at the front of the queue is synced with the
-      // gprmc time at the front of the queue to within 10 ms
-      if (gpgga_time - gprmc_time > 0.01)
+      // Get the front elements of the gpgga and gprmc buffers synced to within tolerance
+      if ((gpgga_time - gprmc_time) > gpgga_gprmc_sync_tol)
       {
-        // The gprmc message is more then 10ms older than the gppga message,
-        // so discard it and try again
+        // The gprmc message is more than tol older than the gpgga message,
+        // discard it and continue
         gprmc_sync_buffer_.pop_front();
       }
-      else if (gprmc_time - gpgga_time > 0.01)
+      else if ((gprmc_time - gpgga_time) > gpgga_gprmc_sync_tol)
       {
-        // The gppga message is more than 10ms older than the gprmc message, so
-        // discard it and try again
+        // The gpgga message is more than tol older than the gprmc message,
+        // discard it and continue
         gpgga_sync_buffer_.pop_front();
       }
-      else  // The gppga and gprmc messages are synced to within 10 ms
+      else // The gpgga and gprmc messages are synced
       {
-        // If there are no messages left in either buffer, we do not need to
-        // wait for a position message
-        bool wait_for_position = true;
-        if (gpgga_sync_buffer_.size() > 0 && gprmc_sync_buffer_.size() > 0)
-        {
-          wait_for_position = false;
-        }
+        bool has_position = false;
+        bool pop_position = false;
 
-        double position_time = 0;
-        // Iterate over the position synce message buffer until we find one
-        // that is within 10ms of the gppga message
-        while (!position_sync_buffer_.empty() && gpgga_time - position_time > 0.01)
+        // Iterate over the position message buffer until we find one
+        // that is synced with the gpgga message
+        while (!position_sync_buffer_.empty())
         {
           // Calculate UTC position time from GPS seconds by subtracting out
           // full days and applying the UTC offset
-          // TODO(evenator): Should UTC offset be applied *before* calculating
-          //   days?
-          double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds;
+          double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds + utc_offset_;
           int32_t days = gps_seconds / 86400.0;
-          position_time = gps_seconds - days * 86400.0 + utc_offset_;
+          double position_time = gps_seconds - days * 86400.0 + utc_offset_;
 
-          // If the message is more than 10 ms behind the gpgga time, discard
-          // it and continue
-          if (gpgga_time - position_time > 0.01)
+          if ((gpgga_time - position_time) > gpgga_position_sync_tol)
           {
+            // The position message is more than tol older than the gpgga message,
+            // discard it and continue
             position_sync_buffer_.pop_front();
           }
-          else  // The position and gppga messages are synced to within 10 ms
+          else if ((position_time - gpgga_time) > gpgga_position_sync_tol)
           {
-            break;  // All 3 messages are synced, so break the loop
+            // The position message is more than tol ahead of the gpgga message,
+            // use it but don't pop it
+            has_position = true;
+            break;
+          }
+          else //the gpgga and position tol messages are in sync
+          {
+            has_position = true;
+            pop_position = true;
+            break;
           }
         }
-
-        // If a synced position message was found, set has_position true
-        bool has_position = std::fabs(gpgga_time - position_time) < 0.01;
 
         if (has_position || !wait_for_position)
         {
@@ -359,7 +361,10 @@ namespace novatel_oem628
             gps_fix->position_covariance_type =
                 gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
-            position_sync_buffer_.pop_front();
+            if (pop_position)
+            {
+              position_sync_buffer_.pop_front();
+            }
           }
 
           // Add the message to the fix message list
@@ -367,12 +372,11 @@ namespace novatel_oem628
         }
         else  // There is no position message (and wait_for_position is true)
         {
-          // We're out of position messages, so return without pushing any
-          // more messages to the list
+          // return without pushing any more gps fix messages to the list
           return;
         }
-      }  // else (gppga and gprmc synced)
-    }  // while (gppga queue and gprm queue contain messages)
+      }  // else (gpgga and gprmc synced)
+    }  // while (gpgga and gprmc buffers contain messages)
   }
 
   void NovatelGps::GetGpggaMessages(std::vector<GpggaPtr>& gpgga_messages)
@@ -391,35 +395,32 @@ namespace novatel_oem628
 
   bool NovatelGps::CreateSerialConnection(const std::string& device)
   {
-    serial_util::SerialConfig config;
+    swri_serial_util::SerialConfig config;
     config.baud = 115200;
-    config.parity = serial_util::SerialConfig::NO_PARITY;
+    config.parity = swri_serial_util::SerialConfig::NO_PARITY;
     config.flow_control = false;
     config.data_bits = 8;
     config.stop_bits = 1;
     config.low_latency_mode = false;
-
-    if (device.find("ttyUSB") != std::string::npos ||
-        device.find("ttyAMC") != std::string::npos)
-    {
-      config.writable = true;
-    }
+    config.writable = true; // Assume that we can write to this port
 
     bool success = serial_.Open(device, config);
 
-    if (!success)
-    {
-      error_msg_ = serial_.ErrorMsg();
-    }
-
-    if (success && config.writable)
+    if (success)
     {
       if (!Configure())
       {
-        ROS_ERROR("Failed to configure GPS");
-        serial_.Close();
-        return false;
+        // We will not kill the connection here, because the device may already
+        // be setup to communicate correctly, but we will print a warning         
+        ROS_WARN("Failed to configure GPS. This port may be read only, or the "
+                 "device may not be functioning as expected; however, the "
+                 "driver may still function correctly if the port has already "
+                 "been pre-configured.");
       }
+    }
+    else
+    {
+      error_msg_ = serial_.ErrorMsg();
     }
 
     return success;
@@ -447,20 +448,20 @@ namespace novatel_oem628
   {
     if (connection_ == SERIAL)
     {
-      serial_util::SerialPort::Result result =
+      swri_serial_util::SerialPort::Result result =
           serial_.ReadBytes(data_buffer_, 0, 1000);
 
-      if (result == serial_util::SerialPort::ERROR)
+      if (result == swri_serial_util::SerialPort::ERROR)
       {
         error_msg_ = serial_.ErrorMsg();
         return READ_ERROR;
       }
-      else if (result == serial_util::SerialPort::TIMEOUT)
+      else if (result == swri_serial_util::SerialPort::TIMEOUT)
       {
         error_msg_ = "Timed out waiting for serial device.";
         return READ_TIMEOUT;
       }
-      else if (result == serial_util::SerialPort::INTERRUPTED)
+      else if (result == swri_serial_util::SerialPort::INTERRUPTED)
       {
         error_msg_ = "Interrupted during read from serial device.";
         return READ_INTERRUPTED;

@@ -8,3 +8,5 @@ bin/
 msg_gen/
 lib/
 build/
+.idea/
+cmake-build-debug/
