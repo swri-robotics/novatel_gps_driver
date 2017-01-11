@@ -46,12 +46,13 @@ namespace novatel_oem628
       utc_offset_(0),
       tcp_socket_(io_service_),
       udp_socket_(io_service_),
-      novatel_positions_(100),
-      gpgga_msgs_(100),
-      gprmc_msgs_(100),
-      gpgga_sync_buffer_(10),
-      gprmc_sync_buffer_(10),
-      position_sync_buffer_(10)
+      novatel_positions_(MAX_BUFFER_SIZE),
+      gpgga_msgs_(MAX_BUFFER_SIZE),
+      gpgsa_msgs_(MAX_BUFFER_SIZE),
+      gprmc_msgs_(MAX_BUFFER_SIZE),
+      gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
+      gprmc_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
+      position_sync_buffer_(MAX_SYNC_BUFFER_SIZE)
   {
 
   }
@@ -65,26 +66,40 @@ namespace novatel_oem628
       const std::string& device,
       ConnectionType connection)
   {
+    NovatelMessageOpts opts;
+    opts["gpgga"] = 0.05;
+    opts["gprmc"] = 0.05;
+    opts["bestposa"] = 0.05;
+    opts["timea"] = 1.0;
+    return Connect(device, connection, opts);
+  }
+
+  bool NovatelGps::Connect(
+      const std::string& device,
+      ConnectionType connection,
+      NovatelMessageOpts const& opts)
+  {
     Disconnect();
 
     connection_ = connection;
 
     if (connection_ == SERIAL)
     {
-      return CreateSerialConnection(device);
+      return CreateSerialConnection(device, opts);
     }
     else if (connection_ == TCP)
     {
-      return CreateTcpConnection(device);
+      return CreateTcpConnection(device, opts);
     }
     else if (connection_ == UDP)
     {
-      return CreateUdpConnection(device);
+      return CreateUdpConnection(device, opts);
     }
 
     error_msg_ = "Invalid connection type.";
 
     return false;
+
   }
 
   NovatelGps::ConnectionType NovatelGps::ParseConnection(const std::string& connection)
@@ -223,6 +238,17 @@ namespace novatel_oem628
           read_result = READ_PARSE_FAILED;
           error_msg_ = "Failed to parse the NMEA GPRMC message.";
         }
+      }
+      else if (nmea_sentences_[i].id == "GPGSA")
+      {
+        GpgsaPtr gpgsa = boost::make_shared<Gpgsa>();
+        NmeaMessageParseResult parse_result =
+            parse_vectorized_gpgsa_message(nmea_sentences_[i].body, gpgsa);
+        gpgsa_msgs_.push_back(gpgsa);
+      }
+      else
+      {
+        ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << nmea_sentences_[i].id);
       }
     }
     nmea_sentences_.clear();
@@ -390,6 +416,13 @@ namespace novatel_oem628
     gpgga_msgs_.clear();
   }
 
+  void NovatelGps::GetGpgsaMessages(std::vector<GpgsaPtr>& gpgsa_messages)
+  {
+    gpgsa_messages.resize(gpgsa_msgs_.size());
+    std::copy(gpgsa_msgs_.begin(), gpgsa_msgs_.end(), gpgsa_messages.begin());
+    gpgsa_msgs_.clear();
+  }
+
   void NovatelGps::GetGprmcMessages(std::vector<GprmcPtr>& gprmc_messages)
   {
     gprmc_messages.clear();
@@ -397,7 +430,7 @@ namespace novatel_oem628
     gprmc_msgs_.clear();
   }
 
-  bool NovatelGps::CreateSerialConnection(const std::string& device)
+  bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
     swri_serial_util::SerialConfig config;
     config.baud = 115200;
@@ -412,7 +445,7 @@ namespace novatel_oem628
 
     if (success)
     {
-      if (!Configure())
+      if (!Configure(opts))
       {
         ROS_ERROR("Failed to configure GPS");
         serial_.Close();
@@ -427,7 +460,7 @@ namespace novatel_oem628
     return success;
   }
 
-  bool NovatelGps::CreateTcpConnection(const std::string& device)
+  bool NovatelGps::CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
     boost::asio::ip::tcp::resolver resolver(io_service_);
     boost::asio::ip::tcp::resolver::query query(device);
@@ -438,7 +471,7 @@ namespace novatel_oem628
     return false;
   }
 
-  bool NovatelGps::CreateUdpConnection(const std::string& device)
+  bool NovatelGps::CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
     // TODO(malban)
 
@@ -496,16 +529,6 @@ namespace novatel_oem628
     }
 
     return false;
-  }
-
-  bool NovatelGps::Configure()
-  {
-    NovatelMessageOpts opts;
-    opts["gpgga"] = 0.05;
-    opts["gprmc"] = 0.05;
-    opts["bestposa"] = 0.05;
-    opts["timea"] = 1.0;
-    return Configure(opts);
   }
 
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)

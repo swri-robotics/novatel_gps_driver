@@ -57,6 +57,9 @@ namespace novatel_oem628
       const static int32_t default_tcp_port_ = 3001;
       const static int32_t default_udp_port_ = 3002;
 
+      const static size_t MAX_BUFFER_SIZE = 100;
+      const static size_t MAX_SYNC_BUFFER_SIZE = 10;
+
       enum ConnectionType { SERIAL, TCP, UDP, INVALID };
 
       enum ReadResult
@@ -72,7 +75,32 @@ namespace novatel_oem628
       NovatelGps();
       ~NovatelGps();
 
+      /**
+       * Connect and configure with default message options.
+       * @param device A path to a device file handle, e.g. /dev/TTYUSB0
+       * @param connection The type of connection. Only SERIAL is supported
+       * @return True on success
+       */
       bool Connect(const std::string& device, ConnectionType connection);
+
+      /**
+       * Connect and configure with the given message options
+       * @param device A path to a device file handle, e.g. /dev/TTYUSB0
+       * @param connection The type of connection. Only SERIAL is supported
+       * @param opts Message options to use
+       * @return
+       */
+      bool Connect(const std::string& device, ConnectionType connection, NovatelMessageOpts const& opts);
+
+      /**
+       * (Re)configure the driver with a set of message options
+       *
+       * @param opts A map from message name to log period (seconds)
+       *
+       * @return True on successful configuration
+       */
+      bool Configure(NovatelMessageOpts const& opts);
+
       void Disconnect();
 
       static ConnectionType ParseConnection(const std::string& connection);
@@ -82,6 +110,7 @@ namespace novatel_oem628
       void GetNovatelPositions(std::vector<NovatelPositionPtr>& positions);
       void GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages);
       void GetGpggaMessages(std::vector<GpggaPtr>& gpgga_messages);
+      void GetGpgsaMessages(std::vector<GpgsaPtr>& gpgsa_messages);
       void GetGprmcMessages(std::vector<GprmcPtr>& gprmc_messages);
 
       std::string ErrorMsg() const { return error_msg_; }
@@ -94,33 +123,11 @@ namespace novatel_oem628
       void setBufferCapacity(const size_t buffer_size);
 
     private:
-      bool CreateSerialConnection(const std::string& device);
-      bool CreateTcpConnection(const std::string& device);
-      bool CreateUdpConnection(const std::string& device);
+      bool CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts);
+      bool CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts);
+      bool CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts);
 
       bool Write(const std::string& command);
-      /**
-       * (Re)configure the driver with default message options.
-       *
-       * The default message options are:
-       *
-       * - gpgga: 0.05
-       * - gprmc: 0.05
-       * - bestposa: 0.05
-       * - timea: 1.0
-       *
-       * @return True on successful configuration
-       */
-      bool Configure();
-
-      /**
-       * (Re)configure the driver with a set of message options
-       *
-       * @param opts A map from message name to log period (seconds)
-       *
-       * @return True on successful configuration
-       */
-      bool Configure(NovatelMessageOpts const& opts);
 
       ReadResult ReadData();
 
@@ -145,6 +152,7 @@ namespace novatel_oem628
       // Message buffers
       boost::circular_buffer<NovatelPositionPtr> novatel_positions_;
       boost::circular_buffer<GpggaPtr> gpgga_msgs_;
+      boost::circular_buffer<GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<GprmcPtr> gprmc_msgs_;
 
       boost::circular_buffer<Gpgga> gpgga_sync_buffer_;

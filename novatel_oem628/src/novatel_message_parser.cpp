@@ -631,6 +631,42 @@ namespace novatel_oem628
     return ParseSucceededAndGpsDataValid;
   }
 
+  NmeaMessageParseResult parse_vectorized_gpgsa_message(
+      std::vector<std::string>& vec,
+      novatel_oem628::GpgsaPtr msg)
+  {
+    // Check the length first -- should be 18 elements long
+    const size_t LENGTH = 18;
+    if (vec.size() != LENGTH)
+    {
+      ROS_ERROR("Expected GPGSA length %zu, actual length = %zu",
+          LENGTH,
+          vec.size());
+      return ParseFailed;
+    }
+
+    msg->message_id = vec[0];
+    msg->auto_manual_mode = vec[1];
+    ParseUInt8(vec[2], msg->fix_mode);
+    // Words 3-14 of the sentence are SV IDs. Copy only the non-null strings.
+    msg->sv_ids.resize(12, 0);
+    size_t n_svs = 0;
+    for (std::vector<std::string>::const_iterator id = vec.begin()+3; id < vec.begin()+15; ++id)
+    {
+      if (! id->empty())
+      {
+        ParseUInt8(*id, msg->sv_ids[n_svs]);
+        ++n_svs;
+      }
+    }
+    msg->sv_ids.resize(n_svs);
+
+    ParseFloat(vec[15], msg->pdop);
+    ParseFloat(vec[16], msg->hdop);
+    ParseFloat(vec[17], msg->vdop);
+    return ParseSucceededAndGpsDataValid;
+  }
+
   NmeaMessageParseResult parse_vectorized_gprmc_message(
       std::vector<std::string>& vec,
       novatel_oem628::GprmcPtr msg)
