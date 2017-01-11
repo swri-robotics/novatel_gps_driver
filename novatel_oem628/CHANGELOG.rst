@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.9.0 (2017-01-11)
+------------------
 * Clean up wait_for_position member variable usage
 * Merge repos on dismount and ivs; also fix some warnings
 * Move GitLab CI config to correct location.
