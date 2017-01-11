@@ -2,6 +2,20 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Clean up wait_for_position member variable usage
+* Merge repos on dismount and ivs; also fix some warnings
+* Move GitLab CI config to correct location.
+* Enable GitLab CI.
+* Fix potential issue with how utc offset is applied.
+* Change to always try to configure the device.
+* Fix NMEA/novatel message synchronization issues
+* Widening synchronization tolerance
+* Switch to from \*_util to swri\_\*_util.
+* Update example launch file for novatel nodelet.
+* Contributors: Edward Venator, Jerry Towler, Kris Kozak, Marc Alban, P. J. Reed
+
 2.8.0 (2017-01-05)
 ------------------
 * Remove explicit serial device name check
