@@ -27,6 +27,7 @@
 //
 // *****************************************************************************
 
+#include <sstream>
 #include <novatel_oem628/novatel_gps.h>
 
 #include <boost/make_shared.hpp>
@@ -499,12 +500,25 @@ namespace novatel_oem628
 
   bool NovatelGps::Configure()
   {
+    NovatelMessageOpts opts;
+    opts["gpgga"] = 0.05;
+    opts["gprmc"] = 0.05;
+    opts["bestposa"] = 0.05;
+    opts["timea"] = 1.0;
+    return Configure(opts);
+  }
+
+  bool NovatelGps::Configure(NovatelMessageOpts const& opts)
+  {
     bool configured = true;
     configured = configured && Write("unlogall\n");
-    configured = configured && Write("log gpgga ontime 0.05\n");
-    configured = configured && Write("log gprmc ontime 0.05\n");
-    configured = configured && Write("log bestposa ontime 0.05\n");
-    configured = configured && Write("log timea ontime 1.0\n");
+    for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
+    {
+      std::stringstream command;
+      command << std::setprecision(3);
+      command << "log " << option->first << " ontime " << option->second << "\n";
+      configured = configured && Write(command.str());
+    }
     return configured;
   }
 }

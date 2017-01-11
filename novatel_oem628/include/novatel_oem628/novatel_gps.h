@@ -30,6 +30,7 @@
 #ifndef NOVATEL_OEM628_NOVATEL_GPS_H_
 #define NOVATEL_OEM628_NOVATEL_GPS_H_
 
+#include <map>
 #include <string>
 #include <vector>
 
@@ -41,11 +42,15 @@
 #include <gps_common/GPSFix.h>
 #include <novatel_oem628/NovatelPosition.h>
 #include <novatel_oem628/Gpgga.h>
+#include <novatel_oem628/Gpgsa.h>
 #include <novatel_oem628/Gprmc.h>
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628
 {
+  /// Define NovatelMessageOpts as a map from message name to log period (seconds)
+  typedef std::map<std::string, double> NovatelMessageOpts;
+
   class NovatelGps
   {
     public:
@@ -94,7 +99,28 @@ namespace novatel_oem628
       bool CreateUdpConnection(const std::string& device);
 
       bool Write(const std::string& command);
+      /**
+       * (Re)configure the driver with default message options.
+       *
+       * The default message options are:
+       *
+       * - gpgga: 0.05
+       * - gprmc: 0.05
+       * - bestposa: 0.05
+       * - timea: 1.0
+       *
+       * @return True on successful configuration
+       */
       bool Configure();
+
+      /**
+       * (Re)configure the driver with a set of message options
+       *
+       * @param opts A map from message name to log period (seconds)
+       *
+       * @return True on successful configuration
+       */
+      bool Configure(NovatelMessageOpts const& opts);
 
       ReadResult ReadData();
 
