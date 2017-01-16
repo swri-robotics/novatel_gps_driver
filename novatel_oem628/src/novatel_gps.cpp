@@ -51,6 +51,7 @@ namespace novatel_oem628
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
+      time_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       gprmc_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       position_sync_buffer_(MAX_SYNC_BUFFER_SIZE)
@@ -287,15 +288,16 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "TIMEA")
       {
-        double offset = 0;
-        if (!ParseNovatelTimeMessage(novatel_sentences_[i], offset))
+        novatel_msgs::TimePtr time = boost::make_shared<novatel_msgs::Time>();
+        if (!ParseNovatelTimeMessage(novatel_sentences_[i], time))
         {
           read_result = READ_PARSE_FAILED;
           error_msg_ = "Failed to parse the Novatel Time message.";
         }
         else
         {
-          utc_offset_ = offset;
+          utc_offset_ = time->utc_offset;
+          time_msgs_.push_back(time);
         }
       }
     }
@@ -447,6 +449,13 @@ namespace novatel_oem628
     gprmc_messages.clear();
     gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());
     gprmc_msgs_.clear();
+  }
+
+  void NovatelGps::GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages)
+  {
+    time_messages.resize(time_msgs_.size());
+    std::copy(time_msgs_.begin(), time_msgs_.end(), time_messages.begin());
+    time_msgs_.clear();
   }
 
   bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)

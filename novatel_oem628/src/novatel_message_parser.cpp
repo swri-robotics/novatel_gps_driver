@@ -246,14 +246,26 @@ namespace novatel_oem628
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
-      double& utc_offset)
+      novatel_msgs::TimePtr msg)
   {
     if (sentence.body.size() != NOVATEL_TIME_BODY_FIELDS)
     {
       return false;
     }
+    bool valid = true;
+    msg->clock_status = sentence.body[0];
+    valid &= ParseDouble(sentence.body[1], msg->offset);
+    valid &= ParseDouble(sentence.body[2], msg->offset_std);
+    valid &= ParseDouble(sentence.body[3], msg->utc_offset);
+    valid &= ParseUInt32(sentence.body[4], msg->utc_year, 10);
+    valid &= ParseUInt8(sentence.body[5], msg->utc_month, 10);
+    valid &= ParseUInt8(sentence.body[6], msg->utc_day, 10);
+    valid &= ParseUInt8(sentence.body[7], msg->utc_hour, 10);
+    valid &= ParseUInt8(sentence.body[8], msg->utc_minute, 10);
+    valid &= ParseUInt32(sentence.body[9], msg->utc_millisecond, 10);
+    msg->utc_status = sentence.body[10];
 
-    return swri_string_util::ToDouble(sentence.body[3], utc_offset);
+    return valid;
   }
 
   bool ParseNovatelVelMessage(
