@@ -94,6 +94,9 @@
 #include <swri_roscpp/publisher.h>
 #include <swri_roscpp/subscriber.h>
 
+#include <novatel_oem628/NovatelMessageHeader.h>
+#include <novatel_oem628/NovatelPosition.h>
+#include <novatel_oem628/NovatelVelocity.h>
 #include <novatel_oem628/Gpgga.h>
 #include <novatel_oem628/Gprmc.h>
 #include <novatel_oem628/novatel_gps.h>
@@ -112,6 +115,7 @@ namespace novatel_oem628
       connection_type_("serial"),
       publish_gpgsa_(false),
       publish_novatel_positions_(false),
+      publish_novatel_velocity_(false),
       publish_nmea_messages_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
@@ -148,6 +152,7 @@ namespace novatel_oem628
       swri::param(priv,"device", device_, device_);
       swri::param(priv,"publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
       swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
+      swri::param(priv,"publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
@@ -184,6 +189,11 @@ namespace novatel_oem628
       if (publish_novatel_positions_)
       {
         novatel_position_pub_ = swri::advertise<NovatelPosition>(node,"bestpos", 100);
+      }
+
+      if (publish_novatel_velocity_)
+      {
+        novatel_velocity_pub_ = swri::advertise<NovatelVelocity>(node,"bestvel", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -237,11 +247,15 @@ namespace novatel_oem628
       NovatelMessageOpts opts;
       opts["gpgga"] = 0.05;
       opts["gprmc"] = 0.05;
-      opts["bestposa"] = 0.05;
-      opts["timea"] = 1.0;
+      opts["bestposa"] = 0.05;  // Best position (ASCII)
+      opts["timea"] = 1.0;  // Time (ASCII)
       if (publish_gpgsa_)
       {
         opts["gpgsa"] = 1.0;
+      }
+      if (publish_novatel_velocity_)
+      {
+        opts["bestvela"] = 0.05;  // Best velocity (ASCII)
       }
 
       while (ros::ok())
@@ -368,6 +382,18 @@ namespace novatel_oem628
               }
             }
 
+            if (publish_novatel_velocity_)
+            {
+              std::vector<NovatelVelocityPtr> velocity_msgs;
+              gps_.GetNovatelVelocities(velocity_msgs);
+              for (size_t i = 0; i < velocity_msgs.size(); i++)
+              {
+                velocity_msgs[i]->header.stamp += sync_offset;
+                velocity_msgs[i]->header.frame_id = frame_id_;
+                novatel_velocity_pub_.publish(velocity_msgs[i]);
+              }
+            }
+
             for (size_t i = 0; i < fix_msgs.size(); i++)
             {
               fix_msgs[i]->header.stamp += sync_offset;
@@ -436,12 +462,14 @@ namespace novatel_oem628
     std::string connection_type_;
     bool publish_gpgsa_;
     bool publish_novatel_positions_;
+    bool publish_novatel_velocity_;
     bool publish_nmea_messages_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
 
     ros::Publisher gps_pub_;
     ros::Publisher novatel_position_pub_;
+    ros::Publisher novatel_velocity_pub_;
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsa_pub_;
     ros::Publisher gprmc_pub_;
