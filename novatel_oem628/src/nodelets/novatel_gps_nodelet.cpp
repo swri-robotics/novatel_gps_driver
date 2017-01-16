@@ -36,7 +36,7 @@
  *
  * Note: At this time, only serial connections to Novatel devices are
  * supported. Future versions of this driver may support TCP and UDP
- * connections. (TODO(kkozak): Verify the status of TCP and UDP support)
+ * connections.
  *
  * <b>Topics Subscribed:</b>
  *
@@ -49,25 +49,45 @@
  * \e gps <tt>gps_common/GPSFix</tt> - GPS data for navigation
  * \e gppga <tt>novatel_oem628/Gpgga</tt> - Raw GPGGA data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
+ * \e gpgsa <tt>novatel_oem628/Gpgga</tt> - Raw GPGSA data for debugging (only
+ *    published if `publish_gpgsa` is set `true`)
  * \e gprmc <tt>novatel_oem628/Gprmc</tt> - Raw GPRMC data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
  * \e bestpos <tt>novatel_oem628/NovatelPosition</tt> - High fidelity Novatel-
  *    specific position and receiver status data. (only published if
  *    `publish_novatel_positions` is set `true`)
+ * \e bestvel <tt>novatel_oem628/NovatelVelocity</tt> - High fidelity Novatel-
+ *    specific velocity and receiver status data. (only published if
+ *    `publish_novatel_velocity` is set `true`)
  *
  * <b>Parameters:</b>
  *
+ * \e buffer_capacity <tt>int</tt> - Size of the circular buffers used to sync
+ *    GPGGA, GPRMC, and BESTPOS messages. [10]
  * \e connection_type <tt>str</tt> - "serial", "udp", or "tcp" as appropriate
  *    for the Novatel device connected. Only "serial" is supported at this
  *    time. ["serial"]
  * \e device <tt>str</tt> - The path to the serial device, e.g. /dev/ttyUSB0
  *    [""]
+ * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
+ *    headers. [""]
+ * \e gpgga_gprmc_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for syncing
+ *    GPGGA messages with GPRMC messages. [0.01]
+ * \e gpgga_position_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for
+ *    syncing GPGGA messages with BESTPOS messages. [0.01]
+ * \e ignore_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic
+ *    [false]
  * \e publish_diagnostics <tt>bool</tt> - If set true, the driver publishes
  *    ROS diagnostics [true]
+ * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
+ *    messages from the device at 20 Hz and publishes them on `gpgsa`
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
  *    GPGGA and GPRMC messages (see Topics Published) [false]
  * \e publish_novatel_messages <tt>bool</tt> - If set true, the driver
  *    publishes Novatel Bestpos messages (see Topics Published) [false]
+ * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
+ *    publishes Novatel Bestvel messages (see Topics Published) [false]
+ * \e wait_for_position <tt>bool</tt> - ??? [false]
  */
 #include <string>
 
