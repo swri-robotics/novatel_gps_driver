@@ -256,6 +256,31 @@ namespace novatel_oem628
     return swri_string_util::ToDouble(sentence.body[3], utc_offset);
   }
 
+  bool ParseNovatelVelMessage(
+      const NovatelSentence& sentence,
+      novatel_oem628::NovatelVelocityPtr msg)
+  {
+    if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    if (sentence.body.size() != NOVATEL_VEL_BODY_FIELDS)
+    {
+      return false;
+    }
+    bool valid = true;
+    msg->solution_status = sentence.body[0];
+    msg->velocity_type = sentence.body[1];
+    valid = valid && ParseFloat(sentence.body[2], msg->latency);
+    valid = valid && ParseFloat(sentence.body[3], msg->age);
+    valid = valid && ParseDouble(sentence.body[4], msg->horizontal_speed);
+    valid = valid && ParseDouble(sentence.body[5], msg->track_ground);
+    valid = valid && ParseDouble(sentence.body[6], msg->vertical_speed);
+
+    return valid;
+  }
+
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
       novatel_oem628::NovatelPositionPtr msg)

@@ -42,6 +42,7 @@
 #include <novatel_oem628/NovatelPosition.h>
 #include <novatel_oem628/NovatelMessageHeader.h>
 #include <novatel_oem628/NovatelReceiverStatus.h>
+#include <novatel_oem628/NovatelVelocity.h>
 
 #define NOVATEL_CRC32_POLYNOMIAL       0xEDB88320L
 
@@ -63,6 +64,7 @@ namespace novatel_oem628
   const size_t NOVATEL_OMNIHPPOS_BODY_LENGTH = 21;
   const size_t NOVATEL_POS_MSG_BODY_LENGTH = 21;
   const size_t NOVATEL_TIME_BODY_FIELDS = 11;
+  const size_t NOVATEL_VEL_BODY_FIELDS = 8;
 
   enum NmeaMessageParseResult
   {
@@ -167,6 +169,10 @@ namespace novatel_oem628
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
       double& utc_offset);
+
+  bool ParseNovatelVelMessage(
+      const NovatelSentence& sentence,
+      novatel_oem628::NovatelVelocityPtr msg);
 
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
