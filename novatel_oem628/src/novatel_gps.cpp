@@ -180,7 +180,7 @@ namespace novatel_oem628
     {
       if (nmea_sentences_[i].id == "GPGGA")
       {
-        GpggaPtr gpgga = boost::make_shared<Gpgga>();
+        novatel_msgs::GpggaPtr gpgga = boost::make_shared<novatel_msgs::Gpgga>();
         NmeaMessageParseResult parse_result =
           parse_vectorized_gpgga_message(nmea_sentences_[i].body, gpgga);
 
@@ -211,7 +211,7 @@ namespace novatel_oem628
       }
       else if (nmea_sentences_[i].id == "GPRMC")
       {
-        GprmcPtr gprmc = boost::make_shared<Gprmc>();
+        novatel_msgs::GprmcPtr gprmc = boost::make_shared<novatel_msgs::Gprmc>();
         NmeaMessageParseResult parse_result =
           parse_vectorized_gprmc_message(nmea_sentences_[i].body, gprmc);
 
@@ -242,7 +242,7 @@ namespace novatel_oem628
       }
       else if (nmea_sentences_[i].id == "GPGSA")
       {
-        GpgsaPtr gpgsa = boost::make_shared<Gpgsa>();
+        novatel_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_msgs::Gpgsa>();
         NmeaMessageParseResult parse_result =
             parse_vectorized_gpgsa_message(nmea_sentences_[i].body, gpgsa);
         gpgsa_msgs_.push_back(gpgsa);
@@ -258,7 +258,7 @@ namespace novatel_oem628
     {
       if (novatel_sentences_[i].id == "BESTPOSA")
       {
-        NovatelPositionPtr position = boost::make_shared<NovatelPosition>();
+        novatel_msgs::NovatelPositionPtr position = boost::make_shared<novatel_msgs::NovatelPosition>();
         if (!parse_novatel_pos_msg(novatel_sentences_[i], position))
         {
           read_result = READ_PARSE_FAILED;
@@ -273,7 +273,7 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "BESTVELA")
       {
-        NovatelVelocityPtr velocity = boost::make_shared<NovatelVelocity>();
+        novatel_msgs::NovatelVelocityPtr velocity = boost::make_shared<novatel_msgs::NovatelVelocity>();
         if (!ParseNovatelVelMessage(novatel_sentences_[i], velocity))
         {
           read_result = READ_PARSE_FAILED;
@@ -304,14 +304,14 @@ namespace novatel_oem628
     return read_result;
   }
 
-  void NovatelGps::GetNovatelPositions(std::vector<NovatelPositionPtr>& positions)
+  void NovatelGps::GetNovatelPositions(std::vector<novatel_msgs::NovatelPositionPtr>& positions)
   {
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
   }
 
-  void NovatelGps::GetNovatelVelocities(std::vector<NovatelVelocityPtr>& velocities)
+  void NovatelGps::GetNovatelVelocities(std::vector<novatel_msgs::NovatelVelocityPtr>& velocities)
   {
     velocities.resize(novatel_velocities_.size());
     std::copy(novatel_velocities_.begin(), novatel_velocities_.end(), velocities.begin());
@@ -428,21 +428,21 @@ namespace novatel_oem628
     }  // while (gpgga and gprmc buffers contain messages)
   }
 
-  void NovatelGps::GetGpggaMessages(std::vector<GpggaPtr>& gpgga_messages)
+  void NovatelGps::GetGpggaMessages(std::vector<novatel_msgs::GpggaPtr>& gpgga_messages)
   {
     gpgga_messages.clear();
     gpgga_messages.insert(gpgga_messages.end(), gpgga_msgs_.begin(), gpgga_msgs_.end());
     gpgga_msgs_.clear();
   }
 
-  void NovatelGps::GetGpgsaMessages(std::vector<GpgsaPtr>& gpgsa_messages)
+  void NovatelGps::GetGpgsaMessages(std::vector<novatel_msgs::GpgsaPtr>& gpgsa_messages)
   {
     gpgsa_messages.resize(gpgsa_msgs_.size());
     std::copy(gpgsa_msgs_.begin(), gpgsa_msgs_.end(), gpgsa_messages.begin());
     gpgsa_msgs_.clear();
   }
 
-  void NovatelGps::GetGprmcMessages(std::vector<GprmcPtr>& gprmc_messages)
+  void NovatelGps::GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages)
   {
     gprmc_messages.clear();
     gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());

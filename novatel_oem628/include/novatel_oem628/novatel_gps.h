@@ -40,11 +40,11 @@
 #include <swri_serial_util/serial_port.h>
 
 #include <gps_common/GPSFix.h>
-#include <novatel_oem628/NovatelPosition.h>
-#include <novatel_oem628/NovatelVelocity.h>
-#include <novatel_oem628/Gpgga.h>
-#include <novatel_oem628/Gpgsa.h>
-#include <novatel_oem628/Gprmc.h>
+#include <novatel_msgs/NovatelPosition.h>
+#include <novatel_msgs/NovatelVelocity.h>
+#include <novatel_msgs/Gpgga.h>
+#include <novatel_msgs/Gpgsa.h>
+#include <novatel_msgs/Gprmc.h>
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628
@@ -108,12 +108,12 @@ namespace novatel_oem628
 
       ReadResult ProcessData();
 
-      void GetNovatelPositions(std::vector<NovatelPositionPtr>& positions);
-      void GetNovatelVelocities(std::vector<NovatelVelocityPtr>& velocities);
+      void GetNovatelPositions(std::vector<novatel_msgs::NovatelPositionPtr>& positions);
+      void GetNovatelVelocities(std::vector<novatel_msgs::NovatelVelocityPtr>& velocities);
       void GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages);
-      void GetGpggaMessages(std::vector<GpggaPtr>& gpgga_messages);
-      void GetGpgsaMessages(std::vector<GpgsaPtr>& gpgsa_messages);
-      void GetGprmcMessages(std::vector<GprmcPtr>& gprmc_messages);
+      void GetGpggaMessages(std::vector<novatel_msgs::GpggaPtr>& gpgga_messages);
+      void GetGpgsaMessages(std::vector<novatel_msgs::GpgsaPtr>& gpgsa_messages);
+      void GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages);
 
       std::string ErrorMsg() const { return error_msg_; }
 
@@ -152,15 +152,15 @@ namespace novatel_oem628
       std::vector<NovatelSentence> novatel_sentences_;
 
       // Message buffers
-      boost::circular_buffer<NovatelPositionPtr> novatel_positions_;
-      boost::circular_buffer<NovatelVelocityPtr> novatel_velocities_;
-      boost::circular_buffer<GpggaPtr> gpgga_msgs_;
-      boost::circular_buffer<GpgsaPtr> gpgsa_msgs_;
-      boost::circular_buffer<GprmcPtr> gprmc_msgs_;
+      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> novatel_positions_;
+      boost::circular_buffer<novatel_msgs::NovatelVelocityPtr> novatel_velocities_;
+      boost::circular_buffer<novatel_msgs::GpggaPtr> gpgga_msgs_;
+      boost::circular_buffer<novatel_msgs::GpgsaPtr> gpgsa_msgs_;
+      boost::circular_buffer<novatel_msgs::GprmcPtr> gprmc_msgs_;
 
-      boost::circular_buffer<Gpgga> gpgga_sync_buffer_;
-      boost::circular_buffer<Gprmc> gprmc_sync_buffer_;
-      boost::circular_buffer<NovatelPositionPtr> position_sync_buffer_;
+      boost::circular_buffer<novatel_msgs::Gpgga> gpgga_sync_buffer_;
+      boost::circular_buffer<novatel_msgs::Gprmc> gprmc_sync_buffer_;
+      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> position_sync_buffer_;
 
       std::string error_msg_;
   };
