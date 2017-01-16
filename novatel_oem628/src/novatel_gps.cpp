@@ -47,6 +47,7 @@ namespace novatel_oem628
       tcp_socket_(io_service_),
       udp_socket_(io_service_),
       novatel_positions_(MAX_BUFFER_SIZE),
+      novatel_velocities_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
@@ -270,6 +271,20 @@ namespace novatel_oem628
           position_sync_buffer_.push_back(position);
         }
       }
+      else if (novatel_sentences_[i].id == "BESTVELA")
+      {
+        NovatelVelocityPtr velocity = boost::make_shared<NovatelVelocity>();
+        if (!ParseNovatelVelMessage(novatel_sentences_[i], velocity))
+        {
+          read_result = READ_PARSE_FAILED;
+          error_msg_ = "Failed to parse the Novatel BestVel message.";
+        }
+        else
+        {
+          velocity->header.stamp = stamp;
+          novatel_velocities_.push_back(velocity);
+        }
+      }
       else if (novatel_sentences_[i].id == "TIMEA")
       {
         double offset = 0;
@@ -294,6 +309,13 @@ namespace novatel_oem628
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
+  }
+
+  void NovatelGps::GetNovatelVelocities(std::vector<NovatelVelocityPtr>& velocities)
+  {
+    velocities.resize(novatel_velocities_.size());
+    std::copy(novatel_velocities_.begin(), novatel_velocities_.end(), velocities.begin());
+    novatel_velocities_.clear();
   }
 
   void NovatelGps::GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages)

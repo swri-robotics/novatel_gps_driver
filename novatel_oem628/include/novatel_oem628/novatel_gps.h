@@ -41,6 +41,7 @@
 
 #include <gps_common/GPSFix.h>
 #include <novatel_oem628/NovatelPosition.h>
+#include <novatel_oem628/NovatelVelocity.h>
 #include <novatel_oem628/Gpgga.h>
 #include <novatel_oem628/Gpgsa.h>
 #include <novatel_oem628/Gprmc.h>
@@ -108,6 +109,7 @@ namespace novatel_oem628
       ReadResult ProcessData();
 
       void GetNovatelPositions(std::vector<NovatelPositionPtr>& positions);
+      void GetNovatelVelocities(std::vector<NovatelVelocityPtr>& velocities);
       void GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages);
       void GetGpggaMessages(std::vector<GpggaPtr>& gpgga_messages);
       void GetGpgsaMessages(std::vector<GpgsaPtr>& gpgsa_messages);
@@ -151,6 +153,7 @@ namespace novatel_oem628
 
       // Message buffers
       boost::circular_buffer<NovatelPositionPtr> novatel_positions_;
+      boost::circular_buffer<NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<GprmcPtr> gprmc_msgs_;
