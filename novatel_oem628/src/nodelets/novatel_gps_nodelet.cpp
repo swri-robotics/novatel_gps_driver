@@ -59,6 +59,8 @@
  * \e bestvel <tt>novatel_msgs/NovatelVelocity</tt> - High fidelity Novatel-
  *    specific velocity and receiver status data. (only published if
  *    `publish_novatel_velocity` is set `true`)
+ * \e time <tt>novatel_msgs/Time</tt> - Novatel-specific time data. (Only
+ *    published if `publish_time` is set `true`.)
  *
  * <b>Parameters:</b>
  *
@@ -87,6 +89,8 @@
  *    publishes Novatel Bestpos messages (see Topics Published) [false]
  * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
  *    publishes Novatel Bestvel messages (see Topics Published) [false]
+ * \e publish_time <tt>bool</tt> - If set true, the driver publishes Novatel
+ *    Time messages (see Topics Published) [false]
  * \e wait_for_position <tt>bool</tt> - ??? [false]
  */
 #include <string>
@@ -101,27 +105,26 @@
 #include <boost/accumulators/statistics/variance.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <ros/ros.h>
-#include <nodelet/nodelet.h>
-
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
 #include <gps_common/GPSFix.h>
-#include <std_msgs/Time.h>
-#include <swri_math_util/math_util.h>
-#include <swri_roscpp/parameters.h>
-#include <swri_roscpp/publisher.h>
-#include <swri_roscpp/subscriber.h>
-
+#include <nodelet/nodelet.h>
 #include <novatel_msgs/NovatelMessageHeader.h>
 #include <novatel_msgs/NovatelPosition.h>
 #include <novatel_msgs/NovatelVelocity.h>
 #include <novatel_msgs/Gpgga.h>
 #include <novatel_msgs/Gprmc.h>
-#include <novatel_oem628/novatel_gps.h>
 #include <novatel_msgs/NovatelMessageHeader.h>
 #include <novatel_msgs/NovatelPosition.h>
+#include <novatel_msgs/Time.h>
+#include <novatel_oem628/novatel_gps.h>
+#include <ros/ros.h>
+#include <std_msgs/Time.h>
+#include <swri_math_util/math_util.h>
+#include <swri_roscpp/parameters.h>
+#include <swri_roscpp/publisher.h>
+#include <swri_roscpp/subscriber.h>
 
 namespace stats = boost::accumulators;
 
@@ -137,6 +140,7 @@ namespace novatel_oem628
       publish_novatel_positions_(false),
       publish_novatel_velocity_(false),
       publish_nmea_messages_(false),
+      publish_time_messages_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
       connection_(NovatelGps::SERIAL),
@@ -174,6 +178,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
       swri::param(priv,"publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
+      swri::param(priv,"publish_time_messages", publish_time_messages_, publish_time_messages_);
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
 
@@ -214,6 +219,11 @@ namespace novatel_oem628
       if (publish_novatel_velocity_)
       {
         novatel_velocity_pub_ = swri::advertise<novatel_msgs::NovatelVelocity>(node,"bestvel", 100);
+      }
+
+      if (publish_time_messages_)
+      {
+        time_pub_ = swri::advertise<novatel_msgs::Time>(node, "time", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -413,6 +423,17 @@ namespace novatel_oem628
                 novatel_velocity_pub_.publish(velocity_msgs[i]);
               }
             }
+            if (publish_time_messages_)
+            {
+              std::vector<novatel_msgs::TimePtr> time_msgs;
+              gps_.GetTimeMessages(time_msgs);
+              for (size_t i = 0; i < time_msgs.size(); i++)
+              {
+                time_msgs[i]->header.stamp += sync_offset;
+                time_msgs[i]->header.frame_id = frame_id_;
+                time_pub_.publish(time_msgs[i]);
+              }
+            }
 
             for (size_t i = 0; i < fix_msgs.size(); i++)
             {
@@ -484,6 +505,7 @@ namespace novatel_oem628
     bool publish_novatel_positions_;
     bool publish_novatel_velocity_;
     bool publish_nmea_messages_;
+    bool publish_time_messages_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
 
@@ -493,6 +515,7 @@ namespace novatel_oem628
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsa_pub_;
     ros::Publisher gprmc_pub_;
+    ros::Publisher time_pub_;
 
     NovatelGps::ConnectionType connection_;
     NovatelGps gps_;

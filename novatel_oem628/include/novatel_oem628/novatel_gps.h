@@ -40,11 +40,12 @@
 #include <swri_serial_util/serial_port.h>
 
 #include <gps_common/GPSFix.h>
-#include <novatel_msgs/NovatelPosition.h>
-#include <novatel_msgs/NovatelVelocity.h>
 #include <novatel_msgs/Gpgga.h>
 #include <novatel_msgs/Gpgsa.h>
 #include <novatel_msgs/Gprmc.h>
+#include <novatel_msgs/NovatelPosition.h>
+#include <novatel_msgs/NovatelVelocity.h>
+#include <novatel_msgs/Time.h>
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628
@@ -114,6 +115,7 @@ namespace novatel_oem628
       void GetGpggaMessages(std::vector<novatel_msgs::GpggaPtr>& gpgga_messages);
       void GetGpgsaMessages(std::vector<novatel_msgs::GpgsaPtr>& gpgsa_messages);
       void GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages);
+      void GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages);
 
       std::string ErrorMsg() const { return error_msg_; }
 
@@ -157,6 +159,7 @@ namespace novatel_oem628
       boost::circular_buffer<novatel_msgs::GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<novatel_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_msgs::GprmcPtr> gprmc_msgs_;
+      boost::circular_buffer<novatel_msgs::TimePtr> time_msgs_;
 
       boost::circular_buffer<novatel_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_msgs::Gprmc> gprmc_sync_buffer_;

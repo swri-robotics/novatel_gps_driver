@@ -43,6 +43,7 @@
 #include <novatel_msgs/NovatelMessageHeader.h>
 #include <novatel_msgs/NovatelReceiverStatus.h>
 #include <novatel_msgs/NovatelVelocity.h>
+#include <novatel_msgs/Time.h>
 
 #define NOVATEL_CRC32_POLYNOMIAL       0xEDB88320L
 
@@ -168,7 +169,7 @@ namespace novatel_oem628
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
-      double& utc_offset);
+      novatel_msgs::TimePtr time);
 
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
