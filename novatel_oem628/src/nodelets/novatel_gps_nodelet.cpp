@@ -137,6 +137,7 @@ namespace novatel_oem628
       device_(""),
       connection_type_("serial"),
       publish_gpgsa_(false),
+      publish_gpgsv_(false),
       publish_novatel_positions_(false),
       publish_novatel_velocity_(false),
       publish_nmea_messages_(false),
@@ -175,6 +176,7 @@ namespace novatel_oem628
 
       swri::param(priv,"device", device_, device_);
       swri::param(priv,"publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
+      swri::param(priv,"publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
       swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
       swri::param(priv,"publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
@@ -209,6 +211,11 @@ namespace novatel_oem628
       if (publish_gpgsa_)
       {
         gpgsa_pub_ = swri::advertise<novatel_msgs::Gpgsa>(node, "gpgsa", 100);
+      }
+
+      if (publish_gpgsv_)
+      {
+        gpgsv_pub_ = swri::advertise<novatel_msgs::Gpgsv>(node, "gpgsv", 100);
       }
 
       if (publish_novatel_positions_)
@@ -282,6 +289,10 @@ namespace novatel_oem628
       if (publish_gpgsa_)
       {
         opts["gpgsa"] = 1.0;
+      }
+      if (publish_gpgsv_)
+      {
+        opts["gpgsv"] = 1.0;
       }
       if (publish_novatel_velocity_)
       {
@@ -402,6 +413,18 @@ namespace novatel_oem628
               }
             }
 
+            if (publish_gpgsv_)
+            {
+              std::vector<novatel_msgs::GpgsvPtr> gpgsv_msgs;
+              gps_.GetGpgsvMessages(gpgsv_msgs);
+              for (size_t i = 0; i < gpgsv_msgs.size(); ++i)
+              {
+                gpgsv_msgs[i]->header.stamp = ros::Time::now();;
+                gpgsv_msgs[i]->header.frame_id = frame_id_;
+                gpgsv_pub_.publish(gpgsv_msgs[i]);
+              }
+            }
+
             if (publish_novatel_positions_)
             {
               for (size_t i = 0; i < position_msgs.size(); i++)
@@ -502,6 +525,7 @@ namespace novatel_oem628
     /// The connection type, ("serial", "tcp", or "udp")
     std::string connection_type_;
     bool publish_gpgsa_;
+    bool publish_gpgsv_;
     bool publish_novatel_positions_;
     bool publish_novatel_velocity_;
     bool publish_nmea_messages_;
@@ -513,6 +537,7 @@ namespace novatel_oem628
     ros::Publisher novatel_position_pub_;
     ros::Publisher novatel_velocity_pub_;
     ros::Publisher gpgga_pub_;
+    ros::Publisher gpgsv_pub_;
     ros::Publisher gpgsa_pub_;
     ros::Publisher gprmc_pub_;
     ros::Publisher time_pub_;
