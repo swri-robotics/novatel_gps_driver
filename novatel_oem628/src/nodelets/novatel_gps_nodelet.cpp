@@ -36,7 +36,7 @@
  *
  * Note: At this time, only serial connections to Novatel devices are
  * supported. Future versions of this driver may support TCP and UDP
- * connections. (TODO(kkozak): Verify the status of TCP and UDP support)
+ * connections.
  *
  * <b>Topics Subscribed:</b>
  *
@@ -49,25 +49,45 @@
  * \e gps <tt>gps_common/GPSFix</tt> - GPS data for navigation
  * \e gppga <tt>novatel_oem628/Gpgga</tt> - Raw GPGGA data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
- * \e gprmc <tt>novatel_oem628/Gprmc</tt> - Raw GPRMC data for debugging (only
+ * \e gpgsa <tt>novatel_msgs/Gpgga</tt> - Raw GPGSA data for debugging (only
+ *    published if `publish_gpgsa` is set `true`)
+ * \e gprmc <tt>novatel_msgs/Gprmc</tt> - Raw GPRMC data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
- * \e bestpos <tt>novatel_oem628/NovatelPosition</tt> - High fidelity Novatel-
+ * \e bestpos <tt>novatel_msgs/NovatelPosition</tt> - High fidelity Novatel-
  *    specific position and receiver status data. (only published if
  *    `publish_novatel_positions` is set `true`)
+ * \e bestvel <tt>novatel_msgs/NovatelVelocity</tt> - High fidelity Novatel-
+ *    specific velocity and receiver status data. (only published if
+ *    `publish_novatel_velocity` is set `true`)
  *
  * <b>Parameters:</b>
  *
+ * \e buffer_capacity <tt>int</tt> - Size of the circular buffers used to sync
+ *    GPGGA, GPRMC, and BESTPOS messages. [10]
  * \e connection_type <tt>str</tt> - "serial", "udp", or "tcp" as appropriate
  *    for the Novatel device connected. Only "serial" is supported at this
  *    time. ["serial"]
  * \e device <tt>str</tt> - The path to the serial device, e.g. /dev/ttyUSB0
  *    [""]
+ * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
+ *    headers. [""]
+ * \e gpgga_gprmc_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for syncing
+ *    GPGGA messages with GPRMC messages. [0.01]
+ * \e gpgga_position_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for
+ *    syncing GPGGA messages with BESTPOS messages. [0.01]
+ * \e ignore_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic
+ *    [false]
  * \e publish_diagnostics <tt>bool</tt> - If set true, the driver publishes
  *    ROS diagnostics [true]
+ * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
+ *    messages from the device at 20 Hz and publishes them on `gpgsa`
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
  *    GPGGA and GPRMC messages (see Topics Published) [false]
  * \e publish_novatel_messages <tt>bool</tt> - If set true, the driver
  *    publishes Novatel Bestpos messages (see Topics Published) [false]
+ * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
+ *    publishes Novatel Bestvel messages (see Topics Published) [false]
+ * \e wait_for_position <tt>bool</tt> - ??? [false]
  */
 #include <string>
 
@@ -94,14 +114,14 @@
 #include <swri_roscpp/publisher.h>
 #include <swri_roscpp/subscriber.h>
 
-#include <novatel_oem628/NovatelMessageHeader.h>
-#include <novatel_oem628/NovatelPosition.h>
-#include <novatel_oem628/NovatelVelocity.h>
-#include <novatel_oem628/Gpgga.h>
-#include <novatel_oem628/Gprmc.h>
+#include <novatel_msgs/NovatelMessageHeader.h>
+#include <novatel_msgs/NovatelPosition.h>
+#include <novatel_msgs/NovatelVelocity.h>
+#include <novatel_msgs/Gpgga.h>
+#include <novatel_msgs/Gprmc.h>
 #include <novatel_oem628/novatel_gps.h>
-#include <novatel_oem628/NovatelMessageHeader.h>
-#include <novatel_oem628/NovatelPosition.h>
+#include <novatel_msgs/NovatelMessageHeader.h>
+#include <novatel_msgs/NovatelPosition.h>
 
 namespace stats = boost::accumulators;
 
@@ -177,23 +197,23 @@ namespace novatel_oem628
 
       if (publish_nmea_messages_)
       {
-        gpgga_pub_ = swri::advertise<Gpgga>(node,"gpgga", 100);
-        gprmc_pub_ = swri::advertise<Gprmc>(node,"gprmc", 100);
+        gpgga_pub_ = swri::advertise<novatel_msgs::Gpgga>(node,"gpgga", 100);
+        gprmc_pub_ = swri::advertise<novatel_msgs::Gprmc>(node,"gprmc", 100);
       }
 
       if (publish_gpgsa_)
       {
-        gpgsa_pub_ = swri::advertise<Gpgsa>(node, "gpgsa", 100);
+        gpgsa_pub_ = swri::advertise<novatel_msgs::Gpgsa>(node, "gpgsa", 100);
       }
 
       if (publish_novatel_positions_)
       {
-        novatel_position_pub_ = swri::advertise<NovatelPosition>(node,"bestpos", 100);
+        novatel_position_pub_ = swri::advertise<novatel_msgs::NovatelPosition>(node,"bestpos", 100);
       }
 
       if (publish_novatel_velocity_)
       {
-        novatel_velocity_pub_ = swri::advertise<NovatelVelocity>(node,"bestvel", 100);
+        novatel_velocity_pub_ = swri::advertise<novatel_msgs::NovatelVelocity>(node,"bestvel", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -239,10 +259,10 @@ namespace novatel_oem628
      */
     void Spin()
     {
-      std::vector<NovatelPositionPtr> position_msgs;
+      std::vector<novatel_msgs::NovatelPositionPtr> position_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
-      std::vector<GpggaPtr> gpgga_msgs;
-      std::vector<GprmcPtr> gprmc_msgs;
+      std::vector<novatel_msgs::GpggaPtr> gpgga_msgs;
+      std::vector<novatel_msgs::GprmcPtr> gprmc_msgs;
 
       NovatelMessageOpts opts;
       opts["gpgga"] = 0.05;
@@ -362,7 +382,7 @@ namespace novatel_oem628
 
             if (publish_gpgsa_)
             {
-              std::vector<GpgsaPtr> gpgsa_msgs;
+              std::vector<novatel_msgs::GpgsaPtr> gpgsa_msgs;
               gps_.GetGpgsaMessages(gpgsa_msgs);
               for (size_t i = 0; i < gpgsa_msgs.size(); ++i)
               {
@@ -384,7 +404,7 @@ namespace novatel_oem628
 
             if (publish_novatel_velocity_)
             {
-              std::vector<NovatelVelocityPtr> velocity_msgs;
+              std::vector<novatel_msgs::NovatelVelocityPtr> velocity_msgs;
               gps_.GetNovatelVelocities(velocity_msgs);
               for (size_t i = 0; i < velocity_msgs.size(); i++)
               {
@@ -510,7 +530,7 @@ namespace novatel_oem628
     int32_t publish_rate_warnings_;
     int32_t measurement_count_;
     ros::Time last_published_;
-    NovatelPositionPtr last_novatel_position_;
+    novatel_msgs::NovatelPositionPtr last_novatel_position_;
 
     std::string frame_id_;
     
@@ -579,7 +599,7 @@ namespace novatel_oem628
       status.add("Satellites Used", static_cast<int>(last_novatel_position_->num_satellites_used_in_solution));
       status.add("Software Version", last_novatel_position_->novatel_msg_header.receiver_software_version);
 
-      const NovatelReceiverStatus& rcvr_status = last_novatel_position_->novatel_msg_header.receiver_status;
+      const novatel_msgs::NovatelReceiverStatus& rcvr_status = last_novatel_position_->novatel_msg_header.receiver_status;
       status.add("Status Code", rcvr_status.original_status_code);
 
       if (last_novatel_position_->novatel_msg_header.receiver_status.original_status_code != 0)

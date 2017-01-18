@@ -142,7 +142,7 @@ namespace novatel_oem628
 
   void get_novatel_receiver_status_msg(
       uint32_t status,
-      novatel_oem628::NovatelReceiverStatus& receiver_status_msg)
+      novatel_msgs::NovatelReceiverStatus& receiver_status_msg)
   {
     receiver_status_msg.original_status_code = status;
     receiver_status_msg.error_flag = status & 0x00000001;
@@ -172,7 +172,7 @@ namespace novatel_oem628
 
   void get_extended_solution_status_msg(
       uint32_t status,
-      novatel_oem628::NovatelExtendedSolutionStatus& msg)
+      novatel_msgs::NovatelExtendedSolutionStatus& msg)
   {
     msg.original_mask = status;
     msg.advance_rtk_verified = 0x01 & status;
@@ -203,7 +203,7 @@ namespace novatel_oem628
     }
   }
 
-  void get_signals_used(uint32_t mask, novatel_oem628::NovatelSignalMask& msg)
+  void get_signals_used(uint32_t mask, novatel_msgs::NovatelSignalMask& msg)
   {
     msg.original_mask = mask;
     msg.gps_L1_used_in_solution = mask & 0x01;
@@ -215,7 +215,7 @@ namespace novatel_oem628
 
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,
-      novatel_oem628::NovatelMessageHeader& msg)
+      novatel_msgs::NovatelMessageHeader& msg)
   {
     if (header.size() != NOVATEL_MESSAGE_HEADER_LENGTH)
     {
@@ -258,7 +258,7 @@ namespace novatel_oem628
 
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
-      novatel_oem628::NovatelVelocityPtr msg)
+      novatel_msgs::NovatelVelocityPtr msg)
   {
     if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
     {
@@ -283,7 +283,7 @@ namespace novatel_oem628
 
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
-      novatel_oem628::NovatelPositionPtr msg)
+      novatel_msgs::NovatelPositionPtr msg)
   {
     if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
     {
@@ -579,7 +579,7 @@ namespace novatel_oem628
 
   NmeaMessageParseResult parse_vectorized_gpgga_message(
       std::vector<std::string>& vec,
-      novatel_oem628::GpggaPtr msg)
+      novatel_msgs::GpggaPtr msg)
   {
     // Check the length first -- should be 15 elements long
     const size_t MAX_LEN = 15;
@@ -659,7 +659,7 @@ namespace novatel_oem628
 
   NmeaMessageParseResult parse_vectorized_gpgsa_message(
       std::vector<std::string>& vec,
-      novatel_oem628::GpgsaPtr msg)
+      novatel_msgs::GpgsaPtr msg)
   {
     // Check the length first -- should be 18 elements long
     const size_t LENGTH = 18;
@@ -695,7 +695,7 @@ namespace novatel_oem628
 
   NmeaMessageParseResult parse_vectorized_gprmc_message(
       std::vector<std::string>& vec,
-      novatel_oem628::GprmcPtr msg)
+      novatel_msgs::GprmcPtr msg)
   {
     // Check the length first -- should be 15 elements long
     const size_t EXPECTED_LEN = 13;
@@ -771,8 +771,8 @@ namespace novatel_oem628
 
 
   void get_gps_fix_message(
-      const novatel_oem628::Gprmc& gprmc,
-      const novatel_oem628::Gpgga& gpgga,
+      const novatel_msgs::Gprmc& gprmc,
+      const novatel_msgs::Gpgga& gpgga,
       gps_common::GPSFixPtr gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
