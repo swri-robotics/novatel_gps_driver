@@ -47,7 +47,9 @@ add_message_files(DIRECTORY msg FILES
   NovatelMessageHeader.msg
   NovatelPosition.msg
   NovatelReceiverStatus.msg
-  NovatelSignalMask.msg)
+  NovatelSignalMask.msg
+  NovatelVelocity.msg
+)
 
 generate_messages(DEPENDENCIES ${MSGS_DEPS})
 
