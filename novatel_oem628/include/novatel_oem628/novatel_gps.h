@@ -114,6 +114,7 @@ namespace novatel_oem628
       void GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages);
       void GetGpggaMessages(std::vector<novatel_msgs::GpggaPtr>& gpgga_messages);
       void GetGpgsaMessages(std::vector<novatel_msgs::GpgsaPtr>& gpgsa_messages);
+      void GetGpgsvMessages(std::vector<novatel_msgs::GpgsvPtr>& gpgsv_messages);
       void GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages);
       void GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages);
 
@@ -158,6 +159,7 @@ namespace novatel_oem628
       boost::circular_buffer<novatel_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_msgs::GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<novatel_msgs::GpgsaPtr> gpgsa_msgs_;
+      boost::circular_buffer<novatel_msgs::GpgsvPtr> gpgsv_msgs_;
       boost::circular_buffer<novatel_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_msgs::TimePtr> time_msgs_;
 
