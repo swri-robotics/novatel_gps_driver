@@ -117,6 +117,7 @@
 #include <diagnostic_updater/publisher.h>
 #include <gps_common/GPSFix.h>
 #include <nodelet/nodelet.h>
+#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelMessageHeader.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
@@ -128,6 +129,7 @@
 #include <novatel_gps_msgs/Time.h>
 #include <novatel_oem628/novatel_gps.h>
 #include <ros/ros.h>
+#include <sensor_msgs/Imu.h>
 #include <std_msgs/Time.h>
 #include <swri_math_util/math_util.h>
 #include <swri_roscpp/parameters.h>
@@ -147,6 +149,8 @@ namespace novatel_oem628
       polling_period_(0.05),
       publish_gpgsa_(false),
       publish_gpgsv_(false),
+      imu_rate_(100.0),
+      publish_imu_messages_(false),
       publish_novatel_positions_(false),
       publish_novatel_velocity_(false),
       publish_nmea_messages_(false),
@@ -167,6 +171,7 @@ namespace novatel_oem628
       publish_rate_warnings_(0),
       measurement_count_(0),
       last_published_(ros::TIME_MIN),
+      imu_frame_id_(""),
       frame_id_("")
     {
     }
@@ -186,8 +191,10 @@ namespace novatel_oem628
       ros::NodeHandle &priv = getPrivateNodeHandle();
 
       swri::param(priv,"device", device_, device_);
+      swri::param(priv,"imu_rate", imu_rate_, imu_rate_);
       swri::param(priv,"publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
       swri::param(priv,"publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
+      swri::param(priv,"publish_imu_messages", publish_imu_messages_, publish_imu_messages_);
       swri::param(priv,"publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
       swri::param(priv,"publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
@@ -201,6 +208,7 @@ namespace novatel_oem628
       swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
 
+      swri::param(priv,"imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv,"frame_id", frame_id_, std::string(""));
       
       //set NovatelGps parameters
@@ -225,6 +233,12 @@ namespace novatel_oem628
       if (publish_gpgsa_)
       {
         gpgsa_pub_ = swri::advertise<novatel_gps_msgs::Gpgsa>(node, "gpgsa", 100);
+      }
+
+      if (publish_imu_messages_)
+      {
+        imu_pub_ = swri::advertise<sensor_msgs::Imu>(node, "imu", 100);
+        novatel_imu_pub_= swri::advertise<novatel_gps_msgs::NovatelCorrectedImuData>(node, "corrimudatas", 100);
       }
 
       if (publish_gpgsv_)
@@ -303,6 +317,7 @@ namespace novatel_oem628
       std::vector<gps_common::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
+      std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_msgs;
 
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
@@ -317,6 +332,10 @@ namespace novatel_oem628
       if (publish_gpgsv_)
       {
         opts["gpgsv"] = polling_period_;
+      }
+      if (publish_imu_messages_)
+      {
+        opts["corrimudatasb"] = 1.0 / imu_rate_;
       }
       if (publish_novatel_velocity_)
       {
@@ -456,6 +475,47 @@ namespace novatel_oem628
               }
             }
 
+            if (publish_imu_messages_)
+            {
+              bool imu_has_subscribers = imu_pub_.getNumSubscribers() > 0;
+              bool novatel_imu_has_subscribers = novatel_imu_pub_.getNumSubscribers() > 0;
+              if (imu_has_subscribers || novatel_imu_has_subscribers)
+              {
+                gps_.GetNovatelCorrectedImuData(imu_msgs);
+                std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>::iterator iter;
+
+                for (iter = imu_msgs.begin(); iter != imu_msgs.end(); iter++)
+                {
+                  (*iter)->header.frame_id = imu_frame_id_;
+
+                  if (novatel_imu_has_subscribers)
+                  {
+                    novatel_imu_pub_.publish(*iter);
+                  }
+
+                  if (imu_has_subscribers)
+                  {
+                    sensor_msgs::ImuPtr msg = boost::make_shared<sensor_msgs::Imu>();
+                    // The raw values returned from the device are instantaneous
+                    // measurements; attitude rates are in radians and accelerations
+                    // are in m/s.
+                    // The ROS Imu message wants them in rad/s and m/s^2, so we
+                    // multiply them by our data rate to get that.
+                    msg->header.frame_id = imu_frame_id_;
+                    msg->header.stamp = (*iter)->header.stamp;
+                    msg->orientation_covariance[0] = -1;
+                    msg->angular_velocity.x = (*iter)->pitch_rate * imu_rate_;
+                    msg->angular_velocity.y = (*iter)->roll_rate * imu_rate_;
+                    msg->angular_velocity.z = (*iter)->yaw_rate * imu_rate_;
+                    msg->linear_acceleration.x = (*iter)->lateral_acceleration * imu_rate_;
+                    msg->linear_acceleration.y = (*iter)->longitudinal_acceleration * imu_rate_;
+                    msg->linear_acceleration.z = (*iter)->vertical_acceleration * imu_rate_;
+                    imu_pub_.publish(msg);
+                  }
+                }
+              }
+            }
+
             if (publish_novatel_positions_)
             {
               for (size_t i = 0; i < position_msgs.size(); i++)
@@ -582,6 +642,9 @@ namespace novatel_oem628
     double polling_period_;
     bool publish_gpgsa_;
     bool publish_gpgsv_;
+    /// The rate of data to expect for IMU measurements, in Hz
+    double imu_rate_;
+    bool publish_imu_messages_;
     bool publish_novatel_positions_;
     bool publish_novatel_velocity_;
     bool publish_nmea_messages_;
@@ -592,6 +655,8 @@ namespace novatel_oem628
     bool ignore_sync_diagnostic;
 
     ros::Publisher gps_pub_;
+    ros::Publisher imu_pub_;
+    ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
     ros::Publisher novatel_velocity_pub_;
     ros::Publisher gpgga_pub_;
@@ -640,6 +705,7 @@ namespace novatel_oem628
     ros::Time last_published_;
     novatel_gps_msgs::NovatelPositionPtr last_novatel_position_;
 
+    std::string imu_frame_id_;
     std::string frame_id_;
     
     /**

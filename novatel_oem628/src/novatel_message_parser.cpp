@@ -329,6 +329,28 @@ namespace novatel_oem628
     return valid;
   }
 
+  bool ParseNovatelCorrectedImuMessage(const NovatelSentence& sentence, 
+                                       novatel_gps_msgs::NovatelCorrectedImuDataPtr msg)
+  {
+    if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    bool valid = true;
+
+    valid &= ParseUInt32(sentence.body[0], msg->gps_week_num);
+    valid &= ParseDouble(sentence.body[1], msg->gps_seconds);
+    valid &= ParseDouble(sentence.body[2], msg->pitch_rate);
+    valid &= ParseDouble(sentence.body[3], msg->roll_rate);
+    valid &= ParseDouble(sentence.body[4], msg->yaw_rate);
+    valid &= ParseDouble(sentence.body[5], msg->lateral_acceleration);
+    valid &= ParseDouble(sentence.body[6], msg->longitudinal_acceleration);
+    valid &= ParseDouble(sentence.body[7], msg->vertical_acceleration);
+
+    return valid;
+  }
+
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
       novatel_gps_msgs::TimePtr msg)

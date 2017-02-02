@@ -16,6 +16,7 @@
   <depend>nodelet</depend>
   <depend>novatel_gps_msgs</depend>
   <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>swri_math_util</depend>
   <depend>swri_roscpp</depend>

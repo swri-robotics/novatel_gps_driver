@@ -40,6 +40,7 @@
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gpgsv.h>
 #include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelMessageHeader.h>
 #include <novatel_gps_msgs/NovatelReceiverStatus.h>
@@ -176,6 +177,10 @@ namespace novatel_oem628
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,
       novatel_gps_msgs::NovatelMessageHeader& novatel_msg_header);
+
+  bool ParseNovatelCorrectedImuMessage(
+      const NovatelSentence& sentence,
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr msg);
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
