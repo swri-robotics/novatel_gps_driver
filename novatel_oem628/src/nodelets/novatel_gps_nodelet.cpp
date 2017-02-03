@@ -335,7 +335,7 @@ namespace novatel_oem628
       }
       if (publish_imu_messages_)
       {
-        opts["corrimudatasb"] = 1.0 / imu_rate_;
+        opts["corrimudatasa"] = 1.0 / imu_rate_;
       }
       if (publish_novatel_velocity_)
       {
