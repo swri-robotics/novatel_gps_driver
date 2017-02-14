@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(DIRECTORY msg FILES
   Gpgga.msg
   Gpgsa.msg
+  Gpgsv.msg
   Gprmc.msg
   NovatelExtendedSolutionStatus.msg
   NovatelMessageHeader.msg
@@ -19,10 +20,10 @@ add_message_files(DIRECTORY msg FILES
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg
   NovatelVelocity.msg
+  Satellite.msg
   Time.msg
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 catkin_package(
   CATKIN_DEPENDS message_runtime
 )
-

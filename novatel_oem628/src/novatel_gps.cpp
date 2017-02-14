@@ -50,6 +50,7 @@ namespace novatel_oem628
       novatel_velocities_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
+      gpgsv_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       time_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
@@ -248,6 +249,12 @@ namespace novatel_oem628
             parse_vectorized_gpgsa_message(nmea_sentences_[i].body, gpgsa);
         gpgsa_msgs_.push_back(gpgsa);
       }
+      else if (nmea_sentences_[i].id == "GPGSV")
+      {
+        novatel_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_msgs::Gpgsv>();
+        NmeaMessageParseResult parse_result = ParseVectorizedGpgsvMessage(nmea_sentences_[i].body, gpgsv);
+        gpgsv_msgs_.push_back(gpgsv);
+      }
       else
       {
         ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << nmea_sentences_[i].id);
@@ -442,6 +449,13 @@ namespace novatel_oem628
     gpgsa_messages.resize(gpgsa_msgs_.size());
     std::copy(gpgsa_msgs_.begin(), gpgsa_msgs_.end(), gpgsa_messages.begin());
     gpgsa_msgs_.clear();
+  }
+
+  void NovatelGps::GetGpgsvMessages(std::vector<novatel_msgs::GpgsvPtr>& gpgsv_messages)
+  {
+    gpgsv_messages.resize(gpgsv_msgs_.size());
+    std::copy(gpgsv_msgs_.begin(), gpgsv_msgs_.end(), gpgsv_messages.begin());
+    gpgsv_msgs_.clear();
   }
 
   void NovatelGps::GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages)

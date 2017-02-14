@@ -30,6 +30,7 @@
 #include <novatel_oem628/novatel_message_parser.h>
 
 #include <limits>
+#include <sstream>
 
 #include <ros/ros.h>
 
@@ -705,6 +706,77 @@ namespace novatel_oem628
     return ParseSucceededAndGpsDataValid;
   }
 
+  NmeaMessageParseResult ParseVectorizedGpgsvMessage(
+      std::vector<std::string>& vec,
+      novatel_msgs::GpgsvPtr msg)
+  {
+    const size_t MIN_LENGTH = 4;
+    // Check that the message is at least as long as a a GPGSV with no satellites
+    if (vec.size() < MIN_LENGTH)
+    {
+      ROS_ERROR("Expected GPGSV length >=%zu, actual length = %zu",
+          MIN_LENGTH,
+          vec.size());
+      return ParseFailed;
+    }
+    msg->message_id = vec[0];
+    bool valid = true;
+    valid &= ParseUInt8(vec[1], msg->n_msgs);
+    valid &= (msg->n_msgs <= 9);  // Check that number of messages <= 9
+    valid &= ParseUInt8(vec[2], msg->msg_number);
+    valid &= (msg->msg_number <= msg->n_msgs);  // Check that this message is within the sequence range
+    valid &= ParseUInt8(vec[3], msg->n_satellites);
+
+    // Figure out how many satellites should be described in this sentence
+    size_t n_sats_in_sentence = 4;
+    if (msg->msg_number == msg->n_msgs)
+    {
+      n_sats_in_sentence = msg->n_satellites % 4;
+    }
+    if (n_sats_in_sentence == 0)
+    {
+      n_sats_in_sentence = 4;
+    }
+    // Check that the sentence is the right length for the number of satellites
+    size_t expected_length = MIN_LENGTH + 4 * n_sats_in_sentence;
+    if (!valid || (vec.size() != expected_length && vec.size() != expected_length -1))
+    {
+      std::stringstream ss;
+      for (size_t i = 0; i < vec.size(); ++i)
+      {
+        ss << vec[i];
+        if ((i+1) < vec.size())
+        {
+          ss << ",";
+        }
+      }
+      ROS_ERROR("Expected GPGSV length = %zu for message with %zu satellites, actual length = %zu\n%s",
+          expected_length,
+          n_sats_in_sentence,
+          vec.size(),
+          ss.str().c_str());
+      return ParseFailed;
+    }
+    msg->satellites.resize(n_sats_in_sentence);
+    for (size_t sat = 0, index=MIN_LENGTH; sat < n_sats_in_sentence; ++sat, index += 4)
+    {
+      valid &= ParseUInt8(vec[index], msg->satellites[sat].prn);
+      valid &= ParseUInt8(vec[index + 1], msg->satellites[sat].elevation);
+      valid &= ParseUInt16(vec[index + 2], msg->satellites[sat].azimuth);
+      if ((index + 3) >= vec.size() || vec[index + 3].empty())
+      {
+        msg->satellites[sat].snr = -1;
+      }
+      else
+      {
+        uint8_t snr;
+        valid &= ParseUInt8(vec[index + 3], snr);
+        msg->satellites[sat].snr = static_cast<int8_t>(snr);
+      }
+    }
+    return (valid ? ParseSucceededAndGpsDataValid : ParseFailed);
+  }
+
   NmeaMessageParseResult parse_vectorized_gprmc_message(
       std::vector<std::string>& vec,
       novatel_msgs::GprmcPtr msg)
@@ -860,6 +932,24 @@ namespace novatel_oem628
     if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
     {
       value = static_cast<uint8_t>(tmp);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base)
+  {
+    value = 0;
+    if (string.empty())
+    {
+      return true;
+    }
+
+    uint32_t tmp;
+    if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint16_t>::max())
+    {
+      value = static_cast<uint16_t>(tmp);
       return true;
     }
 

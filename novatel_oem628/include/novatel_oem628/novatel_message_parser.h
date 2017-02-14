@@ -38,6 +38,7 @@
 #include <gps_common/GPSFix.h>
 #include <novatel_msgs/Gpgga.h>
 #include <novatel_msgs/Gpgsa.h>
+#include <novatel_msgs/Gpgsv.h>
 #include <novatel_msgs/Gprmc.h>
 #include <novatel_msgs/NovatelPosition.h>
 #include <novatel_msgs/NovatelMessageHeader.h>
@@ -111,6 +112,10 @@ namespace novatel_oem628
   NmeaMessageParseResult parse_vectorized_gpgsa_message(
       std::vector<std::string>& vec,
       novatel_msgs::GpgsaPtr msg);
+
+  NmeaMessageParseResult ParseVectorizedGpgsvMessage(
+      std::vector<std::string>& vec,
+      novatel_msgs::GpgsvPtr msg);
 
   NmeaMessageParseResult parse_vectorized_gprmc_message(
       std::vector<std::string>& vec,
@@ -216,6 +221,8 @@ namespace novatel_oem628
   bool ParseFloat(const std::string& string, float& value);
 
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base = 10);
+
+  bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base = 10);
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base = 10);
 
