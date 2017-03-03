@@ -53,6 +53,7 @@ namespace novatel_oem628
       gpgsv_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       time_msgs_(MAX_BUFFER_SIZE),
+      range_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       gprmc_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       position_sync_buffer_(MAX_SYNC_BUFFER_SIZE)
@@ -73,7 +74,8 @@ namespace novatel_oem628
     opts["gpgga"] = 0.05;
     opts["gprmc"] = 0.05;
     opts["bestposa"] = 0.05;
-    opts["timea"] = 1.0;
+    opts["timea"] = 1.0;   
+    opts["rangea"] = 1;
     return Connect(device, connection, opts);
   }
 
@@ -307,6 +309,20 @@ namespace novatel_oem628
           time_msgs_.push_back(time);
         }
       }
+      else if (novatel_sentences_[i].id == "RANGEA")
+      {
+        novatel_msgs::RangePtr range = boost::make_shared<novatel_msgs::Range>();
+        if (!ParseNovatelRangeMessage(novatel_sentences_[i], range))
+        {
+          read_result = READ_PARSE_FAILED;
+          error_msg_ = "Failed to parse the Novatel Range message.";
+        }
+        else
+        {
+          range->header.stamp = stamp;
+          range_msgs_.push_back(range);
+        }
+      }
     }
     novatel_sentences_.clear();
 
@@ -463,6 +479,13 @@ namespace novatel_oem628
     gprmc_messages.clear();
     gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());
     gprmc_msgs_.clear();
+  }
+  
+  void NovatelGps::GetRangeMessages(std::vector<novatel_msgs::RangePtr>& range_messages)
+  {
+    range_messages.resize(range_msgs_.size());
+    std::copy(range_msgs_.begin(), range_msgs_.end(), range_messages.begin());
+    range_msgs_.clear();
   }
 
   void NovatelGps::GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages)

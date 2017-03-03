@@ -22,6 +22,8 @@ add_message_files(DIRECTORY msg FILES
   NovatelVelocity.msg
   Satellite.msg
   Time.msg
+  Range.msg
+  RangeInformation.msg
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 catkin_package(

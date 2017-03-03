@@ -44,6 +44,7 @@
 #include <novatel_msgs/NovatelMessageHeader.h>
 #include <novatel_msgs/NovatelReceiverStatus.h>
 #include <novatel_msgs/NovatelVelocity.h>
+#include <novatel_msgs/Range.h>
 #include <novatel_msgs/Time.h>
 
 #define NOVATEL_CRC32_POLYNOMIAL       0xEDB88320L
@@ -65,6 +66,7 @@ namespace novatel_oem628
   const size_t NOVATEL_MESSAGE_HEADER_LENGTH = 10;
   const size_t NOVATEL_OMNIHPPOS_BODY_LENGTH = 21;
   const size_t NOVATEL_POS_MSG_BODY_LENGTH = 21;
+  const size_t NOVATEL_RANGE_BODY_FIELDS = 10;
   const size_t NOVATEL_TIME_BODY_FIELDS = 11;
   const size_t NOVATEL_VEL_BODY_FIELDS = 8;
 
@@ -175,6 +177,10 @@ namespace novatel_oem628
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
       novatel_msgs::TimePtr time);
+
+  bool ParseNovatelRangeMessage(
+      const NovatelSentence& sentence,
+      novatel_msgs::RangePtr msg);
 
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
