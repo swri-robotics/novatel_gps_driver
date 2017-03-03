@@ -46,6 +46,7 @@
 #include <novatel_msgs/NovatelVelocity.h>
 #include <novatel_msgs/Range.h>
 #include <novatel_msgs/Time.h>
+#include <novatel_msgs/Trackstat.h>
 
 #define NOVATEL_CRC32_POLYNOMIAL       0xEDB88320L
 
@@ -68,6 +69,8 @@ namespace novatel_oem628
   const size_t NOVATEL_POS_MSG_BODY_LENGTH = 21;
   const size_t NOVATEL_RANGE_BODY_FIELDS = 10;
   const size_t NOVATEL_TIME_BODY_FIELDS = 11;
+  const size_t NOVATEL_TRACKSTAT_BODY_FIELDS = 4;
+  const size_t NOVATEL_TRACKSTAT_CHANNEL_FIELDS = 10;
   const size_t NOVATEL_VEL_BODY_FIELDS = 8;
 
   enum NmeaMessageParseResult
@@ -182,6 +185,10 @@ namespace novatel_oem628
       const NovatelSentence& sentence,
       novatel_msgs::RangePtr msg);
 
+  bool ParseNovatelTrackstatMessage(
+      const NovatelSentence& sentence,
+      novatel_msgs::TrackstatPtr msg);
+
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
       novatel_msgs::NovatelVelocityPtr msg);
@@ -229,6 +236,8 @@ namespace novatel_oem628
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base = 10);
 
   bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base = 10);
+
+  bool ParseInt16(const std::string& string, int16_t& value, int32_t base = 10);
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base = 10);
 

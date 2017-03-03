@@ -22,6 +22,8 @@ add_message_files(DIRECTORY msg FILES
   NovatelVelocity.msg
   Satellite.msg
   Time.msg
+  Trackstat.msg
+  TrackstatChannel.msg
   Range.msg
   RangeInformation.msg
 )

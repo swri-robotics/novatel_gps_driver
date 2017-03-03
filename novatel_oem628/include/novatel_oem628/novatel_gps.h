@@ -47,6 +47,7 @@
 #include <novatel_msgs/NovatelVelocity.h>
 #include <novatel_msgs/Range.h>
 #include <novatel_msgs/Time.h>
+#include <novatel_msgs/Trackstat.h>
 #include <novatel_oem628/novatel_message_parser.h>
 
 namespace novatel_oem628
@@ -119,6 +120,7 @@ namespace novatel_oem628
       void GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages);
       void GetRangeMessages(std::vector<novatel_msgs::RangePtr>& range_messages);
       void GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages);
+      void GetTrackstatMessages(std::vector<novatel_msgs::TrackstatPtr>& trackstat_msgs);
 
       std::string ErrorMsg() const { return error_msg_; }
 
@@ -157,18 +159,19 @@ namespace novatel_oem628
       std::vector<NovatelSentence> novatel_sentences_;
 
       // Message buffers
-      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> novatel_positions_;
-      boost::circular_buffer<novatel_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_msgs::GpggaPtr> gpgga_msgs_;
+      boost::circular_buffer<novatel_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_msgs::GpgsvPtr> gpgsv_msgs_;
       boost::circular_buffer<novatel_msgs::GprmcPtr> gprmc_msgs_;
+      boost::circular_buffer<novatel_msgs::Gprmc> gprmc_sync_buffer_;
+      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> novatel_positions_;
+      boost::circular_buffer<novatel_msgs::NovatelVelocityPtr> novatel_velocities_;
+      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> position_sync_buffer_;
       boost::circular_buffer<novatel_msgs::RangePtr> range_msgs_;
       boost::circular_buffer<novatel_msgs::TimePtr> time_msgs_;
+      boost::circular_buffer<novatel_msgs::TrackstatPtr> trackstat_msgs_;
 
-      boost::circular_buffer<novatel_msgs::Gpgga> gpgga_sync_buffer_;
-      boost::circular_buffer<novatel_msgs::Gprmc> gprmc_sync_buffer_;
-      boost::circular_buffer<novatel_msgs::NovatelPositionPtr> position_sync_buffer_;
 
       std::string error_msg_;
   };
