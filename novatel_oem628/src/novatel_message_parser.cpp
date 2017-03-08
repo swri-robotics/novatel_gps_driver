@@ -244,6 +244,44 @@ namespace novatel_oem628
 
     return valid;
   }
+  
+  bool ParseNovatelRangeMessage(
+      const NovatelSentence& sentence,
+      novatel_msgs::RangePtr msg)
+  { 
+    if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
+    {
+      return false;
+    }
+    if (!ParseInt32(sentence.body[0], msg->numb_of_observ, 10))
+    {
+      return false;
+    }
+    int numb_of_observ = msg->numb_of_observ;
+    if (sentence.body.size() != 1 + numb_of_observ * NOVATEL_RANGE_BODY_FIELDS)
+    {
+      return false;
+    }
+    bool valid = true;
+    bool check = true;
+    valid &= ParseInt32(sentence.body[0], msg->numb_of_observ, 10);
+    msg->info.resize(numb_of_observ);
+    for (int i = 0, index = 0; index < numb_of_observ; i += 10, index++)
+    {
+      ParseUInt16(sentence.body[i + 1], msg->info[index].prn_number, 10);
+      ParseUInt16(sentence.body[i + 2], msg->info[index].glofreq, 10);
+      ParseDouble(sentence.body[i + 3], msg->info[index].psr);
+      ParseFloat(sentence.body[i + 4], msg->info[index].psr_std);
+      ParseDouble(sentence.body[i + 5], msg->info[index].adr);
+      ParseFloat(sentence.body[i + 6], msg->info[index].adr_std);
+      ParseFloat(sentence.body[i + 7], msg->info[index].dopp);
+      ParseFloat(sentence.body[i + 8], msg->info[index].noise_density_ratio);
+      ParseFloat(sentence.body[i + 9], msg->info[index].locktime);
+      std::string track = "0x" + sentence.body[i + 10]; // This number is in hex
+      ParseUInt32(track, msg->info[index].tracking_status, 16);
+    }
+    return valid;
+  } 
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
