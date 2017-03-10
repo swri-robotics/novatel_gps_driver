@@ -46,17 +46,18 @@ namespace novatel_oem628
       utc_offset_(0),
       tcp_socket_(io_service_),
       udp_socket_(io_service_),
-      novatel_positions_(MAX_BUFFER_SIZE),
-      novatel_velocities_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
+      gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
-      time_msgs_(MAX_BUFFER_SIZE),
-      range_msgs_(MAX_BUFFER_SIZE),
-      gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       gprmc_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
-      position_sync_buffer_(MAX_SYNC_BUFFER_SIZE)
+      novatel_positions_(MAX_BUFFER_SIZE),
+      novatel_velocities_(MAX_BUFFER_SIZE),
+      position_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
+      range_msgs_(MAX_BUFFER_SIZE),
+      time_msgs_(MAX_BUFFER_SIZE),
+      trackstat_msgs_(MAX_BUFFER_SIZE)
   {
 
   }
@@ -323,6 +324,20 @@ namespace novatel_oem628
           range_msgs_.push_back(range);
         }
       }
+      else if (novatel_sentences_[i].id == "TRACKSTATA")
+      {
+        novatel_msgs::TrackstatPtr trackstat = boost::make_shared<novatel_msgs::Trackstat>();
+        if (!ParseNovatelTrackstatMessage(novatel_sentences_[i], trackstat))
+        {
+          read_result = READ_PARSE_FAILED;
+          error_msg_ = "Failed to parse the Novatel Trackstat message.";
+        }
+        else
+        {
+          trackstat->header.stamp = stamp;
+          trackstat_msgs_.push_back(trackstat);
+        }
+      }
     }
     novatel_sentences_.clear();
 
@@ -493,6 +508,13 @@ namespace novatel_oem628
     time_messages.resize(time_msgs_.size());
     std::copy(time_msgs_.begin(), time_msgs_.end(), time_messages.begin());
     time_msgs_.clear();
+  }
+
+  void NovatelGps::GetTrackstatMessages(std::vector<novatel_msgs::TrackstatPtr>& trackstat_msgs)
+  {
+    trackstat_msgs.resize(trackstat_msgs_.size());
+    std::copy(trackstat_msgs_.begin(), trackstat_msgs_.end(), trackstat_msgs.begin());
+    trackstat_msgs_.clear();
   }
 
   bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)

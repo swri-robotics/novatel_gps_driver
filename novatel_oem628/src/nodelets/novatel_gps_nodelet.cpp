@@ -61,6 +61,8 @@
  *    `publish_novatel_velocity` is set `true`)
  * \e time <tt>novatel_msgs/Time</tt> - Novatel-specific time data. (Only
  *    published if `publish_time` is set `true`.)
+ * \e trackstat <tt>novatel_msgs/Trackstat</tt> - Novatel-specific trackstat
+ *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
  *
  * <b>Parameters:</b>
  *
@@ -93,6 +95,8 @@
  *    publishes Novatel Bestvel messages (see Topics Published) [false]
  * \e publish_time <tt>bool</tt> - If set true, the driver publishes Novatel
  *    Time messages (see Topics Published) [false]
+ * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
+ *    Novatel Trackstat messages (see Topics Published) [false]
  * \e wait_for_position <tt>bool</tt> - ??? [false]
  */
 #include <exception>
@@ -148,6 +152,7 @@ namespace novatel_oem628
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
+      publish_trackstat_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
       connection_(NovatelGps::SERIAL),
@@ -188,6 +193,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv,"publish_range_messages", publish_range_messages_, publish_range_messages_);
       swri::param(priv,"publish_time_messages", publish_time_messages_, publish_time_messages_);
+      swri::param(priv,"publish_trackstat", publish_trackstat_, publish_trackstat_);
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
       swri::param(priv, "polling_period", polling_period_, polling_period_);
@@ -244,6 +250,11 @@ namespace novatel_oem628
       if (publish_time_messages_)
       {
         time_pub_ = swri::advertise<novatel_msgs::Time>(node, "time", 100);
+      }
+
+      if (publish_trackstat_)
+      {
+        trackstat_pub_ = swri::advertise<novatel_msgs::Trackstat>(node, "trackstat", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -314,6 +325,10 @@ namespace novatel_oem628
       if (publish_range_messages_)
       {
          opts["rangea"] = 1.0;  // Range (ASCII). 1 msg/sec is max rate
+      }
+      if (publish_trackstat_)
+      {
+         opts["trackstata"] = 1.0;  // Trackstat (ASCII)
       }
       while (ros::ok())
       {
@@ -484,6 +499,19 @@ namespace novatel_oem628
                 range_pub_.publish(range_msgs[i]);
               }
             }
+            if (publish_trackstat_)
+            {
+              std::vector<novatel_msgs::TrackstatPtr> trackstat_msgs;
+              gps_.GetTrackstatMessages(trackstat_msgs);
+              ROS_DEBUG("Got %zu trackstat msgs", trackstat_msgs.size());
+              for (size_t i = 0; i < trackstat_msgs.size(); i++)
+              {
+                trackstat_msgs[i]->header.stamp += sync_offset;
+                trackstat_msgs[i]->header.frame_id = frame_id_;
+                trackstat_pub_.publish(trackstat_msgs[i]);
+              }
+
+            }
 
             for (size_t i = 0; i < fix_msgs.size(); i++)
             {
@@ -559,6 +587,7 @@ namespace novatel_oem628
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
+    bool publish_trackstat_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
 
@@ -571,6 +600,7 @@ namespace novatel_oem628
     ros::Publisher gprmc_pub_;
     ros::Publisher range_pub_;
     ros::Publisher time_pub_;
+    ros::Publisher trackstat_pub_;
 
     NovatelGps::ConnectionType connection_;
     NovatelGps gps_;

@@ -268,20 +268,66 @@ namespace novatel_oem628
     msg->info.resize(numb_of_observ);
     for (int i = 0, index = 0; index < numb_of_observ; i += 10, index++)
     {
-      ParseUInt16(sentence.body[i + 1], msg->info[index].prn_number, 10);
-      ParseUInt16(sentence.body[i + 2], msg->info[index].glofreq, 10);
-      ParseDouble(sentence.body[i + 3], msg->info[index].psr);
-      ParseFloat(sentence.body[i + 4], msg->info[index].psr_std);
-      ParseDouble(sentence.body[i + 5], msg->info[index].adr);
-      ParseFloat(sentence.body[i + 6], msg->info[index].adr_std);
-      ParseFloat(sentence.body[i + 7], msg->info[index].dopp);
-      ParseFloat(sentence.body[i + 8], msg->info[index].noise_density_ratio);
-      ParseFloat(sentence.body[i + 9], msg->info[index].locktime);
+      valid &= ParseUInt16(sentence.body[i + 1], msg->info[index].prn_number, 10);
+      valid &= ParseUInt16(sentence.body[i + 2], msg->info[index].glofreq, 10);
+      valid &= ParseDouble(sentence.body[i + 3], msg->info[index].psr);
+      valid &= ParseFloat(sentence.body[i + 4], msg->info[index].psr_std);
+      valid &= ParseDouble(sentence.body[i + 5], msg->info[index].adr);
+      valid &= ParseFloat(sentence.body[i + 6], msg->info[index].adr_std);
+      valid &= ParseFloat(sentence.body[i + 7], msg->info[index].dopp);
+      valid &= ParseFloat(sentence.body[i + 8], msg->info[index].noise_density_ratio);
+      valid &= ParseFloat(sentence.body[i + 9], msg->info[index].locktime);
       std::string track = "0x" + sentence.body[i + 10]; // This number is in hex
-      ParseUInt32(track, msg->info[index].tracking_status, 16);
+      valid &= ParseUInt32(track, msg->info[index].tracking_status, 16);
     }
     return valid;
-  } 
+  }
+
+  bool ParseNovatelTrackstatMessage(
+      const NovatelSentence& sentence,
+      novatel_msgs::TrackstatPtr msg)
+  {
+    if (!msg)
+    {
+      return false;
+    }
+
+    if (sentence.body.size() < NOVATEL_TRACKSTAT_BODY_FIELDS)
+    {
+      return false;
+    }
+
+    int32_t n_channels = 0;
+    ParseInt32(sentence.body[3], n_channels, 10);
+
+    if (sentence.body.size() != NOVATEL_TRACKSTAT_BODY_FIELDS + n_channels * NOVATEL_TRACKSTAT_CHANNEL_FIELDS)
+    {
+      return false;
+    }
+
+    bool valid = true;
+    msg->solution_status = sentence.body[0];
+    msg->position_type = sentence.body[1];
+    valid &= ParseFloat(sentence.body[2], msg->cutoff);
+
+    msg->channels.resize(n_channels);
+    for (size_t i = 0; i < static_cast<size_t>(n_channels); ++i)
+    {
+      size_t offset = 4 + i * NOVATEL_TRACKSTAT_CHANNEL_FIELDS;
+      novatel_msgs::TrackstatChannel& channel = msg->channels[i];
+      valid &= ParseInt16(sentence.body[offset], channel.prn);
+      valid &= ParseInt16(sentence.body[offset+1], channel.glofreq);
+      valid &= ParseUInt32(sentence.body[offset+2], channel.ch_tr_status, 16);
+      valid &= ParseDouble(sentence.body[offset+3], channel.psr);
+      valid &= ParseFloat(sentence.body[offset+4], channel.doppler);
+      valid &= ParseFloat(sentence.body[offset+5], channel.c_no);
+      valid &= ParseFloat(sentence.body[offset+6], channel.locktime);
+      valid &= ParseFloat(sentence.body[offset+7], channel.psr_res);
+      channel.reject = sentence.body[offset+8];
+      valid &= ParseFloat(sentence.body[offset+9], channel.psr_weight);
+    }
+    return valid;
+  }
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
@@ -891,7 +937,6 @@ namespace novatel_oem628
     return ParseSucceededAndGpsDataValid;
   }
 
-
   void get_gps_fix_message(
       const novatel_msgs::Gprmc& gprmc,
       const novatel_msgs::Gpgga& gpgga,
@@ -946,6 +991,26 @@ namespace novatel_oem628
   bool ParseFloat(const std::string& string, float& value)
   {
     return swri_string_util::ToFloat(string, value) || string.empty();
+  }
+
+  bool ParseInt16(const std::string& string, int16_t& value, int32_t base)
+  {
+    value = 0;
+    if (string.empty())
+    {
+      return true;
+    }
+
+    int32_t tmp;
+    if (swri_string_util::ToInt32(string, tmp, base) &&
+        tmp <= std::numeric_limits<int16_t>::max() &&
+        tmp >= std::numeric_limits<int16_t>::min())
+    {
+      value = static_cast<int16_t>(tmp);
+      return true;
+    }
+
+    return false;
   }
 
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base)
