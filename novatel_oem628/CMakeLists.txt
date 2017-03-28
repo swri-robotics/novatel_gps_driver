@@ -6,13 +6,14 @@ set(BUILD_DEPS
   diagnostic_msgs 
   diagnostic_updater 
   gps_common 
-  swri_math_util 
   nav_msgs 
   nodelet 
+  novatel_msgs
   roscpp 
+  swri_math_util 
+  swri_roscpp
   swri_serial_util 
   swri_string_util 
-  swri_roscpp
   tf
 )
 
@@ -20,13 +21,14 @@ set(RUNTIME_DEPS
   diagnostic_msgs 
   diagnostic_updater 
   gps_common 
-  swri_math_util 
   nav_msgs 
   nodelet 
+  novatel_msgs
   roscpp 
+  swri_math_util 
+  swri_roscpp
   swri_serial_util 
   swri_string_util 
-  swri_roscpp
   tf
 )
 
