@@ -2,8 +2,8 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.0.0 (2017-04-03)
+------------------
 * Rename novatel_msgs to novatel_gps_msgs
 * Contributors: P. J. Reed
 
