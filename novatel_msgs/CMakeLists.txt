@@ -20,14 +20,14 @@ add_message_files(DIRECTORY msg FILES
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg
   NovatelVelocity.msg
+  RangeInformation.msg
+  Range.msg
   Satellite.msg
   Time.msg
-  Trackstat.msg
   TrackstatChannel.msg
-  Range.msg
-  RangeInformation.msg
+  Trackstat.msg
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 catkin_package(
-  CATKIN_DEPENDS message_runtime
+  CATKIN_DEPENDS message_runtime ${MSG_DEPS}
 )

@@ -10,6 +10,7 @@ set(BUILD_DEPS
   nodelet 
   novatel_msgs
   roscpp 
+  std_msgs
   swri_math_util 
   swri_roscpp
   swri_serial_util 
@@ -25,6 +26,7 @@ set(RUNTIME_DEPS
   nodelet 
   novatel_msgs
   roscpp 
+  std_msgs
   swri_math_util 
   swri_roscpp
   swri_serial_util 
@@ -62,7 +64,10 @@ add_executable(novatel_gps_node src/nodes/novatel_gps_node.cpp)
 target_link_libraries(novatel_gps_node ${catkin_LIBRARIES})
 
 ### Install Libraries and Headers ###
-install(TARGETS ${PROJECT_NAME} ${PROJECT_NAME}_nodelets novatel_gps_node
+install(TARGETS 
+    novatel_gps_node
+    ${PROJECT_NAME} 
+    ${PROJECT_NAME}_nodelets
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
