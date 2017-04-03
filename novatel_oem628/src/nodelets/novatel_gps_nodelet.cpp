@@ -49,19 +49,19 @@
  * \e gps <tt>gps_common/GPSFix</tt> - GPS data for navigation
  * \e gppga <tt>novatel_oem628/Gpgga</tt> - Raw GPGGA data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
- * \e gpgsa <tt>novatel_msgs/Gpgga</tt> - Raw GPGSA data for debugging (only
+ * \e gpgsa <tt>novatel_gps_msgs/Gpgga</tt> - Raw GPGSA data for debugging (only
  *    published if `publish_gpgsa` is set `true`)
- * \e gprmc <tt>novatel_msgs/Gprmc</tt> - Raw GPRMC data for debugging (only
+ * \e gprmc <tt>novatel_gps_msgs/Gprmc</tt> - Raw GPRMC data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
- * \e bestpos <tt>novatel_msgs/NovatelPosition</tt> - High fidelity Novatel-
+ * \e bestpos <tt>novatel_gps_msgs/NovatelPosition</tt> - High fidelity Novatel-
  *    specific position and receiver status data. (only published if
  *    `publish_novatel_positions` is set `true`)
- * \e bestvel <tt>novatel_msgs/NovatelVelocity</tt> - High fidelity Novatel-
+ * \e bestvel <tt>novatel_gps_msgs/NovatelVelocity</tt> - High fidelity Novatel-
  *    specific velocity and receiver status data. (only published if
  *    `publish_novatel_velocity` is set `true`)
- * \e time <tt>novatel_msgs/Time</tt> - Novatel-specific time data. (Only
+ * \e time <tt>novatel_gps_msgs/Time</tt> - Novatel-specific time data. (Only
  *    published if `publish_time` is set `true`.)
- * \e trackstat <tt>novatel_msgs/Trackstat</tt> - Novatel-specific trackstat
+ * \e trackstat <tt>novatel_gps_msgs/Trackstat</tt> - Novatel-specific trackstat
  *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
  *
  * <b>Parameters:</b>
@@ -117,15 +117,15 @@
 #include <diagnostic_updater/publisher.h>
 #include <gps_common/GPSFix.h>
 #include <nodelet/nodelet.h>
-#include <novatel_msgs/NovatelMessageHeader.h>
-#include <novatel_msgs/NovatelPosition.h>
-#include <novatel_msgs/NovatelVelocity.h>
-#include <novatel_msgs/Gpgga.h>
-#include <novatel_msgs/Gprmc.h>
-#include <novatel_msgs/NovatelMessageHeader.h>
-#include <novatel_msgs/NovatelPosition.h>
-#include <novatel_msgs/Range.h>
-#include <novatel_msgs/Time.h>
+#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/NovatelPosition.h>
+#include <novatel_gps_msgs/NovatelVelocity.h>
+#include <novatel_gps_msgs/Gpgga.h>
+#include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/NovatelPosition.h>
+#include <novatel_gps_msgs/Range.h>
+#include <novatel_gps_msgs/Time.h>
 #include <novatel_oem628/novatel_gps.h>
 #include <ros/ros.h>
 #include <std_msgs/Time.h>
@@ -218,43 +218,43 @@ namespace novatel_oem628
 
       if (publish_nmea_messages_)
       {
-        gpgga_pub_ = swri::advertise<novatel_msgs::Gpgga>(node,"gpgga", 100);
-        gprmc_pub_ = swri::advertise<novatel_msgs::Gprmc>(node,"gprmc", 100);
+        gpgga_pub_ = swri::advertise<novatel_gps_msgs::Gpgga>(node,"gpgga", 100);
+        gprmc_pub_ = swri::advertise<novatel_gps_msgs::Gprmc>(node,"gprmc", 100);
       }
 
       if (publish_gpgsa_)
       {
-        gpgsa_pub_ = swri::advertise<novatel_msgs::Gpgsa>(node, "gpgsa", 100);
+        gpgsa_pub_ = swri::advertise<novatel_gps_msgs::Gpgsa>(node, "gpgsa", 100);
       }
 
       if (publish_gpgsv_)
       {
-        gpgsv_pub_ = swri::advertise<novatel_msgs::Gpgsv>(node, "gpgsv", 100);
+        gpgsv_pub_ = swri::advertise<novatel_gps_msgs::Gpgsv>(node, "gpgsv", 100);
       }
 
       if (publish_novatel_positions_)
       { 
-        novatel_position_pub_ = swri::advertise<novatel_msgs::NovatelPosition>(node, "bestpos", 100);
+        novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
       }
 
       if (publish_novatel_velocity_)
       {
-        novatel_velocity_pub_ = swri::advertise<novatel_msgs::NovatelVelocity>(node, "bestvel", 100);
+        novatel_velocity_pub_ = swri::advertise<novatel_gps_msgs::NovatelVelocity>(node, "bestvel", 100);
       }
 
       if (publish_range_messages_)
       {
-        range_pub_ = swri::advertise<novatel_msgs::Range>(node, "range", 100);
+        range_pub_ = swri::advertise<novatel_gps_msgs::Range>(node, "range", 100);
       }
 
       if (publish_time_messages_)
       {
-        time_pub_ = swri::advertise<novatel_msgs::Time>(node, "time", 100);
+        time_pub_ = swri::advertise<novatel_gps_msgs::Time>(node, "time", 100);
       }
 
       if (publish_trackstat_)
       {
-        trackstat_pub_ = swri::advertise<novatel_msgs::Trackstat>(node, "trackstat", 100);
+        trackstat_pub_ = swri::advertise<novatel_gps_msgs::Trackstat>(node, "trackstat", 100);
       }
 
       hw_id_ = "Novatel GPS (" + device_ +")";
@@ -299,10 +299,10 @@ namespace novatel_oem628
      */
     void Spin()
     {
-      std::vector<novatel_msgs::NovatelPositionPtr> position_msgs;
+      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
-      std::vector<novatel_msgs::GpggaPtr> gpgga_msgs;
-      std::vector<novatel_msgs::GprmcPtr> gprmc_msgs;
+      std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
+      std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
 
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
@@ -434,7 +434,7 @@ namespace novatel_oem628
 
             if (publish_gpgsa_)
             {
-              std::vector<novatel_msgs::GpgsaPtr> gpgsa_msgs;
+              std::vector<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs;
               gps_.GetGpgsaMessages(gpgsa_msgs);
               for (size_t i = 0; i < gpgsa_msgs.size(); ++i)
               {
@@ -446,7 +446,7 @@ namespace novatel_oem628
 
             if (publish_gpgsv_)
             {
-              std::vector<novatel_msgs::GpgsvPtr> gpgsv_msgs;
+              std::vector<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs;
               gps_.GetGpgsvMessages(gpgsv_msgs);
               for (size_t i = 0; i < gpgsv_msgs.size(); ++i)
               {
@@ -468,7 +468,7 @@ namespace novatel_oem628
 
             if (publish_novatel_velocity_)
             {
-              std::vector<novatel_msgs::NovatelVelocityPtr> velocity_msgs;
+              std::vector<novatel_gps_msgs::NovatelVelocityPtr> velocity_msgs;
               gps_.GetNovatelVelocities(velocity_msgs);
               for (size_t i = 0; i < velocity_msgs.size(); i++)
               {
@@ -479,7 +479,7 @@ namespace novatel_oem628
             }
             if (publish_time_messages_)
             {
-              std::vector<novatel_msgs::TimePtr> time_msgs;
+              std::vector<novatel_gps_msgs::TimePtr> time_msgs;
               gps_.GetTimeMessages(time_msgs);
               for (size_t i = 0; i < time_msgs.size(); i++)
               {
@@ -490,7 +490,7 @@ namespace novatel_oem628
             }
             if (publish_range_messages_)
             {
-              std::vector<novatel_msgs::RangePtr> range_msgs;
+              std::vector<novatel_gps_msgs::RangePtr> range_msgs;
               gps_.GetRangeMessages(range_msgs);
               for (size_t i = 0; i < range_msgs.size(); i++)
               {
@@ -501,7 +501,7 @@ namespace novatel_oem628
             }
             if (publish_trackstat_)
             {
-              std::vector<novatel_msgs::TrackstatPtr> trackstat_msgs;
+              std::vector<novatel_gps_msgs::TrackstatPtr> trackstat_msgs;
               gps_.GetTrackstatMessages(trackstat_msgs);
               ROS_DEBUG("Got %zu trackstat msgs", trackstat_msgs.size());
               for (size_t i = 0; i < trackstat_msgs.size(); i++)
@@ -638,7 +638,7 @@ namespace novatel_oem628
     int32_t publish_rate_warnings_;
     int32_t measurement_count_;
     ros::Time last_published_;
-    novatel_msgs::NovatelPositionPtr last_novatel_position_;
+    novatel_gps_msgs::NovatelPositionPtr last_novatel_position_;
 
     std::string frame_id_;
     
@@ -707,7 +707,7 @@ namespace novatel_oem628
       status.add("Satellites Used", static_cast<int>(last_novatel_position_->num_satellites_used_in_solution));
       status.add("Software Version", last_novatel_position_->novatel_msg_header.receiver_software_version);
 
-      const novatel_msgs::NovatelReceiverStatus& rcvr_status = last_novatel_position_->novatel_msg_header.receiver_status;
+      const novatel_gps_msgs::NovatelReceiverStatus& rcvr_status = last_novatel_position_->novatel_msg_header.receiver_status;
       status.add("Status Code", rcvr_status.original_status_code);
 
       if (last_novatel_position_->novatel_msg_header.receiver_status.original_status_code != 0)

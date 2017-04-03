@@ -36,17 +36,17 @@
 #include <vector>
 
 #include <gps_common/GPSFix.h>
-#include <novatel_msgs/Gpgga.h>
-#include <novatel_msgs/Gpgsa.h>
-#include <novatel_msgs/Gpgsv.h>
-#include <novatel_msgs/Gprmc.h>
-#include <novatel_msgs/NovatelPosition.h>
-#include <novatel_msgs/NovatelMessageHeader.h>
-#include <novatel_msgs/NovatelReceiverStatus.h>
-#include <novatel_msgs/NovatelVelocity.h>
-#include <novatel_msgs/Range.h>
-#include <novatel_msgs/Time.h>
-#include <novatel_msgs/Trackstat.h>
+#include <novatel_gps_msgs/Gpgga.h>
+#include <novatel_gps_msgs/Gpgsa.h>
+#include <novatel_gps_msgs/Gpgsv.h>
+#include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/NovatelPosition.h>
+#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/NovatelReceiverStatus.h>
+#include <novatel_gps_msgs/NovatelVelocity.h>
+#include <novatel_gps_msgs/Range.h>
+#include <novatel_gps_msgs/Time.h>
+#include <novatel_gps_msgs/Trackstat.h>
 
 #define NOVATEL_CRC32_POLYNOMIAL       0xEDB88320L
 
@@ -112,23 +112,23 @@ namespace novatel_oem628
 
   NmeaMessageParseResult parse_vectorized_gpgga_message(
       std::vector<std::string>& vec,
-      novatel_msgs::GpggaPtr msg);
+      novatel_gps_msgs::GpggaPtr msg);
 
   NmeaMessageParseResult parse_vectorized_gpgsa_message(
       std::vector<std::string>& vec,
-      novatel_msgs::GpgsaPtr msg);
+      novatel_gps_msgs::GpgsaPtr msg);
 
   NmeaMessageParseResult ParseVectorizedGpgsvMessage(
       std::vector<std::string>& vec,
-      novatel_msgs::GpgsvPtr msg);
+      novatel_gps_msgs::GpgsvPtr msg);
 
   NmeaMessageParseResult parse_vectorized_gprmc_message(
       std::vector<std::string>& vec,
-      novatel_msgs::GprmcPtr msg);
+      novatel_gps_msgs::GprmcPtr msg);
 
   void get_gps_fix_message(
-      const novatel_msgs::Gprmc& gprmc,
-      const novatel_msgs::Gpgga& gpgga,
+      const novatel_gps_msgs::Gprmc& gprmc,
+      const novatel_gps_msgs::Gpgga& gpgga,
       gps_common::GPSFixPtr gps_fix);
 
   double UtcFloatToSeconds(double utc_float);
@@ -171,31 +171,31 @@ namespace novatel_oem628
 
   void get_novatel_receiver_status_msg(
       uint32_t status,
-      novatel_msgs::NovatelReceiverStatus& receiver_status_msg);
+      novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg);
 
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,
-      novatel_msgs::NovatelMessageHeader& novatel_msg_header);
+      novatel_gps_msgs::NovatelMessageHeader& novatel_msg_header);
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
-      novatel_msgs::TimePtr time);
+      novatel_gps_msgs::TimePtr time);
 
   bool ParseNovatelRangeMessage(
       const NovatelSentence& sentence,
-      novatel_msgs::RangePtr msg);
+      novatel_gps_msgs::RangePtr msg);
 
   bool ParseNovatelTrackstatMessage(
       const NovatelSentence& sentence,
-      novatel_msgs::TrackstatPtr msg);
+      novatel_gps_msgs::TrackstatPtr msg);
 
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
-      novatel_msgs::NovatelVelocityPtr msg);
+      novatel_gps_msgs::NovatelVelocityPtr msg);
 
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
-      novatel_msgs::NovatelPositionPtr ros_msg);
+      novatel_gps_msgs::NovatelPositionPtr ros_msg);
 
   /**
    * @brief      Gets the novatel message sentence

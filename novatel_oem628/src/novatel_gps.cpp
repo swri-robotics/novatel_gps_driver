@@ -185,7 +185,7 @@ namespace novatel_oem628
     {
       if (nmea_sentences_[i].id == "GPGGA")
       {
-        novatel_msgs::GpggaPtr gpgga = boost::make_shared<novatel_msgs::Gpgga>();
+        novatel_gps_msgs::GpggaPtr gpgga = boost::make_shared<novatel_gps_msgs::Gpgga>();
         NmeaMessageParseResult parse_result =
           parse_vectorized_gpgga_message(nmea_sentences_[i].body, gpgga);
 
@@ -216,7 +216,7 @@ namespace novatel_oem628
       }
       else if (nmea_sentences_[i].id == "GPRMC")
       {
-        novatel_msgs::GprmcPtr gprmc = boost::make_shared<novatel_msgs::Gprmc>();
+        novatel_gps_msgs::GprmcPtr gprmc = boost::make_shared<novatel_gps_msgs::Gprmc>();
         NmeaMessageParseResult parse_result =
           parse_vectorized_gprmc_message(nmea_sentences_[i].body, gprmc);
 
@@ -247,14 +247,14 @@ namespace novatel_oem628
       }
       else if (nmea_sentences_[i].id == "GPGSA")
       {
-        novatel_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_msgs::Gpgsa>();
+        novatel_gps_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_gps_msgs::Gpgsa>();
         NmeaMessageParseResult parse_result =
             parse_vectorized_gpgsa_message(nmea_sentences_[i].body, gpgsa);
         gpgsa_msgs_.push_back(gpgsa);
       }
       else if (nmea_sentences_[i].id == "GPGSV")
       {
-        novatel_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_msgs::Gpgsv>();
+        novatel_gps_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_gps_msgs::Gpgsv>();
         NmeaMessageParseResult parse_result = ParseVectorizedGpgsvMessage(nmea_sentences_[i].body, gpgsv);
         gpgsv_msgs_.push_back(gpgsv);
       }
@@ -269,7 +269,7 @@ namespace novatel_oem628
     {
       if (novatel_sentences_[i].id == "BESTPOSA")
       {
-        novatel_msgs::NovatelPositionPtr position = boost::make_shared<novatel_msgs::NovatelPosition>();
+        novatel_gps_msgs::NovatelPositionPtr position = boost::make_shared<novatel_gps_msgs::NovatelPosition>();
         if (!parse_novatel_pos_msg(novatel_sentences_[i], position))
         {
           read_result = READ_PARSE_FAILED;
@@ -284,7 +284,7 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "BESTVELA")
       {
-        novatel_msgs::NovatelVelocityPtr velocity = boost::make_shared<novatel_msgs::NovatelVelocity>();
+        novatel_gps_msgs::NovatelVelocityPtr velocity = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
         if (!ParseNovatelVelMessage(novatel_sentences_[i], velocity))
         {
           read_result = READ_PARSE_FAILED;
@@ -298,7 +298,7 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "TIMEA")
       {
-        novatel_msgs::TimePtr time = boost::make_shared<novatel_msgs::Time>();
+        novatel_gps_msgs::TimePtr time = boost::make_shared<novatel_gps_msgs::Time>();
         if (!ParseNovatelTimeMessage(novatel_sentences_[i], time))
         {
           read_result = READ_PARSE_FAILED;
@@ -312,7 +312,7 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "RANGEA")
       {
-        novatel_msgs::RangePtr range = boost::make_shared<novatel_msgs::Range>();
+        novatel_gps_msgs::RangePtr range = boost::make_shared<novatel_gps_msgs::Range>();
         if (!ParseNovatelRangeMessage(novatel_sentences_[i], range))
         {
           read_result = READ_PARSE_FAILED;
@@ -326,7 +326,7 @@ namespace novatel_oem628
       }
       else if (novatel_sentences_[i].id == "TRACKSTATA")
       {
-        novatel_msgs::TrackstatPtr trackstat = boost::make_shared<novatel_msgs::Trackstat>();
+        novatel_gps_msgs::TrackstatPtr trackstat = boost::make_shared<novatel_gps_msgs::Trackstat>();
         if (!ParseNovatelTrackstatMessage(novatel_sentences_[i], trackstat))
         {
           read_result = READ_PARSE_FAILED;
@@ -344,14 +344,14 @@ namespace novatel_oem628
     return read_result;
   }
 
-  void NovatelGps::GetNovatelPositions(std::vector<novatel_msgs::NovatelPositionPtr>& positions)
+  void NovatelGps::GetNovatelPositions(std::vector<novatel_gps_msgs::NovatelPositionPtr>& positions)
   {
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
   }
 
-  void NovatelGps::GetNovatelVelocities(std::vector<novatel_msgs::NovatelVelocityPtr>& velocities)
+  void NovatelGps::GetNovatelVelocities(std::vector<novatel_gps_msgs::NovatelVelocityPtr>& velocities)
   {
     velocities.resize(novatel_velocities_.size());
     std::copy(novatel_velocities_.begin(), novatel_velocities_.end(), velocities.begin());
@@ -468,49 +468,49 @@ namespace novatel_oem628
     }  // while (gpgga and gprmc buffers contain messages)
   }
 
-  void NovatelGps::GetGpggaMessages(std::vector<novatel_msgs::GpggaPtr>& gpgga_messages)
+  void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_msgs::GpggaPtr>& gpgga_messages)
   {
     gpgga_messages.clear();
     gpgga_messages.insert(gpgga_messages.end(), gpgga_msgs_.begin(), gpgga_msgs_.end());
     gpgga_msgs_.clear();
   }
 
-  void NovatelGps::GetGpgsaMessages(std::vector<novatel_msgs::GpgsaPtr>& gpgsa_messages)
+  void NovatelGps::GetGpgsaMessages(std::vector<novatel_gps_msgs::GpgsaPtr>& gpgsa_messages)
   {
     gpgsa_messages.resize(gpgsa_msgs_.size());
     std::copy(gpgsa_msgs_.begin(), gpgsa_msgs_.end(), gpgsa_messages.begin());
     gpgsa_msgs_.clear();
   }
 
-  void NovatelGps::GetGpgsvMessages(std::vector<novatel_msgs::GpgsvPtr>& gpgsv_messages)
+  void NovatelGps::GetGpgsvMessages(std::vector<novatel_gps_msgs::GpgsvPtr>& gpgsv_messages)
   {
     gpgsv_messages.resize(gpgsv_msgs_.size());
     std::copy(gpgsv_msgs_.begin(), gpgsv_msgs_.end(), gpgsv_messages.begin());
     gpgsv_msgs_.clear();
   }
 
-  void NovatelGps::GetGprmcMessages(std::vector<novatel_msgs::GprmcPtr>& gprmc_messages)
+  void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages)
   {
     gprmc_messages.clear();
     gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());
     gprmc_msgs_.clear();
   }
   
-  void NovatelGps::GetRangeMessages(std::vector<novatel_msgs::RangePtr>& range_messages)
+  void NovatelGps::GetRangeMessages(std::vector<novatel_gps_msgs::RangePtr>& range_messages)
   {
     range_messages.resize(range_msgs_.size());
     std::copy(range_msgs_.begin(), range_msgs_.end(), range_messages.begin());
     range_msgs_.clear();
   }
 
-  void NovatelGps::GetTimeMessages(std::vector<novatel_msgs::TimePtr>& time_messages)
+  void NovatelGps::GetTimeMessages(std::vector<novatel_gps_msgs::TimePtr>& time_messages)
   {
     time_messages.resize(time_msgs_.size());
     std::copy(time_msgs_.begin(), time_msgs_.end(), time_messages.begin());
     time_msgs_.clear();
   }
 
-  void NovatelGps::GetTrackstatMessages(std::vector<novatel_msgs::TrackstatPtr>& trackstat_msgs)
+  void NovatelGps::GetTrackstatMessages(std::vector<novatel_gps_msgs::TrackstatPtr>& trackstat_msgs)
   {
     trackstat_msgs.resize(trackstat_msgs_.size());
     std::copy(trackstat_msgs_.begin(), trackstat_msgs_.end(), trackstat_msgs.begin());

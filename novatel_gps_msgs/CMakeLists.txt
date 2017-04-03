@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(novatel_msgs)
+project(novatel_gps_msgs)
 
 set(MSG_DEPS 
   std_msgs)

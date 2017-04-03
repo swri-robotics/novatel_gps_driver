@@ -8,7 +8,7 @@ set(BUILD_DEPS
   gps_common 
   nav_msgs 
   nodelet 
-  novatel_msgs
+  novatel_gps_msgs
   roscpp 
   std_msgs
   swri_math_util 
@@ -24,7 +24,7 @@ set(RUNTIME_DEPS
   gps_common 
   nav_msgs 
   nodelet 
-  novatel_msgs
+  novatel_gps_msgs
   roscpp 
   std_msgs
   swri_math_util 
