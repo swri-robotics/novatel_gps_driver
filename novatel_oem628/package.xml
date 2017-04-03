@@ -3,9 +3,7 @@
   <name>novatel_oem628</name>
   <version>2.9.0</version>
   <description>
-
-     novatel_oem628
-
+  Driver for NovAtel OEM628 GNSS receivers
   </description>
   <maintainer email="swri@swri.org">SwRI</maintainer>
   <license>United States Government Purpose</license>
