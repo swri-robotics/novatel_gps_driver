@@ -2,6 +2,28 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Rename novatel_msgs to novatel_gps_msgs
+* Fix catkin_lint warnings
+* Add novatel_msgs as a dep to novatel_oem628
+* Add support for Novatel Trackstat messages
+* Remove debug error messages.
+* Add gpgsv support to novatel driver nodelet.
+* Add support for GPGSV messages in driver library.
+* Add support for GPGSV message in novatel parser.
+* Add support to ROS driver for Time message publishing
+* Add support for accessing Time messages.
+* Move messages into separate package.
+* Update nodelet documentation.
+* Add support for Novatel BESTVELA to ROS driver.
+* Add support for BESTVELA to Novatel driver
+* Add support for bestvel to message parser.
+* Add new message for BESTVEL
+* Add support for GPGSA messages.
+* Add support to configure the Novatel GPS driver for any message type and frequency.
+* Contributors: Edward Venator, P. J. Reed
+
 2.9.0 (2017-01-11)
 ------------------
 * Clean up wait_for_position member variable usage
