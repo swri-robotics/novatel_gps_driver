@@ -307,6 +307,7 @@ namespace novatel_oem628
         else
         {
           utc_offset_ = time->utc_offset;
+          ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %d", time->utc_offset, utc_offset_);
           time_msgs_.push_back(time);
         }
       }
@@ -369,14 +370,26 @@ namespace novatel_oem628
       double gpgga_time = gpgga_sync_buffer_.front().utc_seconds;
       double gprmc_time = gprmc_sync_buffer_.front().utc_seconds;
 
+      // Find the time difference between gpgga and gprmc time
+      double dt = gpgga_time - gprmc_time;
+      // Handle times around midnight
+      if (dt > 43200.0)
+      {
+        dt -= 86400.0;
+      }
+      if (dt < -43200.0)
+      {
+        dt += 86400.0;
+      }
+
       // Get the front elements of the gpgga and gprmc buffers synced to within tolerance
-      if ((gpgga_time - gprmc_time) > gpgga_gprmc_sync_tol)
+      if (dt > gpgga_gprmc_sync_tol)
       {
         // The gprmc message is more than tol older than the gpgga message,
         // discard it and continue
         gprmc_sync_buffer_.pop_front();
       }
-      else if ((gprmc_time - gpgga_time) > gpgga_gprmc_sync_tol)
+      else if (-dt > gpgga_gprmc_sync_tol)
       {
         // The gpgga message is more than tol older than the gprmc message,
         // discard it and continue
@@ -394,19 +407,37 @@ namespace novatel_oem628
           // Calculate UTC position time from GPS seconds by subtracting out
           // full days and applying the UTC offset
           double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds + utc_offset_;
+          if (gps_seconds < 0)
+          {
+              // Handle times around week boundaries
+              gps_seconds = gps_seconds + 604800;  // 604800 = 7 * 24 * 60 * 60 (seconds in a week)
+          }
           int32_t days = gps_seconds / 86400.0;
-          double position_time = gps_seconds - days * 86400.0 + utc_offset_;
+          double position_time = gps_seconds - days * 86400.0;
 
-          if ((gpgga_time - position_time) > gpgga_position_sync_tol)
+          // Find the time difference between gpgga and position time
+          double dt = gpgga_time - position_time;
+          // Handle times around midnight
+          if (dt > 43200.0)
+          {
+              dt -= 86400.0;
+          }
+          if (dt < -43200.0)
+          {
+              dt += 86400.0;
+          }
+          if (dt > gpgga_position_sync_tol)
           {
             // The position message is more than tol older than the gpgga message,
             // discard it and continue
+            ROS_DEBUG("Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
             position_sync_buffer_.pop_front();
           }
-          else if ((position_time - gpgga_time) > gpgga_position_sync_tol)
+          else if (-dt > gpgga_position_sync_tol)
           {
             // The position message is more than tol ahead of the gpgga message,
             // use it but don't pop it
+            ROS_DEBUG("Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
             has_position = true;
             break;
           }
