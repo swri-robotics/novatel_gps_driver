@@ -2,6 +2,11 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Set UTC time correctly for message syncing
+* Contributors: Edward Venator
+
 3.0.0 (2017-04-03)
 ------------------
 * Rename novatel_msgs to novatel_gps_msgs
