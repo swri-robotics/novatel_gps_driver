@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.0.1 (2017-05-08)
+------------------
 * Set UTC time correctly for message syncing
 * Contributors: Edward Venator
 
