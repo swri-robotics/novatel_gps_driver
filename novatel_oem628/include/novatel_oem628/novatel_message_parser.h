@@ -129,6 +129,33 @@ namespace novatel_oem628
     uint32_t crc_;
   };
 
+  const std::string SOLUTION_STATUSES[] = {"SOL_COMPUTED", "INSUFFICIENT_OBS",
+    "NO_CONVERGENCE", "SINGULARITY", "COV_TRACE", "TEST_DIST", "COLD_START",
+    "V_H_LIMIT", "VARIANCE", "RESIDUALS", "RESERVED", "RESERVED", "RESERVED",
+    "INTEGRITY_WARNING", "RESERVED", "RESERVED", "RESERVED", "RESERVED",
+    "PENDING", "INVALID_FIX", "RESERVED", "RESERVED", "INVALID_RATE"};
+  const std::string POSITION_TYPES[] = { "NONE", "FIXEDPOS", "FIXEDHEIGHT", "RESERVED",
+    "FLOATCONV", "WIDELANE", "NARROWLANE", "RESERVED", "DOPPLER_VELOCITY", "RESERVED",
+    "RESERVED","RESERVED","RESERVED","RESERVED","RESERVED","RESERVED", "SINGLE",
+    "PSRDIFF", "WAAS", "PROPOGATED", "OMNISTAR", "RESERVED", "RESERVED", "RESERVED",
+    "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED",
+    "RESERVED", "L1_FLOAT", "IONOFREE_FLOAT", "NARROW_FLOAT", "RESERVED", "RESERVED",
+    "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED", "RESERVED",
+    "RESERVED", "RESERVED", "RESERVED", "RESERVED", "L1_INT", "WIDE_INT", "NARROW_INT",
+    "RTK_DIRECT_INS", "INS_SBAS", "INS_PSRSP", "INS_PSRDIFF", "INS_RTKFLOAT", "INS_OMNISTAR",
+    "INS_OMNISTAR_HP", "INS_OMNISTAR_XP", "RESERVED", "RESERVED", "RESERVED", "RESERVED",
+    "OMNISTAR_HP", "OMNISTAR_XP", "RESERVED", "RESERVED", "PPP_CONVERGING", "PPP",
+    "RESERVED", "RESERVED", "RESERVED", "INS_PPP_CONVERGING", "INS_PPP" };
+  const std::string DATUMS[] = { "ADIND", "ARC50", "ARC60", "AGD66", "AGD84", "BUKIT",
+    "ASTRO", "CHATM", "CARTH", "CAPE", "DJAKA", "EGYPT", "ED50", "ED79", "GUNSG", "GEO49",
+    "GRB36", "GUAM", "HAWAII", "KAUAI", "MAUI", "OAHU", "HERAT", "HJORS", "HONGK", "HUTZU",
+    "INDIA", "IRE65", "KERTA", "KANDA", "LIBER", "LUZON", "MINDA", "MERCH", "NAHR", "NAD83",
+    "CANADA", "ALASKA", "NAD27", "CARIBB", "MEXICO", "CAMER", "MINNA", "OMAN", "PUERTO",
+    "QORNO", "ROME", "CHUA", "SAM56", "SAM69", "CAMPO", "SACOR", "YACAR", "TANAN", "TIMBA",
+    "TOKYO", "TRIST", "VITI", "WAK60", "WGS72", "WGS84", "ZANDE", "USER", "CSRS", "ADIM",
+    "ARSM", "ENW", "HTN", "INDB", "INDI", "IRL", "LUZA", "LUZB", "NAHC", "NASP", "OGBM",
+    "OHAA", "OHAB", "OHAC", "OHAD", "OHIA", "OHIB", "OHIC", "OHID", "TIL", "TOYM" };
+
   struct NovatelSentence
   {
     std::string id;
@@ -242,6 +269,10 @@ namespace novatel_oem628
       const NovatelSentence& sentence,
       novatel_gps_msgs::NovatelVelocityPtr msg);
 
+  bool parse_binary_novatel_pos_msg(
+      const BinaryMessage& bin_msg,
+      novatel_gps_msgs::NovatelPositionPtr ros_msg);
+
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
       novatel_gps_msgs::NovatelPositionPtr ros_msg);
@@ -279,19 +310,31 @@ namespace novatel_oem628
       std::string& remaining,
       bool keep_nmea_container = false);
 
+  double ParseDouble(const uint8_t* buffer);
+
   bool ParseDouble(const std::string& string, double& value);
+
+  float ParseFloat(const uint8_t* buffer);
 
   bool ParseFloat(const std::string& string, float& value);
 
-  bool ParseInt32(const std::string& string, int32_t& value, int32_t base = 10);
-
-  bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base = 10);
+  int16_t ParseInt16(const uint8_t* buffer);
 
   bool ParseInt16(const std::string& string, int16_t& value, int32_t base = 10);
 
-  bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base = 10);
+  int32_t ParseInt32(const uint8_t* buffer);
+
+  bool ParseInt32(const std::string& string, int32_t& value, int32_t base = 10);
 
   bool ParseUInt8(const std::string& string, uint8_t& value, int32_t base = 10);
+
+  uint16_t ParseUInt16(const uint8_t* buffer);
+
+  bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base = 10);
+
+  uint32_t ParseUInt32(const uint8_t* buffer);
+
+  bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base = 10);
 }
 
 #endif  // NOVTEL_OEM628_NOVATEL_MESSAGE_PARSER_H_

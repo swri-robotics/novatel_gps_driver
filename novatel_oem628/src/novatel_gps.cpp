@@ -30,6 +30,7 @@
 #include <sstream>
 #include <novatel_oem628/novatel_gps.h>
 
+#include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -74,7 +75,7 @@ namespace novatel_oem628
     NovatelMessageOpts opts;
     opts["gpgga"] = 0.05;
     opts["gprmc"] = 0.05;
-    opts["bestposa"] = 0.05;
+    opts["bestposb"] = 0.05;
     opts["timea"] = 1.0;   
     opts["rangea"] = 1;
     return Connect(device, connection, opts);
@@ -342,6 +343,41 @@ namespace novatel_oem628
       }
     }
     novatel_sentences_.clear();
+
+    BOOST_FOREACH(const BinaryMessage& msg, binary_messages_)
+    {
+      uint16_t msg_id;
+      if (msg.short_header_)
+      {
+        msg_id = msg.short_header_->message_id_;
+      }
+      else
+      {
+        msg_id = msg.header_->message_id_;
+      }
+
+      switch (msg_id)
+      {
+        case 42:
+        {
+          novatel_gps_msgs::NovatelPositionPtr position = boost::make_shared<novatel_gps_msgs::NovatelPosition>();
+          if (!parse_binary_novatel_pos_msg(msg, position))
+          {
+            read_result = READ_PARSE_FAILED;
+            error_msg_ = "Failed to parse the binary Novatel BestPos message.";
+          }
+          else
+          {
+            position->header.stamp = stamp;
+            novatel_positions_.push_back(position);
+            position_sync_buffer_.push_back(position);
+          }
+          break;
+        }
+        default:
+          ROS_DEBUG("Unexpected binary message id: %u", msg_id);
+      }
+    }
 
     if (binary_messages_.size() > 0)
     {

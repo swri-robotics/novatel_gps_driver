@@ -378,6 +378,36 @@ namespace novatel_oem628
     return valid;
   }
 
+  bool parse_binary_novatel_pos_msg(const BinaryMessage& bin_msg,
+                                    novatel_gps_msgs::NovatelPositionPtr ros_msg)
+  {
+    uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
+    ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
+    uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
+    ros_msg->position_type = POSITION_TYPES[pos_type];
+    ros_msg->lat = ParseDouble(&bin_msg.data_[8]);
+    ros_msg->lon = ParseDouble(&bin_msg.data_[16]);
+    ros_msg->height = ParseDouble(&bin_msg.data_[24]);
+    ros_msg->undulation = ParseFloat(&bin_msg.data_[32]);
+    uint16_t datum_id = ParseUInt16(&bin_msg.data_[36]);
+    ros_msg->datum_id = DATUMS[datum_id];
+    ros_msg->lat_sigma = ParseFloat(&bin_msg.data_[40]);
+    ros_msg->lon_sigma = ParseFloat(&bin_msg.data_[44]);
+    ros_msg->height_sigma = ParseFloat(&bin_msg.data_[48]);
+    std::copy(&bin_msg.data_[52], &bin_msg.data_[56], &ros_msg->base_station_id[0]);
+    ros_msg->diff_age = ParseFloat(&bin_msg.data_[56]);
+    ros_msg->solution_age = ParseFloat(&bin_msg.data_[60]);
+    ros_msg->num_satellites_tracked = bin_msg.data_[64];
+    ros_msg->num_satellites_used_in_solution = bin_msg.data_[65];
+    ros_msg->num_gps_and_glonass_l1_used_in_solution = bin_msg.data_[66];
+    ros_msg->num_gps_and_glonass_l1_and_l2_used_in_solution = bin_msg.data_[67];
+    get_extended_solution_status_msg(bin_msg.data_[69],
+                                     ros_msg->extended_solution_status);
+    get_signals_used(bin_msg.data_[70], ros_msg->signal_mask);
+
+    return true;
+  }
+
   bool parse_novatel_pos_msg(
       const NovatelSentence& sentence,
       novatel_gps_msgs::NovatelPositionPtr msg)
@@ -467,7 +497,18 @@ namespace novatel_oem628
       return -1;
     }
 
+    msg.data_.reserve(data_length);
+    memcpy(&msg.data_[0], &str[data_start], data_length);
+
+    uint32_t crc = CalculateBlockCRC32(data_length, &msg.data_[0]);
+
     memcpy(&msg.crc_, &str[data_start + data_length], sizeof(uint32_t));
+
+    if (crc != msg.crc_)
+    {
+      // Invalid CRC
+      return 1;
+    }
 
     return 0;
   }
@@ -1054,14 +1095,33 @@ namespace novatel_oem628
 
   }
 
+  double ParseDouble(const uint8_t* buffer)
+  {
+    double x;
+    std::copy(buffer, buffer + sizeof(double), reinterpret_cast<uint8_t*>(&x));
+    return x;
+  }
+
   bool ParseDouble(const std::string& string, double& value)
   {
     return swri_string_util::ToDouble(string, value) || string.empty();
   }
 
+  float ParseFloat(const uint8_t* buffer)
+  {
+    float x;
+    std::copy(buffer, buffer + sizeof(float), reinterpret_cast<uint8_t*>(&x));
+    return x;
+  }
+
   bool ParseFloat(const std::string& string, float& value)
   {
     return swri_string_util::ToFloat(string, value) || string.empty();
+  }
+
+  int16_t ParseInt16(const uint8_t* buffer)
+  {
+    return buffer[0] << 8 | buffer[1];
   }
 
   bool ParseInt16(const std::string& string, int16_t& value, int32_t base)
@@ -1084,9 +1144,19 @@ namespace novatel_oem628
     return false;
   }
 
+  int32_t ParseInt32(const uint8_t* buffer)
+  {
+    return buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3];
+  }
+
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base)
   {
     return swri_string_util::ToInt32(string, value, base) || string.empty();
+  }
+
+  uint32_t ParseUInt32(const uint8_t* buffer)
+  {
+    return buffer[0] << 24 | buffer[1] << 16 | buffer[2] << 8 | buffer[3];
   }
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base)
@@ -1110,6 +1180,11 @@ namespace novatel_oem628
     }
 
     return false;
+  }
+
+  uint16_t ParseUInt16(const uint8_t* buffer)
+  {
+    return buffer[0] << 8 | buffer[1];
   }
 
   bool ParseUInt16(const std::string& string, uint16_t& value, int32_t base)
