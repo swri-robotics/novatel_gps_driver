@@ -80,6 +80,55 @@ namespace novatel_oem628
     ParseFailed
   };
 
+  struct BinaryHeader
+  {
+    BinaryHeader() :
+      sync0_(0xAA),
+      sync1_(0x44),
+      sync2_(0x12)
+    {}
+    uint8_t sync0_;
+    uint8_t sync1_;
+    uint8_t sync2_;
+    uint8_t header_length_;
+    uint16_t message_id_;
+    int8_t message_type_;
+    uint8_t port_address_;
+    uint16_t message_length_;
+    uint16_t sequence_;
+    uint8_t idle_time_;
+    uint8_t time_status_;
+    uint16_t week_;
+    uint32_t gpsec_;
+    uint32_t receiver_status_;
+    uint16_t reserved_;
+    uint16_t receiver_sw_version_;
+  };
+
+  struct ShortBinaryHeader
+  {
+    ShortBinaryHeader() :
+        sync0_(0xAA),
+        sync1_(0x44),
+        sync2_(0x13)
+    {}
+    uint8_t sync0_;
+    uint8_t sync1_;
+    uint8_t sync2_;
+    uint8_t message_length_;
+    uint16_t message_id_;
+    uint16_t week_number_;
+    uint32_t milliseconds_;
+  };
+
+  struct BinaryMessage
+  {
+    boost::shared_ptr<BinaryHeader> header_;
+    boost::shared_ptr<ShortBinaryHeader> short_header_;
+    std::vector<uint8_t> data_;
+    uint32_t crc_;
+  };
+
   struct NovatelSentence
   {
     std::string id;
@@ -226,6 +275,7 @@ namespace novatel_oem628
       const std::string input,
       std::vector<NmeaSentence>& nmea_sentences,
       std::vector<NovatelSentence>& novatel_sentences,
+      std::vector<BinaryMessage>& binary_messages,
       std::string& remaining,
       bool keep_nmea_container = false);
 

@@ -172,6 +172,7 @@ namespace novatel_oem628
           nmea_buffer_,
           nmea_sentences_,
           novatel_sentences_,
+          binary_messages_,
           nmea_buffer_))
       {
         read_result = READ_PARSE_FAILED;
@@ -341,6 +342,12 @@ namespace novatel_oem628
       }
     }
     novatel_sentences_.clear();
+
+    if (binary_messages_.size() > 0)
+    {
+      ROS_INFO("Extracted %lu binary messages", binary_messages_.size());
+      binary_messages_.clear();
+    }
 
     return read_result;
   }

@@ -157,6 +157,7 @@ namespace novatel_oem628
       std::string nmea_buffer_;
       std::vector<NmeaSentence> nmea_sentences_;
       std::vector<NovatelSentence> novatel_sentences_;
+      std::vector<BinaryMessage> binary_messages_;
 
       // Message buffers
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;

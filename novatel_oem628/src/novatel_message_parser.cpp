@@ -426,6 +426,52 @@ namespace novatel_oem628
     return valid;
   }
 
+  int32_t get_binary_message(const std::string& str,
+                             size_t start_idx,
+                             BinaryMessage& msg)
+  {
+    if (str.length() < 16)
+    {
+      // The shortest a binary message can be (short header + no data + CRC)
+      // is 16 bytes, so just return if we don't have at least that many.
+      return -1;
+    }
+
+    if (str[start_idx+1] != '\x44')
+    {
+      // Second sync byte was invalid
+      return -1;
+    }
+
+    uint16_t data_start;
+    uint16_t data_length;
+    if (str[start_idx+2] == 0x12)
+    {
+      boost::shared_ptr<BinaryHeader> header = boost::make_shared<BinaryHeader>();
+      memcpy(header.get(), &str[start_idx], sizeof(BinaryHeader));
+      msg.header_ = header;
+      data_start = sizeof(BinaryHeader) + start_idx;
+      data_length = header->message_length_;
+    }
+    else if (str[start_idx+2] == 0x13)
+    {
+      boost::shared_ptr<ShortBinaryHeader> short_header = boost::make_shared<ShortBinaryHeader>();
+      memcpy(short_header.get(), &str[start_idx], sizeof(ShortBinaryHeader));
+      msg.short_header_ = short_header;
+      data_start = sizeof(BinaryHeader) + start_idx;
+      data_length = short_header->message_length_;
+    }
+    else
+    {
+      // Third sync byte was invalid
+      return -1;
+    }
+
+    memcpy(&msg.crc_, &str[data_start + data_length], sizeof(uint32_t));
+
+    return 0;
+  }
+
   int32_t get_novatel_sentence(
       const std::string& str,
       size_t start_idx,
@@ -542,6 +588,7 @@ namespace novatel_oem628
       const std::string input,
       std::vector<NmeaSentence>& nmea_sentences,
       std::vector<NovatelSentence>& novatel_sentences,
+      std::vector<BinaryMessage>& binary_messages,
       std::string& remaining,
       bool keep_nmea_container)
   {
@@ -550,6 +597,7 @@ namespace novatel_oem628
 
     const char NMEA_SENTENCE_FLAG = '$';
     const char NOVATEL_SENTENCE_FLAG = '#';
+    uint8_t BINARY_MESSAGE_FLAG = 0xAA;
 
     size_t sentence_start = 0;
     while(sentence_start != std::string::npos && sentence_start < input.size())
@@ -600,6 +648,29 @@ namespace novatel_oem628
             novatel_sentences.pop_back();
             parse_error = true;
           }
+          cur_idx = sentence_start + 1;
+        }
+        else if (result < 0)
+        {
+          // Sentence is not complete, add it to the remaining and break;
+          remaining = input.substr(sentence_start);
+          break;
+        }
+        else
+        {
+          // Sentence had an invalid checksum, just iterate to the next sentence
+          cur_idx = sentence_start + 1;
+          parse_error = true;
+        }
+      }
+      else if (input[sentence_start] == BINARY_MESSAGE_FLAG)
+      {
+        BinaryMessage cur_msg;
+        int32_t result = get_binary_message(input, sentence_start, cur_msg);
+        if (result == 0)
+        {
+          // TODO Parse message
+          binary_messages.push_back(cur_msg);
           cur_idx = sentence_start + 1;
         }
         else if (result < 0)
