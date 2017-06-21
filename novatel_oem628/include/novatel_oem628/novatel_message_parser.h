@@ -66,6 +66,7 @@ namespace novatel_oem628
   const uint8_t NOVATEL_BINARY_SYNC_BYTE = 0xAA;
 
   const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
+  const uint16_t TIME_BINARY_MESSAGE_ID = 101;
 
   const size_t NOVATEL_MESSAGE_HEADER_LENGTH = 10;
   const size_t NOVATEL_OMNIHPPOS_BODY_LENGTH = 21;
@@ -243,6 +244,10 @@ namespace novatel_oem628
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,
       novatel_gps_msgs::NovatelMessageHeader& novatel_msg_header);
+
+  bool ParseNovatelBinaryTimeMessage(
+      const BinaryMessage& msg,
+      novatel_gps_msgs::TimePtr ros_msg);
 
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,

@@ -230,7 +230,6 @@ namespace novatel_oem628
     msg.percent_idle_time = bin_msg.header_.idle_time_;
     switch (bin_msg.header_.time_status_)
     {
-      default:
       case 20:
         msg.gps_time_status = "UNKNOWN";
         break;
@@ -264,6 +263,8 @@ namespace novatel_oem628
       case 200:
         msg.gps_time_status = "SATTIME";
         break;
+      default:
+        return false;
     }
     msg.gps_week_num = bin_msg.header_.week_;
     msg.gps_seconds = bin_msg.header_.gpsec_;
@@ -388,6 +389,64 @@ namespace novatel_oem628
     return valid;
   }
 
+  bool ParseNovatelBinaryTimeMessage(
+      const BinaryMessage& msg,
+      novatel_gps_msgs::TimePtr ros_msg)
+  {
+    if (msg.data_.size() != 44)
+    {
+      ROS_WARN("Unexpected time message size: %u", msg.data_.size());
+      return false;
+    }
+
+    uint32_t clock_status = ParseUInt32(&msg.data_[0]);
+    switch (clock_status)
+    {
+      case 0:
+        ros_msg->clock_status = "VALID";
+        break;
+      case 1:
+        ros_msg->clock_status = "CONVERGING";
+        break;
+      case 2:
+        ros_msg->clock_status = "ITERATING";
+        break;
+      case 3:
+        ros_msg->clock_status = "INVALID";
+        break;
+      default:
+        ROS_WARN("Unexpected clock status: %u", clock_status);
+        return false;
+    }
+    ros_msg->offset = ParseDouble(&msg.data_[4]);
+    ros_msg->offset_std = ParseDouble(&msg.data_[12]);
+    ros_msg->utc_offset = ParseDouble(&msg.data_[20]);
+    ros_msg->utc_year = ParseUInt32(&msg.data_[28]);
+    ros_msg->utc_month = msg.data_[32];
+    ros_msg->utc_day = msg.data_[33];
+    ros_msg->utc_hour = msg.data_[34];
+    ros_msg->utc_minute = msg.data_[35];
+    ros_msg->utc_millisecond = msg.data_[36];
+    uint32_t utc_status = ParseUInt32(&msg.data_[40]);
+    switch (utc_status)
+    {
+      case 0:
+        ros_msg->utc_status = "Invalid";
+        break;
+      case 1:
+        ros_msg->utc_status = "Valid";
+        break;
+      case 2:
+        ros_msg->utc_status = "Warning";
+        break;
+      default:
+        ROS_WARN("Unexpected UTC status: %u", utc_status);
+        return false;
+    }
+
+    return true;
+  }
+
   bool ParseNovatelTimeMessage(
       const NovatelSentence& sentence,
       novatel_gps_msgs::TimePtr msg)
@@ -473,6 +532,7 @@ namespace novatel_oem628
     ros_msg->lat_sigma = ParseFloat(&bin_msg.data_[40]);
     ros_msg->lon_sigma = ParseFloat(&bin_msg.data_[44]);
     ros_msg->height_sigma = ParseFloat(&bin_msg.data_[48]);
+    ros_msg->base_station_id.resize(4);
     std::copy(&bin_msg.data_[52], &bin_msg.data_[56], &ros_msg->base_station_id[0]);
     ros_msg->diff_age = ParseFloat(&bin_msg.data_[56]);
     ros_msg->solution_age = ParseFloat(&bin_msg.data_[60]);

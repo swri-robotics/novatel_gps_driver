@@ -308,7 +308,7 @@ namespace novatel_oem628
       opts["gpgga"] = polling_period_;
       opts["gprmc"] = polling_period_;
       opts["bestposb"] = polling_period_;  // Best position (Binary)
-      opts["timea"] = 1.0;  // Time (ASCII)
+      opts["timeb"] = 1.0;  // Time (Binary)
 
       if (publish_gpgsa_)
       {

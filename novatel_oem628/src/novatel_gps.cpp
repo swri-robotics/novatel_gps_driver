@@ -76,7 +76,7 @@ namespace novatel_oem628
     opts["gpgga"] = 0.05;
     opts["gprmc"] = 0.05;
     opts["bestposb"] = 0.05;
-    opts["timea"] = 1.0;   
+    opts["timeb"] = 1.0;
     opts["rangea"] = 1;
     return Connect(device, connection, opts);
   }
@@ -309,7 +309,7 @@ namespace novatel_oem628
         else
         {
           utc_offset_ = time->utc_offset;
-          ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %d", time->utc_offset, utc_offset_);
+          ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
           time_msgs_.push_back(time);
         }
       }
@@ -362,6 +362,23 @@ namespace novatel_oem628
             position->header.stamp = stamp;
             novatel_positions_.push_back(position);
             position_sync_buffer_.push_back(position);
+          }
+          break;
+        }
+        case TIME_BINARY_MESSAGE_ID:
+        {
+          novatel_gps_msgs::TimePtr time =
+              boost::make_shared<novatel_gps_msgs::Time>();
+          if (!ParseNovatelBinaryTimeMessage(msg, time))
+          {
+            read_result = READ_PARSE_FAILED;
+            error_msg_ = "Failed to parse the binary Novatel Time message.";
+          }
+          else
+          {
+            utc_offset_ = time->utc_offset;
+            ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+            time_msgs_.push_back(time);
           }
           break;
         }

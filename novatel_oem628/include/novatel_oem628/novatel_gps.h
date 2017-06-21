@@ -142,7 +142,7 @@ namespace novatel_oem628
 
       ConnectionType connection_;
 
-      int32_t utc_offset_;
+      double utc_offset_;
 
       // Serial
       swri_serial_util::SerialPort serial_;
