@@ -346,21 +346,12 @@ namespace novatel_oem628
 
     BOOST_FOREACH(const BinaryMessage& msg, binary_messages_)
     {
-      uint16_t msg_id;
-      if (msg.short_header_)
+      switch (msg.header_.message_id_)
       {
-        msg_id = msg.short_header_->message_id_;
-      }
-      else
-      {
-        msg_id = msg.header_->message_id_;
-      }
-
-      switch (msg_id)
-      {
-        case 42:
+        case BESTPOS_BINARY_MESSAGE_ID:
         {
-          novatel_gps_msgs::NovatelPositionPtr position = boost::make_shared<novatel_gps_msgs::NovatelPosition>();
+          novatel_gps_msgs::NovatelPositionPtr position =
+              boost::make_shared<novatel_gps_msgs::NovatelPosition>();
           if (!parse_binary_novatel_pos_msg(msg, position))
           {
             read_result = READ_PARSE_FAILED;
@@ -375,15 +366,11 @@ namespace novatel_oem628
           break;
         }
         default:
-          ROS_DEBUG("Unexpected binary message id: %u", msg_id);
+          ROS_WARN("Unexpected binary message id: %u", msg.header_.message_id_);
+          break;
       }
     }
-
-    if (binary_messages_.size() > 0)
-    {
-      ROS_INFO("Extracted %lu binary messages", binary_messages_.size());
-      binary_messages_.clear();
-    }
+    binary_messages_.clear();
 
     return read_result;
   }

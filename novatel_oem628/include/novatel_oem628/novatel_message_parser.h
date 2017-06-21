@@ -63,6 +63,9 @@ namespace novatel_oem628
 {
   const char NMEA_SENTENCE_FLAG = '$';
   const char NOVATEL_SENTENCE_FLAG = '#';
+  const uint8_t NOVATEL_BINARY_SYNC_BYTE = 0xAA;
+
+  const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
 
   const size_t NOVATEL_MESSAGE_HEADER_LENGTH = 10;
   const size_t NOVATEL_OMNIHPPOS_BODY_LENGTH = 21;
@@ -105,26 +108,9 @@ namespace novatel_oem628
     uint16_t receiver_sw_version_;
   };
 
-  struct ShortBinaryHeader
-  {
-    ShortBinaryHeader() :
-        sync0_(0xAA),
-        sync1_(0x44),
-        sync2_(0x13)
-    {}
-    uint8_t sync0_;
-    uint8_t sync1_;
-    uint8_t sync2_;
-    uint8_t message_length_;
-    uint16_t message_id_;
-    uint16_t week_number_;
-    uint32_t milliseconds_;
-  };
-
   struct BinaryMessage
   {
-    boost::shared_ptr<BinaryHeader> header_;
-    boost::shared_ptr<ShortBinaryHeader> short_header_;
+    BinaryHeader header_;
     std::vector<uint8_t> data_;
     uint32_t crc_;
   };
@@ -146,15 +132,16 @@ namespace novatel_oem628
     "INS_OMNISTAR_HP", "INS_OMNISTAR_XP", "RESERVED", "RESERVED", "RESERVED", "RESERVED",
     "OMNISTAR_HP", "OMNISTAR_XP", "RESERVED", "RESERVED", "PPP_CONVERGING", "PPP",
     "RESERVED", "RESERVED", "RESERVED", "INS_PPP_CONVERGING", "INS_PPP" };
-  const std::string DATUMS[] = { "ADIND", "ARC50", "ARC60", "AGD66", "AGD84", "BUKIT",
-    "ASTRO", "CHATM", "CARTH", "CAPE", "DJAKA", "EGYPT", "ED50", "ED79", "GUNSG", "GEO49",
-    "GRB36", "GUAM", "HAWAII", "KAUAI", "MAUI", "OAHU", "HERAT", "HJORS", "HONGK", "HUTZU",
-    "INDIA", "IRE65", "KERTA", "KANDA", "LIBER", "LUZON", "MINDA", "MERCH", "NAHR", "NAD83",
-    "CANADA", "ALASKA", "NAD27", "CARIBB", "MEXICO", "CAMER", "MINNA", "OMAN", "PUERTO",
-    "QORNO", "ROME", "CHUA", "SAM56", "SAM69", "CAMPO", "SACOR", "YACAR", "TANAN", "TIMBA",
-    "TOKYO", "TRIST", "VITI", "WAK60", "WGS72", "WGS84", "ZANDE", "USER", "CSRS", "ADIM",
-    "ARSM", "ENW", "HTN", "INDB", "INDI", "IRL", "LUZA", "LUZB", "NAHC", "NASP", "OGBM",
-    "OHAA", "OHAB", "OHAC", "OHAD", "OHIA", "OHIB", "OHIC", "OHID", "TIL", "TOYM" };
+  const std::string DATUMS[] = { "BLANK",
+    "ADIND", "ARC50", "ARC60", "AGD66", "AGD84", "BUKIT", "ASTRO", "CHATM", "CARTH", "CAPE",
+    "DJAKA", "EGYPT", "ED50", "ED79", "GUNSG", "GEO49", "GRB36", "GUAM", "HAWAII", "KAUAI",
+    "MAUI", "OAHU", "HERAT", "HJORS", "HONGK", "HUTZU", "INDIA", "IRE65", "KERTA", "KANDA",
+    "LIBER", "LUZON", "MINDA", "MERCH", "NAHR", "NAD83", "CANADA", "ALASKA", "NAD27", "CARIBB",
+    "MEXICO", "CAMER", "MINNA", "OMAN", "PUERTO", "QORNO", "ROME", "CHUA", "SAM56", "SAM69",
+    "CAMPO", "SACOR", "YACAR", "TANAN", "TIMBA", "TOKYO", "TRIST", "VITI", "WAK60", "WGS72",
+    "WGS84", "ZANDE", "USER", "CSRS", "ADIM", "ARSM", "ENW", "HTN", "INDB", "INDI",
+    "IRL", "LUZA", "LUZB", "NAHC", "NASP", "OGBM", "OHAA", "OHAB", "OHAC", "OHAD",
+    "OHIA", "OHIB", "OHIC", "OHID", "TIL", "TOYM" };
 
   struct NovatelSentence
   {
@@ -248,6 +235,10 @@ namespace novatel_oem628
   void get_novatel_receiver_status_msg(
       uint32_t status,
       novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg);
+
+  bool ParseNovatelBinaryHeader(
+      const BinaryMessage& bin_msg,
+      novatel_gps_msgs::NovatelMessageHeader& msg);
 
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,

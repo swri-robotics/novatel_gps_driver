@@ -307,7 +307,7 @@ namespace novatel_oem628
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
       opts["gprmc"] = polling_period_;
-      opts["bestposa"] = polling_period_;  // Best position (ASCII)
+      opts["bestposb"] = polling_period_;  // Best position (Binary)
       opts["timea"] = 1.0;  // Time (ASCII)
 
       if (publish_gpgsa_)
