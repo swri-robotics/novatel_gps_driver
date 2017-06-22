@@ -84,7 +84,7 @@ namespace novatel_oem628
   {
     size_t nmea_idx = str.find_first_of(NMEA_SENTENCE_FLAG, start_idx);
     size_t novatel_idx = str.find_first_of(NOVATEL_SENTENCE_FLAG, start_idx);
-    size_t binary_idx = str.find("\xAA\x44\x12", start_idx);
+    size_t binary_idx = str.find(NOVATEL_BINARY_SYNC_BYTES, start_idx);
 
     // Need to check for std::string::npos on the return
     return std::min(std::min(nmea_idx, novatel_idx), binary_idx);
@@ -239,10 +239,8 @@ namespace novatel_oem628
       default:
         return false;
     }
-    if (bin_msg.header_.port_address_ > 255)
-    {
-      return false;
-    }
+    // No point in checking whether the port identifier is valid here, because
+    // the variable's range is 0-255 and this array has 256 values in it.
     msg.port = PORT_IDENTIFIERS[bin_msg.header_.port_address_];
     msg.sequence_num = bin_msg.header_.sequence_;
     msg.percent_idle_time = bin_msg.header_.idle_time_;
@@ -839,29 +837,11 @@ namespace novatel_oem628
       return -1;
     }
 
-    if (static_cast<uint8_t>(str[start_idx+1]) != 0x44)
-    {
-      // Second sync byte was invalid
-      ROS_WARN("Binary message sync byte #2 was wrong.");
-      return -1;
-    }
-
-    uint16_t data_start;
-    uint16_t data_length;
-    if (static_cast<uint8_t>(str[start_idx+2]) == 0x12)
-    {
-      ROS_DEBUG("Parsing long header.");
-      std::copy(&str[start_idx], &str[start_idx+NOVATEL_BINARY_HEADER_LENGTH],
-                reinterpret_cast<char*>(&msg.header_));
-      data_start = static_cast<uint16_t>(NOVATEL_BINARY_HEADER_LENGTH + start_idx);
-      data_length = msg.header_.message_length_;
-    }
-    else
-    {
-      // Third sync byte was invalid
-      ROS_ERROR("Third sync byte was invalid");
-      return -1;
-    }
+    ROS_DEBUG("Reading binary header.");
+    std::copy(&str[start_idx], &str[start_idx+NOVATEL_BINARY_HEADER_LENGTH],
+              reinterpret_cast<char*>(&msg.header_));
+    uint16_t data_start = static_cast<uint16_t>(NOVATEL_BINARY_HEADER_LENGTH + start_idx);
+    uint16_t data_length = msg.header_.message_length_;
 
     ROS_DEBUG("Data start / length: %u / %u", data_start, data_length);
 
@@ -871,7 +851,7 @@ namespace novatel_oem628
       return -1;
     }
 
-    ROS_DEBUG("Copying message data.");
+    ROS_DEBUG("Reading binary message data.");
     msg.data_.resize(data_length);
     std::copy(&str[data_start], &str[data_start+data_length], reinterpret_cast<char*>(&msg.data_[0]));
 
@@ -880,20 +860,17 @@ namespace novatel_oem628
     uint32_t crc = CalculateBlockCRC32(static_cast<uint32_t>(NOVATEL_BINARY_HEADER_LENGTH) + data_length,
                                        reinterpret_cast<const uint8_t*>(&str[start_idx]));
 
-    ROS_DEBUG("Copying CRC.");
+    ROS_DEBUG("Reading CRC.");
     msg.crc_ = ParseUInt32(reinterpret_cast<const uint8_t*>(&str[data_start+data_length]));
 
     if (crc != msg.crc_)
     {
       // Invalid CRC
       ROS_DEBUG("Invalid CRC;  Calc: %u    In msg: %u", crc, msg.crc_);
-      ROS_DEBUG("  Id: %u  Week: %u  Sec: %u  Seq: %u",
-                msg.header_.message_id_, msg.header_.week_,
-                msg.header_.gpsec_, msg.header_.sequence_);
       return 1;
     }
 
-    ROS_DEBUG("Finishing copying binary message.");
+    ROS_DEBUG("Finishing reading binary message.");
     return 0;
   }
 
@@ -1085,9 +1062,9 @@ namespace novatel_oem628
           parse_error = true;
         }
       }
-      else if (static_cast<uint8_t>(input[sentence_start]) == NOVATEL_BINARY_SYNC_BYTE)
+      else if (input.substr(sentence_start, NOVATEL_BINARY_SYNC_BYTES.size()) ==
+          NOVATEL_BINARY_SYNC_BYTES)
       {
-        ROS_DEBUG("Saw binary sync byte #1");
         BinaryMessage cur_msg;
         int32_t result = get_binary_message(input, sentence_start, cur_msg);
         if (result == 0)

@@ -63,7 +63,7 @@ namespace novatel_oem628
 {
   const char NMEA_SENTENCE_FLAG = '$';
   const char NOVATEL_SENTENCE_FLAG = '#';
-  const uint8_t NOVATEL_BINARY_SYNC_BYTE = 0xAA;
+  const std::string NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
 
   const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
   const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
