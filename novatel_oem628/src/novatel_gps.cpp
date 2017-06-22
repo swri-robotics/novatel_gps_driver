@@ -75,8 +75,8 @@ namespace novatel_oem628
     NovatelMessageOpts opts;
     opts["gpgga"] = 0.05;
     opts["gprmc"] = 0.05;
-    opts["bestposb"] = 0.05;
-    opts["timeb"] = 1.0;
+    opts["bestposa"] = 0.05;
+    opts["timea"] = 1.0;
     opts["rangea"] = 1;
     return Connect(device, connection, opts);
   }
@@ -502,7 +502,8 @@ namespace novatel_oem628
     return READ_ERROR;
   }
 
-  NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg, const ros::Time& stamp)
+  NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
+                                                        const ros::Time& stamp)
   {
     switch (msg.header_.message_id_)
     {
@@ -523,6 +524,38 @@ namespace novatel_oem628
         }
         break;
       }
+      case BESTVEL_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelVelocityPtr velocity =
+            boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+        if (!ParseNovatelBinaryVelMessage(msg, velocity))
+        {
+          error_msg_ = "Failed to parse the binary Novatel BestVel message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          velocity->header.stamp = stamp;
+          novatel_velocities_.push_back(velocity);
+        }
+        break;
+      }
+      case RANGE_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::RangePtr range =
+            boost::make_shared<novatel_gps_msgs::Range>();
+        if (!ParseNovatelBinaryRangeMessage(msg, range))
+        {
+          error_msg_ = "Failed to parse the binary Novatel Range message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          range->header.stamp = stamp;
+          range_msgs_.push_back(range);
+        }
+        break;
+      }
       case TIME_BINARY_MESSAGE_ID:
       {
         novatel_gps_msgs::TimePtr time =
@@ -540,6 +573,22 @@ namespace novatel_oem628
         }
         break;
       }
+      case TRACKSTAT_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::TrackstatPtr trackstat =
+            boost::make_shared<novatel_gps_msgs::Trackstat>();
+        if (!ParseNovatelBinaryTrackstatMessage(msg, trackstat))
+        {
+          error_msg_ = "Failed to parse the binary Novatel Trackstat message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          trackstat->header.stamp = stamp;
+          trackstat_msgs_.push_back(trackstat);
+        }
+        break;
+      }
       default:
         ROS_WARN("Unexpected binary message id: %u", msg.header_.message_id_);
         break;
@@ -548,7 +597,9 @@ namespace novatel_oem628
     return READ_SUCCESS;
   }
 
-  NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence, const ros::Time& stamp, double most_recent_utc_time)
+  NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
+                                                       const ros::Time& stamp,
+                                                       double most_recent_utc_time)
   {
     if (sentence.id == "GPGGA")
     {
@@ -633,11 +684,13 @@ namespace novatel_oem628
     return READ_SUCCESS;
   }
 
-  NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence, const ros::Time& stamp)
+  NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
+                                                          const ros::Time& stamp)
   {
     if (sentence.id == "BESTPOSA")
     {
-      novatel_gps_msgs::NovatelPositionPtr position = boost::make_shared<novatel_gps_msgs::NovatelPosition>();
+      novatel_gps_msgs::NovatelPositionPtr position =
+          boost::make_shared<novatel_gps_msgs::NovatelPosition>();
       if (!parse_novatel_pos_msg(sentence, position))
       {
         error_msg_ = "Failed to parse the Novatel BestPos message.";
@@ -652,7 +705,8 @@ namespace novatel_oem628
     }
     else if (sentence.id == "BESTVELA")
     {
-      novatel_gps_msgs::NovatelVelocityPtr velocity = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+      novatel_gps_msgs::NovatelVelocityPtr velocity =
+          boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
       if (!ParseNovatelVelMessage(sentence, velocity))
       {
         error_msg_ = "Failed to parse the Novatel BestVel message.";
@@ -695,7 +749,8 @@ namespace novatel_oem628
     }
     else if (sentence.id == "TRACKSTATA")
     {
-      novatel_gps_msgs::TrackstatPtr trackstat = boost::make_shared<novatel_gps_msgs::Trackstat>();
+      novatel_gps_msgs::TrackstatPtr trackstat =
+          boost::make_shared<novatel_gps_msgs::Trackstat>();
       if (!ParseNovatelTrackstatMessage(sentence, trackstat))
       {
         error_msg_ = "Failed to parse the Novatel Trackstat message.";

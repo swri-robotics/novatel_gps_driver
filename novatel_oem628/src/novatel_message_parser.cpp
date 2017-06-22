@@ -219,13 +219,31 @@ namespace novatel_oem628
       const BinaryMessage& bin_msg,
       novatel_gps_msgs::NovatelMessageHeader& msg)
   {
-    std::stringstream conv;
-    conv << bin_msg.header_.message_id_;
-    msg.message_name = conv.str();
-    conv.str("");
-    // TODO Add proper port stringification
-    conv << bin_msg.header_.port_address_;
-    msg.port = conv.str();
+    switch (bin_msg.header_.message_id_)
+    {
+      case BESTPOS_BINARY_MESSAGE_ID:
+        msg.message_name = "BESTPOS";
+        break;
+      case BESTVEL_BINARY_MESSAGE_ID:
+        msg.message_name = "BESTVEL";
+        break;
+      case RANGE_BINARY_MESSAGE_ID:
+        msg.message_name = "RANGE";
+        break;
+      case TIME_BINARY_MESSAGE_ID:
+        msg.message_name = "TIME";
+        break;
+      case TRACKSTAT_BINARY_MESSAGE_ID:
+        msg.message_name = "TRACKSTAT";
+        break;
+      default:
+        return false;
+    }
+    if (bin_msg.header_.port_address_ > 255)
+    {
+      return false;
+    }
+    msg.port = PORT_IDENTIFIERS[bin_msg.header_.port_address_];
     msg.sequence_num = bin_msg.header_.sequence_;
     msg.percent_idle_time = bin_msg.header_.idle_time_;
     switch (bin_msg.header_.time_status_)
@@ -304,7 +322,45 @@ namespace novatel_oem628
 
     return valid;
   }
-  
+
+  bool ParseNovatelBinaryRangeMessage(const BinaryMessage& bin_msg,
+                                      novatel_gps_msgs::RangePtr ros_msg)
+  {
+    uint32_t num_obs = ParseUInt32(&bin_msg.data_[0]);
+    if (bin_msg.data_.size() != (NOVATEL_BINARY_RANGE_OBSERVATION_LENGTH * num_obs) + 4)
+    {
+      ROS_WARN("Unexpected range message size: %lu", bin_msg.data_.size());
+      return false;
+    }
+    if (!ParseNovatelBinaryHeader(bin_msg, ros_msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    ros_msg->numb_of_observ = num_obs;
+    ros_msg->info.reserve(num_obs);
+    for(int i = 0; i < num_obs; i++)
+    {
+      size_t obs_offset = 4 + i * NOVATEL_BINARY_RANGE_OBSERVATION_LENGTH;
+
+      novatel_gps_msgs::RangeInformation info;
+
+      info.prn_number = ParseUInt16(&bin_msg.data_[obs_offset]);
+      info.glofreq = ParseUInt16(&bin_msg.data_[obs_offset+2]);
+      info.psr = ParseDouble(&bin_msg.data_[obs_offset+4]);
+      info.psr_std = ParseFloat(&bin_msg.data_[obs_offset+12]);
+      info.adr = ParseDouble(&bin_msg.data_[obs_offset+16]);
+      info.adr_std = ParseFloat(&bin_msg.data_[obs_offset+24]);
+      info.dopp = ParseFloat(&bin_msg.data_[obs_offset+28]);
+      info.noise_density_ratio = ParseFloat(&bin_msg.data_[obs_offset+32]);
+      info.locktime = ParseFloat(&bin_msg.data_[obs_offset+36]);
+      info.tracking_status = ParseUInt32(&bin_msg.data_[obs_offset+40]);
+
+      ros_msg->info.push_back(info);
+    }
+    return true;
+  }
+
   bool ParseNovatelRangeMessage(
       const NovatelSentence& sentence,
       novatel_gps_msgs::RangePtr msg)
@@ -323,7 +379,6 @@ namespace novatel_oem628
       return false;
     }
     bool valid = true;
-    bool check = true;
     valid &= ParseInt32(sentence.body[0], msg->numb_of_observ, 10);
     msg->info.resize(numb_of_observ);
     for (int i = 0, index = 0; index < numb_of_observ; i += 10, index++)
@@ -341,6 +396,142 @@ namespace novatel_oem628
       valid &= ParseUInt32(track, msg->info[index].tracking_status, 16);
     }
     return valid;
+  }
+
+  bool ParseNovatelBinaryTrackstatMessage(
+      const BinaryMessage& bin_msg,
+      novatel_gps_msgs::TrackstatPtr ros_msg)
+  {
+    uint32_t num_chans = ParseUInt32(&bin_msg.data_[12]);
+    if (bin_msg.data_.size() != (NOVATEL_BINARY_TRACKSTAT_CHANNEL_LENGTH * num_chans) +
+                                    NOVATEL_BINARY_TRACKSTAT_MIN_LENGTH)
+    {
+      ROS_WARN("Unexpected trackstat message size: %lu", bin_msg.data_.size());
+      return false;
+    }
+
+    uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
+    if (solution_status > 22)
+    {
+      ROS_ERROR("Unknown solution status: %u", solution_status);
+      return false;
+    }
+    ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
+    uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
+    if (pos_type > 74)
+    {
+      ROS_ERROR("Unknown position type: %u", pos_type);
+      return false;
+    }
+    ros_msg->position_type = POSITION_TYPES[pos_type];
+    ros_msg->cutoff = ParseFloat(&bin_msg.data_[8]);
+
+    for (int i = 0; i < num_chans; i++)
+    {
+      size_t chan_offset = NOVATEL_BINARY_TRACKSTAT_MIN_LENGTH +
+          i * NOVATEL_BINARY_TRACKSTAT_CHANNEL_LENGTH;
+
+      novatel_gps_msgs::TrackstatChannel chan;
+      chan.prn = ParseInt16(&bin_msg.data_[chan_offset]);
+      chan.glofreq = ParseInt16(&bin_msg.data_[chan_offset+2]);
+      chan.ch_tr_status = ParseUInt32(&bin_msg.data_[chan_offset+4]);
+      chan.psr = ParseDouble(&bin_msg.data_[chan_offset+8]);
+      chan.doppler = ParseFloat(&bin_msg.data_[chan_offset+16]);
+      chan.c_no = ParseFloat(&bin_msg.data_[chan_offset+20]);
+      chan.locktime = ParseFloat(&bin_msg.data_[chan_offset+24]);
+      chan.psr_res = ParseFloat(&bin_msg.data_[chan_offset+28]);
+      uint32_t reject = ParseUInt32(&bin_msg.data_[chan_offset+32]);
+      switch (reject)
+      {
+        case 0:
+          chan.reject = "GOOD";
+          break;
+        case 1:
+          chan.reject = "BADHEALTH";
+          break;
+        case 2:
+          chan.reject = "OLDEPHEMERIS";
+          break;
+        case 6:
+          chan.reject = "ELEVATIONERROR";
+        case 7:
+          chan.reject = "MISCLOSURE";
+          break;
+        case 8:
+          chan.reject = "NODIFFCORR";
+          break;
+        case 9:
+          chan.reject = "NOEPHEMERIS";
+          break;
+        case 10:
+          chan.reject = "INVALIDCODE";
+          break;
+        case 11:
+          chan.reject = "LOCKEDOUT";
+          break;
+        case 12:
+          chan.reject = "LOWPOWER";
+          break;
+        case 13:
+          chan.reject = "OBSL2";
+          break;
+        case 15:
+          chan.reject = "UNKNOWN";
+          break;
+        case 16:
+          chan.reject = "NOIONOCORR";
+          break;
+        case 17:
+          chan.reject = "NOTUSED";
+          break;
+        case 18:
+          chan.reject = "OBSL1";
+          break;
+        case 19:
+          chan.reject = "OBSE1";
+          break;
+        case 20:
+          chan.reject = "OBSL5";
+          break;
+        case 21:
+          chan.reject = "OBSE5";
+          break;
+        case 22:
+          chan.reject = "OBSB2";
+          break;
+        case 23:
+          chan.reject = "OBSB1";
+          break;
+        case 24:
+          chan.reject = "OBSB3";
+          break;
+        case 25:
+          chan.reject = "NOSIGNALMATCH";
+          break;
+        case 26:
+          chan.reject = "SUPPLEMENTARY";
+          break;
+        case 99:
+          chan.reject = "NA";
+          break;
+        case 100:
+          chan.reject = "BAD_INTEGRITY";
+          break;
+        case 101:
+          chan.reject = "LOSSOFLOCK";
+          break;
+        case 102:
+          chan.reject = "NOAMBIGUITY";
+          break;
+        default:
+          return false;
+      }
+      chan.psr_weight = ParseFloat(&bin_msg.data_[chan_offset+36]);
+
+      ros_msg->channels.push_back(chan);
+    }
+
+    return true;
   }
 
   bool ParseNovatelTrackstatMessage(
@@ -393,9 +584,9 @@ namespace novatel_oem628
       const BinaryMessage& msg,
       novatel_gps_msgs::TimePtr ros_msg)
   {
-    if (msg.data_.size() != 44)
+    if (msg.data_.size() != NOVATEL_BINARY_TIME_LENGTH)
     {
-      ROS_WARN("Unexpected time message size: %u", msg.data_.size());
+      ROS_WARN("Unexpected time message size: %lu", msg.data_.size());
       return false;
     }
 
@@ -471,6 +662,42 @@ namespace novatel_oem628
     return valid;
   }
 
+  bool ParseNovatelBinaryVelMessage(const BinaryMessage& bin_msg,
+                                    novatel_gps_msgs::NovatelVelocityPtr ros_msg)
+  {
+    if (bin_msg.data_.size() != NOVATEL_BINARY_BESTVEL_LENGTH)
+    {
+      ROS_WARN("Unexpected velocity message size: %lu", bin_msg.data_.size());
+      return false;
+    }
+    if (!ParseNovatelBinaryHeader(bin_msg, ros_msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
+    if (solution_status > 22)
+    {
+      ROS_ERROR("Unknown solution status: %u", solution_status);
+      return false;
+    }
+    ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
+    uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
+    if (pos_type > 74)
+    {
+      ROS_ERROR("Unknown position type: %u", pos_type);
+      return false;
+    }
+    ros_msg->velocity_type = POSITION_TYPES[pos_type];
+    ros_msg->latency = ParseFloat(&bin_msg.data_[8]);
+    ros_msg->age = ParseFloat(&bin_msg.data_[12]);
+    ros_msg->horizontal_speed = ParseDouble(&bin_msg.data_[16]);
+    ros_msg->track_ground = ParseDouble(&bin_msg.data_[24]);
+    ros_msg->vertical_speed = ParseDouble(&bin_msg.data_[32]);
+
+    return true;
+  }
+
   bool ParseNovatelVelMessage(
       const NovatelSentence& sentence,
       novatel_gps_msgs::NovatelVelocityPtr msg)
@@ -499,6 +726,11 @@ namespace novatel_oem628
   bool parse_binary_novatel_pos_msg(const BinaryMessage& bin_msg,
                                     novatel_gps_msgs::NovatelPositionPtr ros_msg)
   {
+    if (bin_msg.data_.size() != NOVATEL_BINARY_BESTPOS_LENGTH)
+    {
+      ROS_WARN("Unexpected bestpos message length: %lu", bin_msg.data_.size());
+      return false;
+    }
     if (!ParseNovatelBinaryHeader(bin_msg, ros_msg->novatel_msg_header))
     {
       return false;
@@ -599,10 +831,10 @@ namespace novatel_oem628
                              size_t start_idx,
                              BinaryMessage& msg)
   {
-    if (str.length() < 16)
+    if (str.length() < NOVATEL_BINARY_HEADER_LENGTH + 4)
     {
-      // The shortest a binary message can be (short header + no data + CRC)
-      // is 16 bytes, so just return if we don't have at least that many.
+      // The shortest a binary message can be (header + no data + CRC)
+      // is 32 bytes, so just return if we don't have at least that many.
       ROS_WARN("Binary message was too short.");
       return -1;
     }
@@ -615,16 +847,14 @@ namespace novatel_oem628
     }
 
     uint16_t data_start;
-    uint16_t header_length;
     uint16_t data_length;
     if (static_cast<uint8_t>(str[start_idx+2]) == 0x12)
     {
       ROS_DEBUG("Parsing long header.");
-      std::copy(&str[start_idx], &str[start_idx+sizeof(BinaryHeader)],
+      std::copy(&str[start_idx], &str[start_idx+NOVATEL_BINARY_HEADER_LENGTH],
                 reinterpret_cast<char*>(&msg.header_));
-      data_start = sizeof(BinaryHeader) + start_idx;
+      data_start = static_cast<uint16_t>(NOVATEL_BINARY_HEADER_LENGTH + start_idx);
       data_length = msg.header_.message_length_;
-      header_length = sizeof(BinaryHeader);
     }
     else
     {
@@ -647,7 +877,7 @@ namespace novatel_oem628
 
     ROS_DEBUG("Calculating CRC.");
 
-    uint32_t crc = CalculateBlockCRC32(header_length + data_length,
+    uint32_t crc = CalculateBlockCRC32(static_cast<uint32_t>(NOVATEL_BINARY_HEADER_LENGTH) + data_length,
                                        reinterpret_cast<const uint8_t*>(&str[start_idx]));
 
     ROS_DEBUG("Copying CRC.");
@@ -838,6 +1068,7 @@ namespace novatel_oem628
           {
             novatel_sentences.pop_back();
             parse_error = true;
+            ROS_ERROR_THROTTLE(1.0, "Unable to vectorize novatel sentence");
           }
           cur_idx = sentence_start + 1;
         }
@@ -874,6 +1105,7 @@ namespace novatel_oem628
         {
           // Sentence had an invalid checksum, just iterate to the next sentence
           cur_idx = sentence_start + 1;
+          ROS_ERROR_THROTTLE(1.0, "Invalid binary message checksum");
           parse_error = true;
         }
       }
@@ -881,6 +1113,7 @@ namespace novatel_oem628
       {
         // If for some reason we get here, we'll just iterate to the next message
         cur_idx = sentence_start + 1;
+        ROS_ERROR_THROTTLE(1.0, "Unrecognized sentence start: %x", input[sentence_start]);
         parse_error = true;
       }
     }
