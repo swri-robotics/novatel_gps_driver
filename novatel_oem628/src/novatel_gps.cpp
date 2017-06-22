@@ -547,6 +547,21 @@ namespace novatel_oem628
         }
         break;
       }
+      case CORRIMUDATA_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu =
+            boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();
+        if (!ParseNovatelBinaryCorrectedImuMessage(msg, imu))
+        {
+          error_msg_ = "Failed to parse the Novatel Corrected IMU Data message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          imu->header.stamp = stamp;
+          imu_messages_.push_back(imu);
+        }
+      }
       case RANGE_BINARY_MESSAGE_ID:
       {
         novatel_gps_msgs::RangePtr range =

@@ -67,8 +67,9 @@ namespace novatel_oem628
   const std::string NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
 
   const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
-  const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
   const uint16_t BESTVEL_BINARY_MESSAGE_ID = 99;
+  const uint16_t CORRIMUDATA_BINARY_MESSAGE_ID = 812;
+  const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
   const uint16_t TIME_BINARY_MESSAGE_ID = 101;
   const uint16_t TRACKSTAT_BINARY_MESSAGE_ID = 83;
 
@@ -84,6 +85,7 @@ namespace novatel_oem628
   const size_t NOVATEL_BINARY_HEADER_LENGTH = 28;
   const size_t NOVATEL_BINARY_BESTPOS_LENGTH = 72;
   const size_t NOVATEL_BINARY_BESTVEL_LENGTH = 44;
+  const size_t NOVATEL_BINARY_CORRIMUDATA_LENGTH = 60;
   const size_t NOVATEL_BINARY_RANGE_OBSERVATION_LENGTH = 44;
   const size_t NOVATEL_BINARY_TIME_LENGTH = 44;
   const size_t NOVATEL_BINARY_TRACKSTAT_MIN_LENGTH = 16;
@@ -284,6 +286,10 @@ namespace novatel_oem628
   bool parse_novatel_vectorized_header(
       const std::vector<std::string>& header,
       novatel_gps_msgs::NovatelMessageHeader& novatel_msg_header);
+
+  bool ParseNovatelBinaryCorrectedImuMessage(
+      const BinaryMessage& bin_msg,
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr ros_msg);
 
   bool ParseNovatelCorrectedImuMessage(
       const NovatelSentence& sentence,

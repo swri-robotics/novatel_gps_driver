@@ -351,7 +351,17 @@ namespace novatel_oem628
       }
       if (publish_imu_messages_)
       {
-        opts["corrimudatasa"] = 1.0 / imu_rate_;
+        double period = 1.0 / imu_rate_;
+        if (use_binary_messages_)
+        {
+          opts["corrimudatab"] = period;
+        }
+        else
+        {
+          ROS_WARN("Using the ASCII message format with CORRIMUDATA logs is not recommended.  "
+                       "The serial link will not be able to keep up with the data rate.");
+          opts["corrimudataa"] = period;
+        }
       }
       if (publish_novatel_velocity_)
       {
