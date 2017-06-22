@@ -138,13 +138,21 @@ namespace novatel_oem628
       bool CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts);
       bool CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts);
 
+      NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
+                                                const ros::Time& stamp);
+      NovatelGps::ReadResult ParseNmeaSentence(const NmeaSentence& sentence,
+                                               const ros::Time& stamp,
+                                               double most_recent_utc_time);
+      NovatelGps::ReadResult ParseNovatelSentence(const NovatelSentence& sentence,
+                                                  const ros::Time& stamp);
+
       bool Write(const std::string& command);
 
       ReadResult ReadData();
 
       ConnectionType connection_;
 
-      int32_t utc_offset_;
+      double utc_offset_;
 
       // Serial
       swri_serial_util::SerialPort serial_;
@@ -159,6 +167,7 @@ namespace novatel_oem628
       std::string nmea_buffer_;
       std::vector<NmeaSentence> nmea_sentences_;
       std::vector<NovatelSentence> novatel_sentences_;
+      std::vector<BinaryMessage> binary_messages_;
 
       // Message buffers
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;

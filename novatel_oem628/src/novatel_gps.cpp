@@ -30,6 +30,7 @@
 #include <sstream>
 #include <novatel_oem628/novatel_gps.h>
 
+#include <boost/foreach.hpp>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
@@ -75,7 +76,7 @@ namespace novatel_oem628
     opts["gpgga"] = 0.05;
     opts["gprmc"] = 0.05;
     opts["bestposa"] = 0.05;
-    opts["timea"] = 1.0;   
+    opts["timea"] = 1.0;
     opts["rangea"] = 1;
     return Connect(device, connection, opts);
   }
@@ -172,6 +173,7 @@ namespace novatel_oem628
           nmea_buffer_,
           nmea_sentences_,
           novatel_sentences_,
+          binary_messages_,
           nmea_buffer_))
       {
         read_result = READ_PARSE_FAILED;
@@ -181,181 +183,35 @@ namespace novatel_oem628
 
     double most_recent_utc_time = GetMostRecentUtcTime(nmea_sentences_);
 
-    for (size_t i = 0; i < nmea_sentences_.size(); i++)
+    BOOST_FOREACH(const NmeaSentence& sentence, nmea_sentences_)
     {
-      if (nmea_sentences_[i].id == "GPGGA")
+      NovatelGps::ReadResult result = ParseNmeaSentence(sentence, stamp, most_recent_utc_time);
+      if (result != READ_SUCCESS)
       {
-        novatel_gps_msgs::GpggaPtr gpgga = boost::make_shared<novatel_gps_msgs::Gpgga>();
-        NmeaMessageParseResult parse_result =
-          parse_vectorized_gpgga_message(nmea_sentences_[i].body, gpgga);
-
-        if (most_recent_utc_time < gpgga->utc_seconds)
-        {
-          most_recent_utc_time = gpgga->utc_seconds;
-        }
-
-        gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga->utc_seconds);
-
-        if (parse_result == ParseSucceededAndGpsDataValid)
-        {
-          gpgga_msgs_.push_back(gpgga);
-
-          // Make a deep copy for the sync buffer so the GPSFix messages
-          // don't get adjusted multiple times for the sync offset.
-          gpgga_sync_buffer_.push_back(*gpgga);
-        }
-        else if (parse_result == ParseSucceededAndGpsDataNotValid)
-        {
-          gpgga_msgs_.push_back(gpgga);
-        }
-        else
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the NMEA GPGGA message.";
-        }
-      }
-      else if (nmea_sentences_[i].id == "GPRMC")
-      {
-        novatel_gps_msgs::GprmcPtr gprmc = boost::make_shared<novatel_gps_msgs::Gprmc>();
-        NmeaMessageParseResult parse_result =
-          parse_vectorized_gprmc_message(nmea_sentences_[i].body, gprmc);
-
-        if (most_recent_utc_time < gprmc->utc_seconds)
-        {
-          most_recent_utc_time = gprmc->utc_seconds;
-        }
-
-        gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc->utc_seconds);
-
-        if (parse_result == ParseSucceededAndGpsDataValid)
-        {
-          gprmc_msgs_.push_back(gprmc);
-
-          // Make a deep copy for the sync buffer so the GPSFix messages
-          // don't get adjusted multiple times for the sync offset.
-          gprmc_sync_buffer_.push_back(*gprmc);
-        }
-        else if (parse_result == ParseSucceededAndGpsDataNotValid)
-        {
-          gprmc_msgs_.push_back(gprmc);
-        }
-        else
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the NMEA GPRMC message.";
-        }
-      }
-      else if (nmea_sentences_[i].id == "GPGSA")
-      {
-        novatel_gps_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_gps_msgs::Gpgsa>();
-        NmeaMessageParseResult parse_result =
-            parse_vectorized_gpgsa_message(nmea_sentences_[i].body, gpgsa);
-        gpgsa_msgs_.push_back(gpgsa);
-      }
-      else if (nmea_sentences_[i].id == "GPGSV")
-      {
-        novatel_gps_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_gps_msgs::Gpgsv>();
-        NmeaMessageParseResult parse_result = ParseVectorizedGpgsvMessage(nmea_sentences_[i].body, gpgsv);
-        gpgsv_msgs_.push_back(gpgsv);
-      }
-      else
-      {
-        ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << nmea_sentences_[i].id);
+        read_result = result;
       }
     }
     nmea_sentences_.clear();
 
-    for (size_t i = 0; i < novatel_sentences_.size(); i++)
+    BOOST_FOREACH(const NovatelSentence& sentence, novatel_sentences_)
     {
-      if (novatel_sentences_[i].id == "BESTPOSA")
+      NovatelGps::ReadResult result = ParseNovatelSentence(sentence, stamp);
+      if (result != READ_SUCCESS)
       {
-        novatel_gps_msgs::NovatelPositionPtr position = boost::make_shared<novatel_gps_msgs::NovatelPosition>();
-        if (!parse_novatel_pos_msg(novatel_sentences_[i], position))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel BestPos message.";
-        }
-        else
-        {
-          position->header.stamp = stamp;
-          novatel_positions_.push_back(position);
-          position_sync_buffer_.push_back(position);
-        }
-      }
-      else if (novatel_sentences_[i].id == "BESTVELA")
-      {
-        novatel_gps_msgs::NovatelVelocityPtr velocity = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
-        if (!ParseNovatelVelMessage(novatel_sentences_[i], velocity))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel BestVel message.";
-        }
-        else
-        {
-          velocity->header.stamp = stamp;
-          novatel_velocities_.push_back(velocity);
-        }
-      }
-      else if (novatel_sentences_[i].id == "CORRIMUDATASA")
-      {
-        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu =
-          boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();
-        if (!ParseNovatelCorrectedImuMessage(novatel_sentences_[i], imu))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel Corrected IMU Data message.";
-        }
-        else
-        {
-          imu->header.stamp = stamp;
-          imu_messages_.push_back(imu);
-        }
-      }
-      else if (novatel_sentences_[i].id == "TIMEA")
-      {
-        novatel_gps_msgs::TimePtr time = boost::make_shared<novatel_gps_msgs::Time>();
-        if (!ParseNovatelTimeMessage(novatel_sentences_[i], time))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel Time message.";
-        }
-        else
-        {
-          utc_offset_ = time->utc_offset;
-          ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %d", time->utc_offset, utc_offset_);
-          time_msgs_.push_back(time);
-        }
-      }
-      else if (novatel_sentences_[i].id == "RANGEA")
-      {
-        novatel_gps_msgs::RangePtr range = boost::make_shared<novatel_gps_msgs::Range>();
-        if (!ParseNovatelRangeMessage(novatel_sentences_[i], range))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel Range message.";
-        }
-        else
-        {
-          range->header.stamp = stamp;
-          range_msgs_.push_back(range);
-        }
-      }
-      else if (novatel_sentences_[i].id == "TRACKSTATA")
-      {
-        novatel_gps_msgs::TrackstatPtr trackstat = boost::make_shared<novatel_gps_msgs::Trackstat>();
-        if (!ParseNovatelTrackstatMessage(novatel_sentences_[i], trackstat))
-        {
-          read_result = READ_PARSE_FAILED;
-          error_msg_ = "Failed to parse the Novatel Trackstat message.";
-        }
-        else
-        {
-          trackstat->header.stamp = stamp;
-          trackstat_msgs_.push_back(trackstat);
-        }
+        read_result = result;
       }
     }
     novatel_sentences_.clear();
+
+    BOOST_FOREACH(const BinaryMessage& msg, binary_messages_)
+    {
+      NovatelGps::ReadResult result = ParseBinaryMessage(msg, stamp);
+      if (result != READ_SUCCESS)
+      {
+        read_result = result;
+      }
+    }
+    binary_messages_.clear();
 
     return read_result;
   }
@@ -651,6 +507,285 @@ namespace novatel_oem628
 
     error_msg_ = "unsupported connection type.";
     return READ_ERROR;
+  }
+
+  NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
+                                                        const ros::Time& stamp)
+  {
+    switch (msg.header_.message_id_)
+    {
+      case BESTPOS_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelPositionPtr position =
+            boost::make_shared<novatel_gps_msgs::NovatelPosition>();
+        if (!parse_binary_novatel_pos_msg(msg, position))
+        {
+          error_msg_ = "Failed to parse the binary Novatel BestPos message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          position->header.stamp = stamp;
+          novatel_positions_.push_back(position);
+          position_sync_buffer_.push_back(position);
+        }
+        break;
+      }
+      case BESTVEL_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelVelocityPtr velocity =
+            boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+        if (!ParseNovatelBinaryVelMessage(msg, velocity))
+        {
+          error_msg_ = "Failed to parse the binary Novatel BestVel message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          velocity->header.stamp = stamp;
+          novatel_velocities_.push_back(velocity);
+        }
+        break;
+      }
+      case RANGE_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::RangePtr range =
+            boost::make_shared<novatel_gps_msgs::Range>();
+        if (!ParseNovatelBinaryRangeMessage(msg, range))
+        {
+          error_msg_ = "Failed to parse the binary Novatel Range message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          range->header.stamp = stamp;
+          range_msgs_.push_back(range);
+        }
+        break;
+      }
+      case TIME_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::TimePtr time =
+            boost::make_shared<novatel_gps_msgs::Time>();
+        if (!ParseNovatelBinaryTimeMessage(msg, time))
+        {
+          error_msg_ = "Failed to parse the binary Novatel Time message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          utc_offset_ = time->utc_offset;
+          ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+          time_msgs_.push_back(time);
+        }
+        break;
+      }
+      case TRACKSTAT_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::TrackstatPtr trackstat =
+            boost::make_shared<novatel_gps_msgs::Trackstat>();
+        if (!ParseNovatelBinaryTrackstatMessage(msg, trackstat))
+        {
+          error_msg_ = "Failed to parse the binary Novatel Trackstat message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          trackstat->header.stamp = stamp;
+          trackstat_msgs_.push_back(trackstat);
+        }
+        break;
+      }
+      default:
+        ROS_WARN("Unexpected binary message id: %u", msg.header_.message_id_);
+        break;
+    }
+
+    return READ_SUCCESS;
+  }
+
+  NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
+                                                       const ros::Time& stamp,
+                                                       double most_recent_utc_time)
+  {
+    if (sentence.id == "GPGGA")
+    {
+      novatel_gps_msgs::GpggaPtr gpgga = boost::make_shared<novatel_gps_msgs::Gpgga>();
+      NmeaMessageParseResult parse_result =
+          parse_vectorized_gpgga_message(sentence.body, gpgga);
+
+      if (most_recent_utc_time < gpgga->utc_seconds)
+      {
+        most_recent_utc_time = gpgga->utc_seconds;
+      }
+
+      gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga->utc_seconds);
+
+      if (parse_result == ParseSucceededAndGpsDataValid)
+      {
+        gpgga_msgs_.push_back(gpgga);
+
+        // Make a deep copy for the sync buffer so the GPSFix messages
+        // don't get adjusted multiple times for the sync offset.
+        gpgga_sync_buffer_.push_back(*gpgga);
+      }
+      else if (parse_result == ParseSucceededAndGpsDataNotValid)
+      {
+        gpgga_msgs_.push_back(gpgga);
+      }
+      else
+      {
+        error_msg_ = "Failed to parse the NMEA GPGGA message.";
+        return READ_PARSE_FAILED;
+      }
+    }
+    else if (sentence.id == "GPRMC")
+    {
+      novatel_gps_msgs::GprmcPtr gprmc = boost::make_shared<novatel_gps_msgs::Gprmc>();
+      NmeaMessageParseResult parse_result =
+          parse_vectorized_gprmc_message(sentence.body, gprmc);
+
+      if (most_recent_utc_time < gprmc->utc_seconds)
+      {
+        most_recent_utc_time = gprmc->utc_seconds;
+      }
+
+      gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc->utc_seconds);
+
+      if (parse_result == ParseSucceededAndGpsDataValid)
+      {
+        gprmc_msgs_.push_back(gprmc);
+
+        // Make a deep copy for the sync buffer so the GPSFix messages
+        // don't get adjusted multiple times for the sync offset.
+        gprmc_sync_buffer_.push_back(*gprmc);
+      }
+      else if (parse_result == ParseSucceededAndGpsDataNotValid)
+      {
+        gprmc_msgs_.push_back(gprmc);
+      }
+      else
+      {
+        error_msg_ = "Failed to parse the NMEA GPRMC message.";
+        return READ_PARSE_FAILED;
+      }
+    }
+    else if (sentence.id == "GPGSA")
+    {
+      novatel_gps_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_gps_msgs::Gpgsa>();
+      NmeaMessageParseResult parse_result =
+          parse_vectorized_gpgsa_message(sentence.body, gpgsa);
+      gpgsa_msgs_.push_back(gpgsa);
+    }
+    else if (sentence.id == "GPGSV")
+    {
+      novatel_gps_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_gps_msgs::Gpgsv>();
+      NmeaMessageParseResult parse_result = ParseVectorizedGpgsvMessage(sentence.body, gpgsv);
+      gpgsv_msgs_.push_back(gpgsv);
+    }
+    else
+    {
+      ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << sentence.id);
+    }
+
+    return READ_SUCCESS;
+  }
+
+  NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
+                                                          const ros::Time& stamp)
+  {
+    if (sentence.id == "BESTPOSA")
+    {
+      novatel_gps_msgs::NovatelPositionPtr position =
+          boost::make_shared<novatel_gps_msgs::NovatelPosition>();
+      if (!parse_novatel_pos_msg(sentence, position))
+      {
+        error_msg_ = "Failed to parse the Novatel BestPos message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        position->header.stamp = stamp;
+        novatel_positions_.push_back(position);
+        position_sync_buffer_.push_back(position);
+      }
+    }
+    else if (sentence.id == "BESTVELA")
+    {
+      novatel_gps_msgs::NovatelVelocityPtr velocity =
+          boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+      if (!ParseNovatelVelMessage(sentence, velocity))
+      {
+        error_msg_ = "Failed to parse the Novatel BestVel message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        velocity->header.stamp = stamp;
+        novatel_velocities_.push_back(velocity);
+      }
+    }
+    else if (sentence.id == "CORRIMUDATASA")
+    {
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu =
+        boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();
+      if (!ParseNovatelCorrectedImuMessage(sentence, imu))
+      {
+        error_msg_ = "Failed to parse the Novatel Corrected IMU Data message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        imu->header.stamp = stamp;
+        imu_messages_.push_back(imu);
+      }
+    }
+    else if (sentence.id == "TIMEA")
+    {
+      novatel_gps_msgs::TimePtr time = boost::make_shared<novatel_gps_msgs::Time>();
+      if (!ParseNovatelTimeMessage(sentence, time))
+      {
+        error_msg_ = "Failed to parse the Novatel Time message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        utc_offset_ = time->utc_offset;
+        ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+        time_msgs_.push_back(time);
+      }
+    }
+    else if (sentence.id == "RANGEA")
+    {
+      novatel_gps_msgs::RangePtr range = boost::make_shared<novatel_gps_msgs::Range>();
+      if (!ParseNovatelRangeMessage(sentence, range))
+      {
+        error_msg_ = "Failed to parse the Novatel Range message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        range->header.stamp = stamp;
+        range_msgs_.push_back(range);
+      }
+    }
+    else if (sentence.id == "TRACKSTATA")
+    {
+      novatel_gps_msgs::TrackstatPtr trackstat =
+          boost::make_shared<novatel_gps_msgs::Trackstat>();
+      if (!ParseNovatelTrackstatMessage(sentence, trackstat))
+      {
+        error_msg_ = "Failed to parse the Novatel Trackstat message.";
+        return READ_PARSE_FAILED;
+      }
+      else
+      {
+        trackstat->header.stamp = stamp;
+        trackstat_msgs_.push_back(trackstat);
+      }
+    }
+
+    return READ_SUCCESS;
   }
 
   bool NovatelGps::Write(const std::string& command)

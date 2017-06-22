@@ -159,6 +159,7 @@ namespace novatel_oem628
       publish_trackstat_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
+      use_binary_messages_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -204,6 +205,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
       swri::param(priv, "polling_period", polling_period_, polling_period_);
+      swri::param(priv, "use_binary_messages", use_binary_messages_, use_binary_messages_);
 
       swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
@@ -322,8 +324,22 @@ namespace novatel_oem628
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
       opts["gprmc"] = polling_period_;
-      opts["bestposa"] = polling_period_;  // Best position (ASCII)
-      opts["timea"] = 1.0;  // Time (ASCII)
+      if (use_binary_messages_)
+      {
+        opts["bestposb"] = polling_period_;  // Best position (Binary)
+      }
+      else
+      {
+        opts["bestposa"] = polling_period_;  // Best position (ASCII)
+      }
+      if (use_binary_messages_)
+      {
+        opts["timeb"] = 1.0;  // Time (Binary)
+      }
+      else
+      {
+        opts["timea"] = 1.0;  // Time (ASCII)
+      }
 
       if (publish_gpgsa_)
       {
@@ -339,15 +355,36 @@ namespace novatel_oem628
       }
       if (publish_novatel_velocity_)
       {
-        opts["bestvela"] = polling_period_;  // Best velocity (ASCII)
+        if (use_binary_messages_)
+        {
+          opts["bestvelb"] = polling_period_;  // Best velocity (Binary)
+        }
+        else
+        {
+          opts["bestvela"] = polling_period_;  // Best velocity (ASCII)
+        }
       }
       if (publish_range_messages_)
       {
-         opts["rangea"] = 1.0;  // Range (ASCII). 1 msg/sec is max rate
+        if (use_binary_messages_)
+        {
+          opts["rangeb"] = 1.0;  // Range (Binary). 1 msg/sec is max rate
+        }
+        else
+        {
+          opts["rangea"] = 1.0;  // Range (ASCII). 1 msg/sec is max rate
+        }
       }
       if (publish_trackstat_)
       {
-         opts["trackstata"] = 1.0;  // Trackstat (ASCII)
+        if (use_binary_messages_)
+        {
+          opts["trackstatb"] = 1.0;  // Trackstat (Binary)
+        }
+        else
+        {
+          opts["trackstata"] = 1.0;  // Trackstat (ASCII)
+        }
       }
       while (ros::ok())
       {
@@ -653,6 +690,7 @@ namespace novatel_oem628
     bool publish_trackstat_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
+    bool use_binary_messages_;
 
     ros::Publisher gps_pub_;
     ros::Publisher imu_pub_;
