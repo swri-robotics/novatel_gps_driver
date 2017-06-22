@@ -175,19 +175,19 @@ namespace novatel_oem628
   double GetMostRecentUtcTime(const std::vector<NmeaSentence>& sentences);
 
   NmeaMessageParseResult parse_vectorized_gpgga_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpggaPtr msg);
 
   NmeaMessageParseResult parse_vectorized_gpgsa_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpgsaPtr msg);
 
   NmeaMessageParseResult ParseVectorizedGpgsvMessage(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpgsvPtr msg);
 
   NmeaMessageParseResult parse_vectorized_gprmc_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GprmcPtr msg);
 
   void get_gps_fix_message(

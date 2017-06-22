@@ -937,7 +937,7 @@ namespace novatel_oem628
   }
 
   NmeaMessageParseResult parse_vectorized_gpgga_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpggaPtr msg)
   {
     // Check the length first -- should be 15 elements long
@@ -1017,7 +1017,7 @@ namespace novatel_oem628
   }
 
   NmeaMessageParseResult parse_vectorized_gpgsa_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpgsaPtr msg)
   {
     // Check the length first -- should be 18 elements long
@@ -1053,7 +1053,7 @@ namespace novatel_oem628
   }
 
   NmeaMessageParseResult ParseVectorizedGpgsvMessage(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GpgsvPtr msg)
   {
     const size_t MIN_LENGTH = 4;
@@ -1124,7 +1124,7 @@ namespace novatel_oem628
   }
 
   NmeaMessageParseResult parse_vectorized_gprmc_message(
-      std::vector<std::string>& vec,
+      const std::vector<std::string>& vec,
       novatel_gps_msgs::GprmcPtr msg)
   {
     // Check the length first -- should be 15 elements long

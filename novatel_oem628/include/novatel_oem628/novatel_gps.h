@@ -136,6 +136,14 @@ namespace novatel_oem628
       bool CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts);
       bool CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts);
 
+      NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
+                                                const ros::Time& stamp);
+      NovatelGps::ReadResult ParseNmeaSentence(const NmeaSentence& sentence,
+                                               const ros::Time& stamp,
+                                               double most_recent_utc_time);
+      NovatelGps::ReadResult ParseNovatelSentence(const NovatelSentence& sentence,
+                                                  const ros::Time& stamp);
+
       bool Write(const std::string& command);
 
       ReadResult ReadData();
