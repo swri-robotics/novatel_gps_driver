@@ -568,6 +568,53 @@ namespace novatel_oem628
     return valid;
   }
 
+  bool ParseNovatelBinaryCorrectedImuMessage(const BinaryMessage& bin_msg,
+                                             novatel_gps_msgs::NovatelCorrectedImuDataPtr ros_msg)
+  {
+    if (bin_msg.data_.size() != NOVATEL_BINARY_CORRIMUDATA_LENGTH)
+    {
+      ROS_WARN("Unexpected corrimudata message size: %lu", bin_msg.data_.size());
+      return false;
+    }
+    if (!ParseNovatelBinaryHeader(bin_msg, ros_msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    ros_msg->gps_week_num = ParseUInt32(&bin_msg.data_[0]);
+    ros_msg->gps_seconds = ParseDouble(&bin_msg.data_[4]);
+    ros_msg->pitch_rate = ParseDouble(&bin_msg.data_[12]);
+    ros_msg->roll_rate = ParseDouble(&bin_msg.data_[20]);
+    ros_msg->yaw_rate = ParseDouble(&bin_msg.data_[28]);
+    ros_msg->lateral_acceleration = ParseDouble(&bin_msg.data_[36]);
+    ros_msg->longitudinal_acceleration = ParseDouble(&bin_msg.data_[44]);
+    ros_msg->vertical_acceleration = ParseDouble(&bin_msg.data_[52]);
+
+    return true;
+  }
+
+  bool ParseNovatelCorrectedImuMessage(const NovatelSentence& sentence,
+                                       novatel_gps_msgs::NovatelCorrectedImuDataPtr msg)
+  {
+    if (!parse_novatel_vectorized_header(sentence.header, msg->novatel_msg_header))
+    {
+      return false;
+    }
+
+    bool valid = true;
+
+    valid &= ParseUInt32(sentence.body[0], msg->gps_week_num);
+    valid &= ParseDouble(sentence.body[1], msg->gps_seconds);
+    valid &= ParseDouble(sentence.body[2], msg->pitch_rate);
+    valid &= ParseDouble(sentence.body[3], msg->roll_rate);
+    valid &= ParseDouble(sentence.body[4], msg->yaw_rate);
+    valid &= ParseDouble(sentence.body[5], msg->lateral_acceleration);
+    valid &= ParseDouble(sentence.body[6], msg->longitudinal_acceleration);
+    valid &= ParseDouble(sentence.body[7], msg->vertical_acceleration);
+
+    return valid;
+  }
+
   bool ParseNovatelBinaryTimeMessage(
       const BinaryMessage& msg,
       novatel_gps_msgs::TimePtr ros_msg)

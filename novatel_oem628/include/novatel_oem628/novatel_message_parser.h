@@ -40,6 +40,7 @@
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gpgsv.h>
 #include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelMessageHeader.h>
 #include <novatel_gps_msgs/NovatelReceiverStatus.h>
@@ -71,8 +72,9 @@ namespace novatel_oem628
   const std::string NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
 
   const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
-  const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
   const uint16_t BESTVEL_BINARY_MESSAGE_ID = 99;
+  const uint16_t CORRIMUDATA_BINARY_MESSAGE_ID = 812;
+  const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
   const uint16_t TIME_BINARY_MESSAGE_ID = 101;
   const uint16_t TRACKSTAT_BINARY_MESSAGE_ID = 83;
 
@@ -88,6 +90,7 @@ namespace novatel_oem628
   const size_t NOVATEL_BINARY_HEADER_LENGTH = 28;
   const size_t NOVATEL_BINARY_BESTPOS_LENGTH = 72;
   const size_t NOVATEL_BINARY_BESTVEL_LENGTH = 44;
+  const size_t NOVATEL_BINARY_CORRIMUDATA_LENGTH = 60;
   const size_t NOVATEL_BINARY_RANGE_OBSERVATION_LENGTH = 44;
   const size_t NOVATEL_BINARY_TIME_LENGTH = 44;
   const size_t NOVATEL_BINARY_TRACKSTAT_MIN_LENGTH = 16;
@@ -310,6 +313,14 @@ namespace novatel_oem628
       const std::vector<std::string>& header,
       novatel_gps_msgs::NovatelMessageHeader& novatel_msg_header);
 
+  bool ParseNovatelBinaryCorrectedImuMessage(
+      const BinaryMessage& bin_msg,
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr ros_msg);
+
+  bool ParseNovatelCorrectedImuMessage(
+      const NovatelSentence& sentence,
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr msg);
+
   bool ParseNovatelBinaryTimeMessage(
       const BinaryMessage& msg,
       novatel_gps_msgs::TimePtr ros_msg);
@@ -382,7 +393,6 @@ namespace novatel_oem628
       std::vector<BinaryMessage>& binary_messages,
       std::string& remaining,
       bool keep_nmea_container = false);
-
 
   /**
    * @brief Converts a buffer containing 8 bytes into a double.

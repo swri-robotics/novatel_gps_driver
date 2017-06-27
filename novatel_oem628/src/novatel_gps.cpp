@@ -386,6 +386,13 @@ namespace novatel_oem628
     }  // while (gpgga and gprmc buffers contain messages)
   }
 
+  void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages)
+  {
+    imu_messages.clear();
+    imu_messages.insert(imu_messages.end(), imu_messages_.begin(), imu_messages_.end());
+    imu_messages_.clear();
+  }
+
   void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_msgs::GpggaPtr>& gpgga_messages)
   {
     gpgga_messages.clear();
@@ -684,6 +691,21 @@ namespace novatel_oem628
           novatel_velocities_.push_back(velocity);
         }
         break;
+      }
+      case CORRIMUDATA_BINARY_MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu =
+            boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();
+        if (!ParseNovatelBinaryCorrectedImuMessage(msg, imu))
+        {
+          error_msg_ = "Failed to parse the Novatel Corrected IMU Data message.";
+          return READ_PARSE_FAILED;
+        }
+        else
+        {
+          imu->header.stamp = stamp;
+          imu_messages_.push_back(imu);
+        }
       }
       case RANGE_BINARY_MESSAGE_ID:
       {

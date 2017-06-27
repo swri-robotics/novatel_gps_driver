@@ -43,6 +43,7 @@
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
 #include <novatel_gps_msgs/Range.h>
@@ -111,6 +112,7 @@ namespace novatel_oem628
 
       ReadResult ProcessData();
 
+      void GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages);
       void GetNovatelPositions(std::vector<novatel_gps_msgs::NovatelPositionPtr>& positions);
       void GetNovatelVelocities(std::vector<novatel_gps_msgs::NovatelVelocityPtr>& velocities);
       void GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages);
@@ -179,13 +181,13 @@ namespace novatel_oem628
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_messages_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> novatel_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> position_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TimePtr> time_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TrackstatPtr> trackstat_msgs_;
-
 
       std::string error_msg_;
   };

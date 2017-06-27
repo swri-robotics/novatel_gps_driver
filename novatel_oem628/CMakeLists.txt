@@ -9,11 +9,12 @@ set(DEPS
   nav_msgs 
   nodelet 
   novatel_gps_msgs
-  roscpp 
+  roscpp
+  sensor_msgs
   std_msgs
   swri_math_util 
   swri_roscpp
-  swri_serial_util 
+  swri_serial_util
   swri_string_util 
   tf
 )
