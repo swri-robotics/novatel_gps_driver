@@ -80,19 +80,9 @@ namespace novatel_oem628
     return checksum;
   }
 
-  size_t get_next_sentence_start(const std::string& str, size_t start_idx)
-  {
-    size_t nmea_idx = str.find_first_of(NMEA_SENTENCE_FLAG, start_idx);
-    size_t novatel_idx = str.find_first_of(NOVATEL_SENTENCE_FLAG, start_idx);
-    size_t binary_idx = str.find(NOVATEL_BINARY_SYNC_BYTES, start_idx);
-
-    // Need to check for std::string::npos on the return
-    return std::min(std::min(nmea_idx, novatel_idx), binary_idx);
-  }
-
   size_t get_sentence_checksum_start(const std::string& str, size_t start_idx)
   {
-    return str.find_first_of('*', start_idx);
+    return str.find_first_of(CHECKSUM_FLAG, start_idx);
   }
 
   void vectorize_string(
@@ -120,16 +110,16 @@ namespace novatel_oem628
     body.clear();
 
     std::vector<std::string> vectorized_message;
-    vectorize_string(sentence, vectorized_message, ';');
+    vectorize_string(sentence, vectorized_message, HEADER_SEPARATOR);
 
     if (vectorized_message.size() != 2)
     {
       return false;
     }
 
-    vectorize_string(vectorized_message[0], header, ',');
+    vectorize_string(vectorized_message[0], header, FIELD_SEPARATOR);
 
-    vectorize_string(vectorized_message[1], body, ',');
+    vectorize_string(vectorized_message[1], body, FIELD_SEPARATOR);
 
     if (!header.empty())
     {
@@ -283,7 +273,7 @@ namespace novatel_oem628
         return false;
     }
     msg.gps_week_num = bin_msg.header_.week_;
-    msg.gps_seconds = bin_msg.header_.gpsec_;
+    msg.gps_seconds = static_cast<double>(bin_msg.header_.gps_ms_) / 1000.0;
     get_novatel_receiver_status_msg(bin_msg.header_.receiver_status_, msg.receiver_status);
     msg.receiver_software_version = bin_msg.header_.receiver_sw_version_;
 
@@ -615,7 +605,7 @@ namespace novatel_oem628
     ros_msg->utc_day = msg.data_[33];
     ros_msg->utc_hour = msg.data_[34];
     ros_msg->utc_minute = msg.data_[35];
-    ros_msg->utc_millisecond = msg.data_[36];
+    ros_msg->utc_millisecond = ParseUInt32(&msg.data_[36]);
     uint32_t utc_status = ParseUInt32(&msg.data_[40]);
     switch (utc_status)
     {
@@ -843,7 +833,8 @@ namespace novatel_oem628
     uint16_t data_start = static_cast<uint16_t>(NOVATEL_BINARY_HEADER_LENGTH + start_idx);
     uint16_t data_length = msg.header_.message_length_;
 
-    ROS_DEBUG("Data start / length: %u / %u", data_start, data_length);
+    ROS_DEBUG("Msg ID: %u    Data start / length: %u / %u",
+              msg.header_.message_id_, data_start, data_length);
 
     if (data_start + data_length + 4 > str.length())
     {
@@ -867,11 +858,13 @@ namespace novatel_oem628
     {
       // Invalid CRC
       ROS_DEBUG("Invalid CRC;  Calc: %u    In msg: %u", crc, msg.crc_);
-      return 1;
+      return -2;
     }
 
+    // On success, return how many bytes we read
+
     ROS_DEBUG("Finishing reading binary message.");
-    return 0;
+    return static_cast<int32_t>(NOVATEL_BINARY_HEADER_LENGTH + data_length + 4);
   }
 
   int32_t get_novatel_sentence(
@@ -880,6 +873,7 @@ namespace novatel_oem628
       std::string& sentence)
   {
     sentence.clear();
+
     size_t checksum_start = get_sentence_checksum_start(str, start_idx);
     if (checksum_start == std::string::npos)
     {
@@ -924,6 +918,7 @@ namespace novatel_oem628
       bool keep_container)
   {
     sentence.clear();
+
     size_t checksum_start = get_sentence_checksum_start(str, start_idx);
     if (checksum_start == std::string::npos)
     {
@@ -967,6 +962,37 @@ namespace novatel_oem628
     }
   }
 
+  void FindAsciiSentence(const std::string& sentence,
+                         uint64_t current_idx,
+                         uint64_t& start_idx,
+                         uint64_t& end_idx,
+                         uint64_t& invalid_char_idx)
+  {
+    start_idx = sentence.find_first_of(NOVATEL_ASCII_FLAGS, current_idx);
+    end_idx = std::string::npos;
+    invalid_char_idx = std::string::npos;
+
+    if (start_idx == std::string::npos)
+    {
+      return;
+    }
+
+    end_idx = sentence.find(NOVATEL_ENDLINE, start_idx);
+
+    uint64_t search_stop_idx = std::min(end_idx, sentence.length());
+    for (uint64_t i = start_idx; i < search_stop_idx; i++)
+    {
+      if (sentence[i] == 9 || sentence[i] == 10 || sentence[i] == 11 || sentence[i] == 13 ||
+          (sentence[i] >= 32 && sentence[i] <= 126))
+      {
+        continue;
+      }
+
+      invalid_char_idx = i;
+      break;
+    }
+  }
+
   bool VectorizeNovatelSentence(
       const std::string& data,
       NovatelSentence& sentence)
@@ -979,7 +1005,7 @@ namespace novatel_oem628
     const std::string& sentence,
     NmeaSentence& vectorized_message)
   {
-    vectorize_string(sentence, vectorized_message.body, ',');
+    vectorize_string(sentence, vectorized_message.body, FIELD_SEPARATOR);
     if (!vectorized_message.body.empty())
     {
       vectorized_message.id = vectorized_message.body.front();
@@ -995,103 +1021,147 @@ namespace novatel_oem628
       bool keep_nmea_container)
   {
     bool parse_error = false;
-    size_t cur_idx = 0;
 
     size_t sentence_start = 0;
     while(sentence_start != std::string::npos && sentence_start < input.size())
     {
-      sentence_start = get_next_sentence_start(input, cur_idx);
-      if (sentence_start == std::string::npos)
+      uint64_t ascii_start_idx;
+      uint64_t ascii_end_idx;
+      uint64_t invalid_ascii_idx;
+      uint64_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES, sentence_start);
+
+      FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
+
+      ROS_DEBUG("Binary start: %lu   ASCII start / end / invalid: %lu / %lu / %lu",
+                binary_start_idx, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
+
+      if (binary_start_idx == std::string::npos && ascii_start_idx == std::string::npos)
       {
-        remaining.clear();
+        // If we don't see either a binary or an ASCII message, just give up.
         break;
       }
-      if (input[sentence_start] == NMEA_SENTENCE_FLAG)
+
+      if (ascii_start_idx == std::string::npos ||
+          (binary_start_idx != std::string::npos && binary_start_idx < ascii_start_idx))
       {
-        std::string cur_sentence;
-        int32_t result = get_nmea_sentence(
-            input,
-            sentence_start,
-            cur_sentence,
-            keep_nmea_container);
-        if (result == 0)
-        {
-          nmea_sentences.push_back(NmeaSentence());
-          VectorizeNmeaSentence(cur_sentence, nmea_sentences.back());
-          cur_idx = sentence_start + 1;
-        }
-        else if (result < 0)
-        {
-          // Sentence is not complete, add it to the remaining and break;
-          remaining = input.substr(sentence_start);
-          break;
-        }
-        else
-        {
-          // Sentence had an invalid checksum, just iterate to the next sentence
-          cur_idx = sentence_start + 1;
-          parse_error = true;
-        }
-      }
-      else if (input[sentence_start] == NOVATEL_SENTENCE_FLAG)
-      {
-        std::string cur_sentence;
-        int32_t result = get_novatel_sentence(input, sentence_start, cur_sentence);
-        if (result == 0)
-        {
-          // Send to parser for testing:
-          novatel_sentences.push_back(NovatelSentence());
-          if (!VectorizeNovatelSentence(cur_sentence, novatel_sentences.back()))
-          {
-            novatel_sentences.pop_back();
-            parse_error = true;
-            ROS_ERROR_THROTTLE(1.0, "Unable to vectorize novatel sentence");
-          }
-          cur_idx = sentence_start + 1;
-        }
-        else if (result < 0)
-        {
-          // Sentence is not complete, add it to the remaining and break;
-          remaining = input.substr(sentence_start);
-          break;
-        }
-        else
-        {
-          // Sentence had an invalid checksum, just iterate to the next sentence
-          cur_idx = sentence_start + 1;
-          parse_error = true;
-        }
-      }
-      else if (input.substr(sentence_start, NOVATEL_BINARY_SYNC_BYTES.size()) ==
-          NOVATEL_BINARY_SYNC_BYTES)
-      {
+        // If we see a binary header or if there's both a binary and ASCII header but
+        // the binary one comes first, try to parse it.
         BinaryMessage cur_msg;
         int32_t result = get_binary_message(input, sentence_start, cur_msg);
-        if (result == 0)
+        if (result > 0)
         {
           binary_messages.push_back(cur_msg);
-          cur_idx = sentence_start + 1;
+          sentence_start += result;
+          ROS_DEBUG("Parsed a binary message with %u bytes.", result);
         }
-        else if (result < 0)
+        else if (result == -1)
         {
           // Sentence is not complete, add it to the remaining and break;
-          remaining = input.substr(sentence_start);
+          remaining = input.substr(binary_start_idx);
+          ROS_DEBUG("Binary message was incomplete, waiting for more.");
           break;
         }
         else
         {
           // Sentence had an invalid checksum, just iterate to the next sentence
-          cur_idx = sentence_start + 1;
-          ROS_ERROR_THROTTLE(1.0, "Invalid binary message checksum");
+          sentence_start += 1;
+          ROS_WARN("Invalid binary message checksum");
           parse_error = true;
         }
       }
       else
       {
-        // If for some reason we get here, we'll just iterate to the next message
-        cur_idx = sentence_start + 1;
-        ROS_ERROR_THROTTLE(1.0, "Unrecognized sentence start: %x", input[sentence_start]);
-        parse_error = true;
+        // If we saw the beginning of a binary message, try to parse it.
+        if (invalid_ascii_idx != std::string::npos)
+        {
+          // If we see an invalid character, don't even bother trying to parse
+          // the rest of the message.  By this point we also know there's no
+          // binary header before this point, so just skip the data.
+          ROS_WARN("Invalid ASCII char: [%s]", input.substr(ascii_start_idx, ascii_end_idx-ascii_start_idx).c_str());
+          ROS_WARN("                     %s^", std::string(invalid_ascii_idx-ascii_start_idx-1, ' ').c_str());
+          sentence_start += invalid_ascii_idx + 1;
+        }
+        else if (ascii_end_idx != std::string::npos)
+        {
+          // If we've got a start, an end, and no invalid characters, we've
+          // got a valid ASCII message.
+          ROS_DEBUG("ASCII sentence: [%s]", input.substr(ascii_start_idx, ascii_end_idx-ascii_start_idx).c_str());
+          if (input[ascii_start_idx] == NMEA_SENTENCE_FLAG)
+          {
+            std::string cur_sentence;
+            int32_t result = get_nmea_sentence(
+                input,
+                ascii_start_idx,
+                cur_sentence,
+                keep_nmea_container);
+            if (result == 0)
+            {
+              nmea_sentences.push_back(NmeaSentence());
+              VectorizeNmeaSentence(cur_sentence, nmea_sentences.back());
+              sentence_start += ascii_end_idx;
+            }
+            else if (result < 0)
+            {
+              // Sentence is not complete, add it to the remaining and break.
+              // This is legacy code from before FindAsciiSentence was implemented,
+              // and it will probably never happen, but it doesn't hurt anything to
+              // have it here.
+              remaining = input.substr(ascii_start_idx);
+              ROS_DEBUG("Waiting for more NMEA data.");
+              break;
+            }
+            else
+            {
+              ROS_WARN("Invalid NMEA checksum for: [%s]",
+                       input.substr(ascii_start_idx, ascii_end_idx-ascii_start_idx).c_str());
+              // Sentence had an invalid checksum, just iterate to the next sentence
+              sentence_start += 1;
+              parse_error = true;
+            }
+          }
+          else if (input[ascii_start_idx] == NOVATEL_SENTENCE_FLAG)
+          {
+            std::string cur_sentence;
+            int32_t result = get_novatel_sentence(input, ascii_start_idx, cur_sentence);
+            if (result == 0)
+            {
+              // Send to parser for testing:
+              novatel_sentences.push_back(NovatelSentence());
+              if (!VectorizeNovatelSentence(cur_sentence, novatel_sentences.back()))
+              {
+                novatel_sentences.pop_back();
+                parse_error = true;
+                ROS_ERROR_THROTTLE(1.0, "Unable to vectorize novatel sentence");
+              }
+              sentence_start += ascii_end_idx;
+            }
+            else if (result < 0)
+            {
+
+              // Sentence is not complete, add it to the remaining and break.
+              // This is legacy code from before FindAsciiSentence was implemented,
+              // and it will probably never happen, but it doesn't hurt anything to
+              // have it here.
+              remaining = input.substr(ascii_start_idx);
+              ROS_DEBUG("Waiting for more NovAtel data.");
+              break;
+            }
+            else
+            {
+              // Sentence had an invalid checksum, just iterate to the next sentence
+              sentence_start += 1;
+              ROS_WARN("Invalid NovAtel checksum for: [%s]",
+                       input.substr(ascii_start_idx, ascii_end_idx-ascii_start_idx).c_str());
+              parse_error = true;
+            }
+          }
+        }
+        else
+        {
+          ROS_DEBUG("Incomplete ASCII sentence, waiting for more.");
+          remaining = input.substr(ascii_start_idx);
+          break;
+        }
       }
     }
 

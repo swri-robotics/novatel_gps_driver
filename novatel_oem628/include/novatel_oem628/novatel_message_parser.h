@@ -63,6 +63,11 @@ namespace novatel_oem628
 {
   const char NMEA_SENTENCE_FLAG = '$';
   const char NOVATEL_SENTENCE_FLAG = '#';
+  const std::string NOVATEL_ASCII_FLAGS = "$#";
+  const std::string NOVATEL_ENDLINE = "\r\n";
+  const char CHECKSUM_FLAG = '*';
+  const char FIELD_SEPARATOR = ',';
+  const char HEADER_SEPARATOR = ';';
   const std::string NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
 
   const uint16_t BESTPOS_BINARY_MESSAGE_ID = 42;
@@ -114,7 +119,7 @@ namespace novatel_oem628
     uint8_t idle_time_;
     uint8_t time_status_;
     uint16_t week_;
-    uint32_t gpsec_;
+    uint32_t gps_ms_;
     uint32_t receiver_status_;
     uint16_t reserved_;
     uint16_t receiver_sw_version_;
@@ -253,10 +258,6 @@ namespace novatel_oem628
 
   uint8_t NmeaChecksum(const std::string& sentence);
 
-  size_t get_next_sentence_start(
-      const std::string& str,
-      size_t start_idx);
-
   size_t get_sentence_checksum_start(
       const std::string& str,
       size_t start_idx);
@@ -275,6 +276,31 @@ namespace novatel_oem628
   void get_novatel_receiver_status_msg(
       uint32_t status,
       novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg);
+
+  /**
+   * @brief Searches for a valid ASCII message within a string.
+   *
+   * What constitutes a valid ASCII message is defined by:
+   * http://docs.novatel.com/OEM7/Content/Messages/ASCII.htm
+   *
+   * We check whether a substring:
+   * 1) Starts with '#' or '$'
+   * 2) Ends with "\r\n"
+   * 3) Between those values, only contains characters with an ASCII value
+   *    of 9, 10, 11, 13, or between 32 and 126 (inclusive)
+   *
+   * @param sentence The string to search within
+   * @param current_idx The position in the string to search from
+   * @param start_idx The position of the earliest '#' or '$', if found
+   * @param end_idx The position of the first '\r' after the start, if "\r\n" was found
+   * @param invalid_char_idx If an invalid character was found between the
+   *        start and end, its index
+   */
+  void FindAsciiSentence(const std::string& sentence,
+                         uint64_t current_idx,
+                         uint64_t& start_idx,
+                         uint64_t& end_idx,
+                         uint64_t& invalid_char_idx);
 
   bool ParseNovatelBinaryHeader(
       const BinaryMessage& bin_msg,
