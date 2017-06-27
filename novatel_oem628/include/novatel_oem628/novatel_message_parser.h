@@ -64,7 +64,6 @@ namespace novatel_oem628
 {
   const char NMEA_SENTENCE_FLAG = '$';
   const char NOVATEL_SENTENCE_FLAG = '#';
-  const uint16_t RANGE_BINARY_MESSAGE_ID = 43;
   const std::string NOVATEL_ASCII_FLAGS = "$#";
   const std::string NOVATEL_ENDLINE = "\r\n";
   const char CHECKSUM_FLAG = '*';
