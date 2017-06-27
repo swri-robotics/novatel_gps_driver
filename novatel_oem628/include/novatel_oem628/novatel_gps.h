@@ -58,8 +58,8 @@ namespace novatel_oem628
   class NovatelGps
   {
     public:
-      const static int32_t default_tcp_port_ = 3001;
-      const static int32_t default_udp_port_ = 3002;
+      const static uint16_t default_tcp_port_ = 3001;
+      const static uint16_t default_udp_port_ = 3002;
 
       const static size_t MAX_BUFFER_SIZE = 100;
       const static size_t MAX_SYNC_BUFFER_SIZE = 10;
@@ -121,6 +121,7 @@ namespace novatel_oem628
       void GetRangeMessages(std::vector<novatel_gps_msgs::RangePtr>& range_messages);
       void GetTimeMessages(std::vector<novatel_gps_msgs::TimePtr>& time_messages);
       void GetTrackstatMessages(std::vector<novatel_gps_msgs::TrackstatPtr>& trackstat_msgs);
+      bool IsConnected() { return is_connected_; }
 
       std::string ErrorMsg() const { return error_msg_; }
 
@@ -133,8 +134,7 @@ namespace novatel_oem628
 
     private:
       bool CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts);
-      bool CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts);
-      bool CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts);
+      bool CreateIpConnection(const std::string& device, NovatelMessageOpts const& opts);
 
       NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
                                                 const ros::Time& stamp);
@@ -152,20 +152,25 @@ namespace novatel_oem628
 
       double utc_offset_;
 
+      bool is_connected_;
+
       // Serial
       swri_serial_util::SerialPort serial_;
 
       // TCP / UDP
       boost::asio::io_service io_service_;
       boost::asio::ip::tcp::socket tcp_socket_;
-      boost::asio::ip::tcp::socket udp_socket_;
+      boost::shared_ptr<boost::asio::ip::udp::socket> udp_socket_;
+      boost::shared_ptr<boost::asio::ip::udp::endpoint> udp_endpoint_;
 
       // Data buffers
+      /// Variable-length buffer that has data continually appended to it
+      /// until messages are parsed from it
       std::vector<uint8_t> data_buffer_;
+      /// Buffer containing incomplete data from message parsing
       std::string nmea_buffer_;
-      std::vector<NmeaSentence> nmea_sentences_;
-      std::vector<NovatelSentence> novatel_sentences_;
-      std::vector<BinaryMessage> binary_messages_;
+      /// Fixed-size buffer for reading directly from sockets
+      boost::array<uint8_t, 10000> socket_buffer_;
 
       // Message buffers
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;
