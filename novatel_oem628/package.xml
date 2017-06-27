@@ -5,10 +5,16 @@
   <description>
   Driver for NovAtel OEM628 GNSS receivers
   </description>
-  <maintainer email="swri@swri.org">SwRI</maintainer>
+
+  <maintainer email="preed@swri.org">P. J. Reed</maintainer>
+  <maintainer email="evenator@swri.org">Ed Venator</maintainer>
+  <maintainer email="kkozak@swri.org">Kris Kozak</maintainer>
+
   <license>United States Government Purpose</license>
   <license>SwRI Proprietary</license>
+
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>boost</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
   <depend>gps_common</depend>

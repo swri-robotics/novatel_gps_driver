@@ -159,6 +159,7 @@ namespace novatel_oem628
       publish_trackstat_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
+      reconnect_delay_s_(0.5),
       use_binary_messages_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
@@ -205,6 +206,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
       swri::param(priv, "polling_period", polling_period_, polling_period_);
+      swri::param(priv, "reconnect_delay_ms", reconnect_delay_s_, reconnect_delay_s_);
       swri::param(priv, "use_binary_messages", use_binary_messages_, use_binary_messages_);
 
       swri::param(priv,"connection_type", connection_type_, connection_type_);
@@ -315,31 +317,23 @@ namespace novatel_oem628
      */
     void Spin()
     {
-      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
-      std::vector<gps_common::GPSFixPtr> fix_msgs;
-      std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
-      std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
-      std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_msgs;
+      std::string format_suffix;
+      if (use_binary_messages_)
+      {
+        // NovAtel logs in binary format always end with "b", while ones in
+        // ASCII format always end in "a".
+        format_suffix = "b";
+      }
+      else
+      {
+        format_suffix = "a";
+      }
 
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
       opts["gprmc"] = polling_period_;
-      if (use_binary_messages_)
-      {
-        opts["bestposb"] = polling_period_;  // Best position (Binary)
-      }
-      else
-      {
-        opts["bestposa"] = polling_period_;  // Best position (ASCII)
-      }
-      if (use_binary_messages_)
-      {
-        opts["timeb"] = 1.0;  // Time (Binary)
-      }
-      else
-      {
-        opts["timea"] = 1.0;  // Time (ASCII)
-      }
+      opts["bestpos" + format_suffix] = polling_period_;  // Best position
+      opts["time" + format_suffix] = 1.0;  // Time
 
       if (publish_gpgsa_)
       {
@@ -352,49 +346,24 @@ namespace novatel_oem628
       if (publish_imu_messages_)
       {
         double period = 1.0 / imu_rate_;
-        if (use_binary_messages_)
-        {
-          opts["corrimudatab"] = period;
-        }
-        else
+        opts["corrimudata" + format_suffix] = period;
+        if (!use_binary_messages_)
         {
           ROS_WARN("Using the ASCII message format with CORRIMUDATA logs is not recommended.  "
-                       "The serial link will not be able to keep up with the data rate.");
-          opts["corrimudataa"] = period;
+                       "A serial link will not be able to keep up with the data rate.");
         }
       }
       if (publish_novatel_velocity_)
       {
-        if (use_binary_messages_)
-        {
-          opts["bestvelb"] = polling_period_;  // Best velocity (Binary)
-        }
-        else
-        {
-          opts["bestvela"] = polling_period_;  // Best velocity (ASCII)
-        }
+        opts["bestvel" + format_suffix] = polling_period_;  // Best velocity
       }
       if (publish_range_messages_)
       {
-        if (use_binary_messages_)
-        {
-          opts["rangeb"] = 1.0;  // Range (Binary). 1 msg/sec is max rate
-        }
-        else
-        {
-          opts["rangea"] = 1.0;  // Range (ASCII). 1 msg/sec is max rate
-        }
+        opts["range" + format_suffix] = 1.0;  // Range. 1 msg/sec is max rate
       }
       if (publish_trackstat_)
       {
-        if (use_binary_messages_)
-        {
-          opts["trackstatb"] = 1.0;  // Trackstat (Binary)
-        }
-        else
-        {
-          opts["trackstata"] = 1.0;  // Trackstat (ASCII)
-        }
+        opts["trackstat" + format_suffix] = 1.0;  // Trackstat
       }
       while (ros::ok())
       {
@@ -402,241 +371,10 @@ namespace novatel_oem628
         {
           // Connected to device. Begin reading/processing data
           NODELET_INFO("%s connected to device", hw_id_.c_str());
-          while (ros::ok())
+          while (gps_.IsConnected() && ros::ok())
           {
-            // This call appears to block if the serial device is disconnected
-            NovatelGps::ReadResult result = gps_.ProcessData();
-            if (result == NovatelGps::READ_ERROR)
-            {
-              NODELET_ERROR_THROTTLE(1, "Error reading from device <%s:%s>: %s",
-                  connection_type_.c_str(),
-                  device_.c_str(),
-                  gps_.ErrorMsg().c_str());
-              device_errors_++;
-            }
-            else if (result == NovatelGps::READ_TIMEOUT)
-            {
-              device_timeouts_++;
-            }
-            else if (result == NovatelGps::READ_INTERRUPTED)
-            {
-              // If we are interrupted by a signal, ROS is probably
-              // quitting, but we'll wait for ROS to tell us to quit.
-              device_interrupts_++;
-            }
-            else if (result == NovatelGps::READ_PARSE_FAILED)
-            {
-              gps_parse_failures_++;
-            }
-            else if (result == NovatelGps::READ_INSUFFICIENT_DATA)
-            {
-              gps_insufficient_data_warnings_++;
-            }
-
-            // Read messages from the driver into the local message lists
-            gps_.GetGpggaMessages(gpgga_msgs);
-            gps_.GetGprmcMessages(gprmc_msgs);
-            gps_.GetNovatelPositions(position_msgs);
-            gps_.GetFixMessages(fix_msgs);
-
-            // Increment the measurement count by the number of messages we just
-            // read
-            measurement_count_ += gpgga_msgs.size();
-
-            // If there are new position messages, store the most recent
-            if (!position_msgs.empty())
-            {
-              last_novatel_position_ = position_msgs.back();
-            }
-
-            // Find all the gppga messages that are within 20 ms of whole
-            // numbered UTC seconds and push their stamps onto the msg_times
-            // buffer
-            for (size_t i = 0; i < gpgga_msgs.size(); i++)
-            {
-              if (gpgga_msgs[i]->utc_seconds != 0)
-              {
-                int64_t second = swri_math_util::Round(gpgga_msgs[i]->utc_seconds);
-                double difference = std::fabs(gpgga_msgs[i]->utc_seconds - second);
-
-                if (difference < 0.02)
-                {
-                  msg_times_.push_back(gpgga_msgs[i]->header.stamp);
-                }
-              }
-            }
-
-            // If timesync messages are available, CalculateTimeSync will
-            // update a stat accumulator of the offset of the TimeSync message
-            // stamp from the GPS message stamp
-            CalculateTimeSync();
-
-            // If TimeSync messages are available, CalculateTimeSync keeps
-            // an acculumator of their offset, which is used to
-            // calculate a rolling mean of the offset to apply to all messages
-            ros::Duration sync_offset(0); // If no TimeSyncs, assume 0 offset
-            if (last_sync_ != ros::TIME_MIN)
-            {
-              sync_offset = ros::Duration(stats::rolling_mean(rolling_offset_));
-            }
-            ROS_DEBUG_STREAM("GPS TimeSync offset is " << sync_offset);
-
-            if (publish_nmea_messages_)
-            {
-              for (size_t i = 0; i < gpgga_msgs.size(); i++)
-              {
-                gpgga_msgs[i]->header.stamp += sync_offset;
-                gpgga_msgs[i]->header.frame_id = frame_id_;
-                gpgga_pub_.publish(gpgga_msgs[i]);
-              }
-
-              for (size_t i = 0; i < gprmc_msgs.size(); i++)
-              {
-                gprmc_msgs[i]->header.stamp += sync_offset;
-                gprmc_msgs[i]->header.frame_id = frame_id_;
-                gprmc_pub_.publish(gprmc_msgs[i]);
-              }
-            }
-
-            if (publish_gpgsa_)
-            {
-              std::vector<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs;
-              gps_.GetGpgsaMessages(gpgsa_msgs);
-              for (size_t i = 0; i < gpgsa_msgs.size(); ++i)
-              {
-                gpgsa_msgs[i]->header.stamp = ros::Time::now();;
-                gpgsa_msgs[i]->header.frame_id = frame_id_;
-                gpgsa_pub_.publish(gpgsa_msgs[i]);
-              }
-            }
-
-            if (publish_gpgsv_)
-            {
-              std::vector<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs;
-              gps_.GetGpgsvMessages(gpgsv_msgs);
-              for (size_t i = 0; i < gpgsv_msgs.size(); ++i)
-              {
-                gpgsv_msgs[i]->header.stamp = ros::Time::now();;
-                gpgsv_msgs[i]->header.frame_id = frame_id_;
-                gpgsv_pub_.publish(gpgsv_msgs[i]);
-              }
-            }
-
-            if (publish_imu_messages_)
-            {
-              bool imu_has_subscribers = imu_pub_.getNumSubscribers() > 0;
-              bool novatel_imu_has_subscribers = novatel_imu_pub_.getNumSubscribers() > 0;
-              if (imu_has_subscribers || novatel_imu_has_subscribers)
-              {
-                gps_.GetNovatelCorrectedImuData(imu_msgs);
-                std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>::iterator iter;
-
-                for (iter = imu_msgs.begin(); iter != imu_msgs.end(); iter++)
-                {
-                  (*iter)->header.frame_id = imu_frame_id_;
-
-                  if (novatel_imu_has_subscribers)
-                  {
-                    novatel_imu_pub_.publish(*iter);
-                  }
-
-                  if (imu_has_subscribers)
-                  {
-                    sensor_msgs::ImuPtr msg = boost::make_shared<sensor_msgs::Imu>();
-                    // The raw values returned from the device are instantaneous
-                    // measurements; attitude rates are in radians and accelerations
-                    // are in m/s.
-                    // The ROS Imu message wants them in rad/s and m/s^2, so we
-                    // multiply them by our data rate to get that.
-                    msg->header.frame_id = imu_frame_id_;
-                    msg->header.stamp = (*iter)->header.stamp;
-                    msg->orientation_covariance[0] = -1;
-                    msg->angular_velocity.x = (*iter)->pitch_rate * imu_rate_;
-                    msg->angular_velocity.y = (*iter)->roll_rate * imu_rate_;
-                    msg->angular_velocity.z = (*iter)->yaw_rate * imu_rate_;
-                    msg->linear_acceleration.x = (*iter)->lateral_acceleration * imu_rate_;
-                    msg->linear_acceleration.y = (*iter)->longitudinal_acceleration * imu_rate_;
-                    msg->linear_acceleration.z = (*iter)->vertical_acceleration * imu_rate_;
-                    imu_pub_.publish(msg);
-                  }
-                }
-              }
-            }
-
-            if (publish_novatel_positions_)
-            {
-              for (size_t i = 0; i < position_msgs.size(); i++)
-              {
-                position_msgs[i]->header.stamp += sync_offset;
-                position_msgs[i]->header.frame_id = frame_id_;
-                novatel_position_pub_.publish(position_msgs[i]);
-              }
-            }
-
-            if (publish_novatel_velocity_)
-            {
-              std::vector<novatel_gps_msgs::NovatelVelocityPtr> velocity_msgs;
-              gps_.GetNovatelVelocities(velocity_msgs);
-              for (size_t i = 0; i < velocity_msgs.size(); i++)
-              {
-                velocity_msgs[i]->header.stamp += sync_offset;
-                velocity_msgs[i]->header.frame_id = frame_id_;
-                novatel_velocity_pub_.publish(velocity_msgs[i]);
-              }
-            }
-            if (publish_time_messages_)
-            {
-              std::vector<novatel_gps_msgs::TimePtr> time_msgs;
-              gps_.GetTimeMessages(time_msgs);
-              for (size_t i = 0; i < time_msgs.size(); i++)
-              {
-                time_msgs[i]->header.stamp += sync_offset;
-                time_msgs[i]->header.frame_id = frame_id_;
-                time_pub_.publish(time_msgs[i]);
-              }
-            }
-            if (publish_range_messages_)
-            {
-              std::vector<novatel_gps_msgs::RangePtr> range_msgs;
-              gps_.GetRangeMessages(range_msgs);
-              for (size_t i = 0; i < range_msgs.size(); i++)
-              {
-                range_msgs[i]->header.stamp += sync_offset;
-                range_msgs[i]->header.frame_id = frame_id_;
-                range_pub_.publish(range_msgs[i]);
-              }
-            }
-            if (publish_trackstat_)
-            {
-              std::vector<novatel_gps_msgs::TrackstatPtr> trackstat_msgs;
-              gps_.GetTrackstatMessages(trackstat_msgs);
-              ROS_DEBUG("Got %zu trackstat msgs", trackstat_msgs.size());
-              for (size_t i = 0; i < trackstat_msgs.size(); i++)
-              {
-                trackstat_msgs[i]->header.stamp += sync_offset;
-                trackstat_msgs[i]->header.frame_id = frame_id_;
-                trackstat_pub_.publish(trackstat_msgs[i]);
-              }
-
-            }
-
-            for (size_t i = 0; i < fix_msgs.size(); i++)
-            {
-              fix_msgs[i]->header.stamp += sync_offset;
-              fix_msgs[i]->header.frame_id = frame_id_;
-              gps_pub_.publish(fix_msgs[i]);
-
-              // If the time between GPS message stamps is greater than 1.5
-              // times the expected publish rate, increment the
-              // publish_rate_warnings_ counter, which is used in diagnostics
-              if (last_published_ != ros::TIME_MIN &&
-                  (fix_msgs[i]->header.stamp - last_published_).toSec() > 1.5 * (1.0 / expected_rate_))
-              {
-                publish_rate_warnings_++;
-              }
-
-              last_published_ = fix_msgs[i]->header.stamp;
-            }
+            // Read data from the device and publish any received messages
+            CheckDeviceForData();
 
             // Poke the diagnostic updater. It will only fire diagnostics if
             // its internal timer (1 Hz) has elapsed. Otherwise, this is a
@@ -650,7 +388,7 @@ namespace novatel_oem628
             ros::spinOnce();
             // Sleep for a microsecond to prevent CPU hogging
             boost::this_thread::sleep(boost::posix_time::microseconds(1));
-          }  // While (ros::ok) (inner loop to process data from device)
+          }  // While (gps_.IsConnected() && ros::ok()) (inner loop to process data from device)
         }
         else  // Could not connect to the device
         {
@@ -660,6 +398,13 @@ namespace novatel_oem628
             gps_.ErrorMsg().c_str());
           device_errors_++;
           error_msg_ = gps_.ErrorMsg();
+        }
+
+        if (ros::ok())
+        {
+          // If ROS is still OK but we got disconnected, we're going to try
+          // to reconnect, but wait just a bit so we don't spam the device.
+          ros::Duration(reconnect_delay_s_).sleep();
         }
 
         // Poke the diagnostic updater. It will only fire diagnostics if
@@ -700,6 +445,7 @@ namespace novatel_oem628
     bool publish_trackstat_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
+    double reconnect_delay_s_;
     bool use_binary_messages_;
 
     ros::Publisher gps_pub_;
@@ -755,6 +501,216 @@ namespace novatel_oem628
 
     std::string imu_frame_id_;
     std::string frame_id_;
+
+    /**
+     * @brief Reads data from the device and publishes any parsed messages.
+     *
+     * Note that when reading from the device, this will block until data
+     * is available.
+     */
+    void CheckDeviceForData()
+    {
+      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
+      std::vector<gps_common::GPSFixPtr> fix_msgs;
+      std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
+      std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
+
+      // This call appears to block if the serial device is disconnected
+      NovatelGps::ReadResult result = gps_.ProcessData();
+      if (result == NovatelGps::READ_ERROR)
+      {
+        NODELET_ERROR_THROTTLE(1, "Error reading from device <%s:%s>: %s",
+                               connection_type_.c_str(),
+                               device_.c_str(),
+                               gps_.ErrorMsg().c_str());
+        device_errors_++;
+      }
+      else if (result == NovatelGps::READ_TIMEOUT)
+      {
+        device_timeouts_++;
+      }
+      else if (result == NovatelGps::READ_INTERRUPTED)
+      {
+        // If we are interrupted by a signal, ROS is probably
+        // quitting, but we'll wait for ROS to tell us to quit.
+        device_interrupts_++;
+      }
+      else if (result == NovatelGps::READ_PARSE_FAILED)
+      {
+        NODELET_ERROR("Error reading from device <%s:%s>: %s",
+                               connection_type_.c_str(),
+                               device_.c_str(),
+                               gps_.ErrorMsg().c_str());
+        gps_parse_failures_++;
+      }
+      else if (result == NovatelGps::READ_INSUFFICIENT_DATA)
+      {
+        gps_insufficient_data_warnings_++;
+      }
+
+      // Read messages from the driver into the local message lists
+      gps_.GetGpggaMessages(gpgga_msgs);
+      gps_.GetGprmcMessages(gprmc_msgs);
+      gps_.GetNovatelPositions(position_msgs);
+      gps_.GetFixMessages(fix_msgs);
+
+      // Increment the measurement count by the number of messages we just
+      // read
+      measurement_count_ += gpgga_msgs.size();
+
+      // If there are new position messages, store the most recent
+      if (!position_msgs.empty())
+      {
+        last_novatel_position_ = position_msgs.back();
+      }
+
+      // Find all the gppga messages that are within 20 ms of whole
+      // numbered UTC seconds and push their stamps onto the msg_times
+      // buffer
+      for (size_t i = 0; i < gpgga_msgs.size(); i++)
+      {
+        if (gpgga_msgs[i]->utc_seconds != 0)
+        {
+          int64_t second = swri_math_util::Round(gpgga_msgs[i]->utc_seconds);
+          double difference = std::fabs(gpgga_msgs[i]->utc_seconds - second);
+
+          if (difference < 0.02)
+          {
+            msg_times_.push_back(gpgga_msgs[i]->header.stamp);
+          }
+        }
+      }
+
+      // If timesync messages are available, CalculateTimeSync will
+      // update a stat accumulator of the offset of the TimeSync message
+      // stamp from the GPS message stamp
+      CalculateTimeSync();
+
+      // If TimeSync messages are available, CalculateTimeSync keeps
+      // an acculumator of their offset, which is used to
+      // calculate a rolling mean of the offset to apply to all messages
+      ros::Duration sync_offset(0); // If no TimeSyncs, assume 0 offset
+      if (last_sync_ != ros::TIME_MIN)
+      {
+        sync_offset = ros::Duration(stats::rolling_mean(rolling_offset_));
+      }
+      ROS_DEBUG_STREAM("GPS TimeSync offset is " << sync_offset);
+
+      if (publish_nmea_messages_)
+      {
+        for (size_t i = 0; i < gpgga_msgs.size(); i++)
+        {
+          gpgga_msgs[i]->header.stamp += sync_offset;
+          gpgga_msgs[i]->header.frame_id = frame_id_;
+          gpgga_pub_.publish(gpgga_msgs[i]);
+        }
+
+        for (size_t i = 0; i < gprmc_msgs.size(); i++)
+        {
+          gprmc_msgs[i]->header.stamp += sync_offset;
+          gprmc_msgs[i]->header.frame_id = frame_id_;
+          gprmc_pub_.publish(gprmc_msgs[i]);
+        }
+      }
+
+      if (publish_gpgsa_)
+      {
+        std::vector<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs;
+        gps_.GetGpgsaMessages(gpgsa_msgs);
+        for (size_t i = 0; i < gpgsa_msgs.size(); ++i)
+        {
+          gpgsa_msgs[i]->header.stamp = ros::Time::now();;
+          gpgsa_msgs[i]->header.frame_id = frame_id_;
+          gpgsa_pub_.publish(gpgsa_msgs[i]);
+        }
+      }
+
+      if (publish_gpgsv_)
+      {
+        std::vector<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs;
+        gps_.GetGpgsvMessages(gpgsv_msgs);
+        for (size_t i = 0; i < gpgsv_msgs.size(); ++i)
+        {
+          gpgsv_msgs[i]->header.stamp = ros::Time::now();;
+          gpgsv_msgs[i]->header.frame_id = frame_id_;
+          gpgsv_pub_.publish(gpgsv_msgs[i]);
+        }
+      }
+
+      if (publish_novatel_positions_)
+      {
+        for (size_t i = 0; i < position_msgs.size(); i++)
+        {
+          position_msgs[i]->header.stamp += sync_offset;
+          position_msgs[i]->header.frame_id = frame_id_;
+          novatel_position_pub_.publish(position_msgs[i]);
+        }
+      }
+
+      if (publish_novatel_velocity_)
+      {
+        std::vector<novatel_gps_msgs::NovatelVelocityPtr> velocity_msgs;
+        gps_.GetNovatelVelocities(velocity_msgs);
+        for (size_t i = 0; i < velocity_msgs.size(); i++)
+        {
+          velocity_msgs[i]->header.stamp += sync_offset;
+          velocity_msgs[i]->header.frame_id = frame_id_;
+          novatel_velocity_pub_.publish(velocity_msgs[i]);
+        }
+      }
+      if (publish_time_messages_)
+      {
+        std::vector<novatel_gps_msgs::TimePtr> time_msgs;
+        gps_.GetTimeMessages(time_msgs);
+        for (size_t i = 0; i < time_msgs.size(); i++)
+        {
+          time_msgs[i]->header.stamp += sync_offset;
+          time_msgs[i]->header.frame_id = frame_id_;
+          time_pub_.publish(time_msgs[i]);
+        }
+      }
+      if (publish_range_messages_)
+      {
+        std::vector<novatel_gps_msgs::RangePtr> range_msgs;
+        gps_.GetRangeMessages(range_msgs);
+        for (size_t i = 0; i < range_msgs.size(); i++)
+        {
+          range_msgs[i]->header.stamp += sync_offset;
+          range_msgs[i]->header.frame_id = frame_id_;
+          range_pub_.publish(range_msgs[i]);
+        }
+      }
+      if (publish_trackstat_)
+      {
+        std::vector<novatel_gps_msgs::TrackstatPtr> trackstat_msgs;
+        gps_.GetTrackstatMessages(trackstat_msgs);
+        ROS_DEBUG("Got %zu trackstat msgs", trackstat_msgs.size());
+        for (size_t i = 0; i < trackstat_msgs.size(); i++)
+        {
+          trackstat_msgs[i]->header.stamp += sync_offset;
+          trackstat_msgs[i]->header.frame_id = frame_id_;
+          trackstat_pub_.publish(trackstat_msgs[i]);
+        }
+      }
+
+      for (size_t i = 0; i < fix_msgs.size(); i++)
+      {
+        fix_msgs[i]->header.stamp += sync_offset;
+        fix_msgs[i]->header.frame_id = frame_id_;
+        gps_pub_.publish(fix_msgs[i]);
+
+        // If the time between GPS message stamps is greater than 1.5
+        // times the expected publish rate, increment the
+        // publish_rate_warnings_ counter, which is used in diagnostics
+        if (last_published_ != ros::TIME_MIN &&
+            (fix_msgs[i]->header.stamp - last_published_).toSec() > 1.5 * (1.0 / expected_rate_))
+        {
+          publish_rate_warnings_++;
+        }
+
+        last_published_ = fix_msgs[i]->header.stamp;
+      }
+    }
     
     /**
      * Updates the time sync offsets by matching up timesync messages to gps

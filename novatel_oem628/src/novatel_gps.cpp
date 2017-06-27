@@ -45,8 +45,8 @@ namespace novatel_oem628
       wait_for_position(false),
       connection_(SERIAL),
       utc_offset_(0),
+      is_connected_(false),
       tcp_socket_(io_service_),
-      udp_socket_(io_service_),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(MAX_SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
@@ -94,13 +94,9 @@ namespace novatel_oem628
     {
       return CreateSerialConnection(device, opts);
     }
-    else if (connection_ == TCP)
+    else if (connection_ == TCP || connection_ == UDP)
     {
-      return CreateTcpConnection(device, opts);
-    }
-    else if (connection_ == UDP)
-    {
-      return CreateUdpConnection(device, opts);
+      return CreateIpConnection(device, opts);
     }
 
     error_msg_ = "Invalid connection type.";
@@ -139,8 +135,17 @@ namespace novatel_oem628
     }
     else if (connection_ == UDP)
     {
-      udp_socket_.close();
+      if (udp_socket_)
+      {
+        udp_socket_->close();
+        udp_socket_.reset();
+      }
+      if (udp_endpoint_)
+      {
+        udp_endpoint_.reset();
+      }
     }
+    is_connected_ = false;
   }
 
   void NovatelGps::setBufferCapacity(const size_t buffer_size)
@@ -160,30 +165,44 @@ namespace novatel_oem628
     }
 
     ros::Time stamp = ros::Time::now();
+    std::vector<NmeaSentence> nmea_sentences;
+    std::vector<NovatelSentence> novatel_sentences;
+    std::vector<BinaryMessage> binary_messages;
 
     if (!data_buffer_.empty())
     {
-      nmea_buffer_.append(
-        (char*)&data_buffer_[0],
-        data_buffer_.size());
+      nmea_buffer_.insert(nmea_buffer_.end(),
+                          data_buffer_.begin(),
+                          data_buffer_.end());
 
       data_buffer_.clear();
 
+      std::string remaining_buffer;
+
       if (!extract_complete_sentences(
           nmea_buffer_,
-          nmea_sentences_,
-          novatel_sentences_,
-          binary_messages_,
-          nmea_buffer_))
+          nmea_sentences,
+          novatel_sentences,
+          binary_messages,
+          remaining_buffer))
       {
         read_result = READ_PARSE_FAILED;
-        error_msg_ = "Parse failure extracting NMEA sentences.";
+        error_msg_ = "Parse failure extracting sentences.";
+      }
+
+      nmea_buffer_ = remaining_buffer;
+
+      ROS_DEBUG("Parsed: %lu NMEA / %lu NovAtel / %lu Binary messages",
+               nmea_sentences.size(), novatel_sentences.size(), binary_messages.size());
+      if (!nmea_buffer_.empty())
+      {
+        ROS_DEBUG("%lu unparsed bytes left over.", nmea_buffer_.size());
       }
     }
 
-    double most_recent_utc_time = GetMostRecentUtcTime(nmea_sentences_);
+    double most_recent_utc_time = GetMostRecentUtcTime(nmea_sentences);
 
-    BOOST_FOREACH(const NmeaSentence& sentence, nmea_sentences_)
+    BOOST_FOREACH(const NmeaSentence& sentence, nmea_sentences)
     {
       NovatelGps::ReadResult result = ParseNmeaSentence(sentence, stamp, most_recent_utc_time);
       if (result != READ_SUCCESS)
@@ -191,9 +210,8 @@ namespace novatel_oem628
         read_result = result;
       }
     }
-    nmea_sentences_.clear();
 
-    BOOST_FOREACH(const NovatelSentence& sentence, novatel_sentences_)
+    BOOST_FOREACH(const NovatelSentence& sentence, novatel_sentences)
     {
       NovatelGps::ReadResult result = ParseNovatelSentence(sentence, stamp);
       if (result != READ_SUCCESS)
@@ -201,9 +219,8 @@ namespace novatel_oem628
         read_result = result;
       }
     }
-    novatel_sentences_.clear();
 
-    BOOST_FOREACH(const BinaryMessage& msg, binary_messages_)
+    BOOST_FOREACH(const BinaryMessage& msg, binary_messages)
     {
       NovatelGps::ReadResult result = ParseBinaryMessage(msg, stamp);
       if (result != READ_SUCCESS)
@@ -211,7 +228,6 @@ namespace novatel_oem628
         read_result = result;
       }
     }
-    binary_messages_.clear();
 
     return read_result;
   }
@@ -441,11 +457,12 @@ namespace novatel_oem628
 
     if (success)
     {
+      is_connected_ = true;
       if (!Configure(opts))
       {
         // We will not kill the connection here, because the device may already
         // be setup to communicate correctly, but we will print a warning         
-        ROS_WARN("Failed to configure GPS. This port may be read only, or the "
+        ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
                  "been pre-configured.");
@@ -459,22 +476,119 @@ namespace novatel_oem628
     return success;
   }
 
-  bool NovatelGps::CreateTcpConnection(const std::string& device, NovatelMessageOpts const& opts)
+  bool NovatelGps::CreateIpConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
-    boost::asio::ip::tcp::resolver resolver(io_service_);
-    boost::asio::ip::tcp::resolver::query query(device);
-    boost::system::error_code error_code = boost::asio::error::host_not_found;
+    std::string ip;
+    std::string port;
+    uint16_t num_port;
+    size_t sep_pos = device.find(':');
+    if (sep_pos == std::string::npos || sep_pos == device.size() - 1)
+    {
+      ROS_INFO("Using default port.");
+      std::stringstream ss;
+      if (connection_ == TCP)
+      {
+        num_port = default_tcp_port_;
+      }
+      else
+      {
+        num_port = default_udp_port_;
+      }
+      ss << num_port;
+      port = ss.str();
+    }
+    else
+    {
+      port = device.substr(sep_pos + 1);
+    }
 
-    // TODO(malban)
+    if (sep_pos != 0)
+    {
+      ip = device.substr(0, sep_pos);
+    }
 
-    return false;
-  }
+    try
+    {
+      if (!ip.empty())
+      {
+        if (connection_ == TCP)
+        {
+          boost::asio::ip::tcp::resolver resolver(io_service_);
+          boost::asio::ip::tcp::resolver::query query(ip, port);
+          boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
 
-  bool NovatelGps::CreateUdpConnection(const std::string& device, NovatelMessageOpts const& opts)
-  {
-    // TODO(malban)
+          boost::asio::connect(tcp_socket_, iter);
+          ROS_INFO("Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
+        }
+        else
+        {
+          boost::asio::ip::udp::resolver resolver(io_service_);
+          boost::asio::ip::udp::resolver::query query(ip, port);
+          udp_endpoint_ = boost::make_shared<boost::asio::ip::udp::endpoint>(*resolver.resolve(query));
+          udp_socket_.reset(new boost::asio::ip::udp::socket(io_service_));
+          udp_socket_->open(boost::asio::ip::udp::v4());
+          ROS_INFO("Connecting via UDP to %s:%s", ip.c_str(), port.c_str());
+        }
+      }
+      else
+      {
+        uint16_t port_num = static_cast<uint16_t>(strtoll(port.c_str(), NULL, 10));
+        if (connection_ == TCP)
+        {
+          boost::asio::ip::tcp::acceptor acceptor(io_service_,
+                                                  boost::asio::ip::tcp::endpoint(
+                                                      boost::asio::ip::tcp::v4(), port_num));
+          ROS_INFO("Listening on TCP port %s", port.c_str());
+          acceptor.accept(tcp_socket_);
+          ROS_INFO("Accepted TCP connection from client: %s",
+                   tcp_socket_.remote_endpoint().address().to_string().c_str());
+        }
+        else
+        {
+          udp_socket_.reset(new boost::asio::ip::udp::socket(
+              io_service_,
+              boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(),
+                                             port_num)));
+          boost::array<char, 1> recv_buf;
+          udp_endpoint_ = boost::make_shared<boost::asio::ip::udp::endpoint>();
+          boost::system::error_code error;
 
-    return false;
+          ROS_INFO("Listening on UDP port %s", port.c_str());
+          udp_socket_->receive_from(boost::asio::buffer(recv_buf), *udp_endpoint_, 0, error);
+          if (error && error != boost::asio::error::message_size)
+          {
+            throw boost::system::system_error(error);
+          }
+
+          ROS_INFO("Accepted UDP connection from client: %s",
+                   udp_endpoint_->address().to_string().c_str());
+        }
+      }
+    }
+    catch (std::exception& e)
+    {
+      error_msg_ = e.what();
+      ROS_ERROR("Unable to connect: %s", e.what());
+      return false;
+    }
+
+    is_connected_ = true;
+
+    if (Configure(opts))
+    {
+      ROS_INFO("Configured GPS.");
+    }
+    else
+    {
+      // We will not kill the connection here, because the device may already
+      // be setup to communicate correctly, but we will print a warning
+      ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
+                   "device may not be functioning as expected; however, the "
+                   "driver may still function correctly if the port has already "
+                   "been pre-configured.");
+    }
+
+    return true;
   }
 
   NovatelGps::ReadResult NovatelGps::ReadData()
@@ -502,10 +616,41 @@ namespace novatel_oem628
 
       return READ_SUCCESS;
     }
+    else if (connection_ == TCP || connection_ == UDP)
+    {
+      try
+      {
+        boost::system::error_code error;
+        size_t len;
+
+        if (connection_ == TCP)
+        {
+          len = tcp_socket_.read_some(boost::asio::buffer(socket_buffer_), error);
+        }
+        else
+        {
+          boost::asio::ip::udp::endpoint remote_endpoint;
+          len = udp_socket_->receive_from(boost::asio::buffer(socket_buffer_), remote_endpoint);
+        }
+        data_buffer_.insert(data_buffer_.end(), socket_buffer_.begin(), socket_buffer_.begin()+len);
+        if (error)
+        {
+          error_msg_ = error.message();
+          Disconnect();
+          return READ_ERROR;
+        }
+        return READ_SUCCESS;
+      }
+      catch (std::exception& e)
+      {
+        ROS_WARN("TCP connection error: %s", e.what());
+      }
+    }
 
     // TODO(malban)
 
-    error_msg_ = "unsupported connection type.";
+    error_msg_ = "Unsupported connection type.";
+
     return READ_ERROR;
   }
 
@@ -591,6 +736,7 @@ namespace novatel_oem628
         {
           utc_offset_ = time->utc_offset;
           ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+          time->header.stamp = stamp;
           time_msgs_.push_back(time);
         }
         break;
@@ -690,13 +836,29 @@ namespace novatel_oem628
       novatel_gps_msgs::GpgsaPtr gpgsa = boost::make_shared<novatel_gps_msgs::Gpgsa>();
       NmeaMessageParseResult parse_result =
           parse_vectorized_gpgsa_message(sentence.body, gpgsa);
-      gpgsa_msgs_.push_back(gpgsa);
+      if (parse_result != ParseFailed)
+      {
+        gpgsa_msgs_.push_back(gpgsa);
+      }
+      else
+      {
+        error_msg_ = "Failed to parse the NMEA GPGSA message.";
+        return READ_PARSE_FAILED;
+      }
     }
     else if (sentence.id == "GPGSV")
     {
       novatel_gps_msgs::GpgsvPtr gpgsv = boost::make_shared<novatel_gps_msgs::Gpgsv>();
       NmeaMessageParseResult parse_result = ParseVectorizedGpgsvMessage(sentence.body, gpgsv);
-      gpgsv_msgs_.push_back(gpgsv);
+      if (parse_result != ParseFailed)
+      {
+        gpgsv_msgs_.push_back(gpgsv);
+      }
+      else
+      {
+        error_msg_ = "Failed to parse the NMEA GPGSV message.";
+        return READ_PARSE_FAILED;
+      }
     }
     else
     {
@@ -740,21 +902,6 @@ namespace novatel_oem628
         novatel_velocities_.push_back(velocity);
       }
     }
-    else if (sentence.id == "CORRIMUDATASA")
-    {
-      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu =
-        boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();
-      if (!ParseNovatelCorrectedImuMessage(sentence, imu))
-      {
-        error_msg_ = "Failed to parse the Novatel Corrected IMU Data message.";
-        return READ_PARSE_FAILED;
-      }
-      else
-      {
-        imu->header.stamp = stamp;
-        imu_messages_.push_back(imu);
-      }
-    }
     else if (sentence.id == "TIMEA")
     {
       novatel_gps_msgs::TimePtr time = boost::make_shared<novatel_gps_msgs::Time>();
@@ -767,6 +914,7 @@ namespace novatel_oem628
       {
         utc_offset_ = time->utc_offset;
         ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+        time->header.stamp = stamp;
         time_msgs_.push_back(time);
       }
     }
@@ -805,11 +953,7 @@ namespace novatel_oem628
 
   bool NovatelGps::Write(const std::string& command)
   {
-    std::vector<uint8_t> bytes(command.length());
-    for (size_t i = 0; i < command.length(); i++)
-    {
-      bytes[i] = command[i];
-    }
+    std::vector<uint8_t> bytes(command.begin(), command.end());
 
     if (connection_ == SERIAL)
     {
@@ -819,6 +963,34 @@ namespace novatel_oem628
         ROS_ERROR("Failed to send command: %s", command.c_str());
       }
       return written == (int32_t)command.length();
+    }
+    else if (connection_ == TCP || connection_ == UDP)
+    {
+      boost::system::error_code error;
+      try
+      {
+        size_t written;
+        if (connection_ == TCP)
+        {
+          written = boost::asio::write(tcp_socket_, boost::asio::buffer(bytes), error);
+        }
+        else
+        {
+          written = udp_socket_->send_to(boost::asio::buffer(bytes), *udp_endpoint_, 0, error);
+        }
+        if (error)
+        {
+          ROS_ERROR("Error writing TCP data: %s", error.message().c_str());
+          Disconnect();
+        }
+        ROS_DEBUG("Wrote %lu bytes.", written);
+        return written == (int32_t) command.length();
+      }
+      catch (std::exception& e)
+      {
+        Disconnect();
+        ROS_ERROR("Exception writing TCP data: %s", e.what());
+      }
     }
 
     return false;
