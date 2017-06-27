@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.1.0 (2017-06-27)
+------------------
 * Add ethernet support
 * Binary message support
 * Contributors: P. J. Reed
