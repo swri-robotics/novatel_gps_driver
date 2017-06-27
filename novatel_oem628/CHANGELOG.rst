@@ -2,6 +2,12 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add ethernet support
+* Binary message support
+* Contributors: P. J. Reed
+
 3.0.1 (2017-05-08)
 ------------------
 * Set UTC time correctly for message syncing
