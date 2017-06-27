@@ -155,6 +155,7 @@ namespace novatel_oem628
       publish_trackstat_(false),
       publish_diagnostics_(true),
       ignore_sync_diagnostic(false),
+      use_binary_messages_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -197,6 +198,7 @@ namespace novatel_oem628
       swri::param(priv,"publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
       swri::param(priv,"ignore_sync_diagnostic", ignore_sync_diagnostic, ignore_sync_diagnostic);
       swri::param(priv, "polling_period", polling_period_, polling_period_);
+      swri::param(priv, "use_binary_messages", use_binary_messages_, use_binary_messages_);
 
       swri::param(priv,"connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
@@ -299,6 +301,18 @@ namespace novatel_oem628
      */
     void Spin()
     {
+      std::string format_suffix;
+      if (use_binary_messages_)
+      {
+        // NovAtel logs in binary format always end with "b", while ones in
+        // ASCII format always end in "a".
+        format_suffix = "b";
+      }
+      else
+      {
+        format_suffix = "a";
+      }
+
       std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
@@ -307,8 +321,8 @@ namespace novatel_oem628
       NovatelMessageOpts opts;
       opts["gpgga"] = polling_period_;
       opts["gprmc"] = polling_period_;
-      opts["bestposa"] = polling_period_;  // Best position (ASCII)
-      opts["timea"] = 1.0;  // Time (ASCII)
+      opts["bestpos" + format_suffix] = polling_period_;  // Best position
+      opts["time" + format_suffix] = 1.0;  // Time
 
       if (publish_gpgsa_)
       {
@@ -320,15 +334,15 @@ namespace novatel_oem628
       }
       if (publish_novatel_velocity_)
       {
-        opts["bestvela"] = polling_period_;  // Best velocity (ASCII)
+        opts["bestvel" + format_suffix] = polling_period_;  // Best velocity
       }
       if (publish_range_messages_)
       {
-         opts["rangea"] = 1.0;  // Range (ASCII). 1 msg/sec is max rate
+        opts["range" + format_suffix] = 1.0;  // Range. 1 msg/sec is max rate
       }
       if (publish_trackstat_)
       {
-         opts["trackstata"] = 1.0;  // Trackstat (ASCII)
+        opts["trackstat" + format_suffix] = 1.0;  // Trackstat
       }
       while (ros::ok())
       {
@@ -590,6 +604,7 @@ namespace novatel_oem628
     bool publish_trackstat_;
     bool publish_diagnostics_;
     bool ignore_sync_diagnostic;
+    bool use_binary_messages_;
 
     ros::Publisher gps_pub_;
     ros::Publisher novatel_position_pub_;
