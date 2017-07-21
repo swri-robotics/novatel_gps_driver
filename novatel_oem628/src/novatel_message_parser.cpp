@@ -1010,10 +1010,10 @@ namespace novatel_oem628
   }
 
   void FindAsciiSentence(const std::string& sentence,
-                         uint64_t current_idx,
-                         uint64_t& start_idx,
-                         uint64_t& end_idx,
-                         uint64_t& invalid_char_idx)
+                         size_t current_idx,
+                         size_t& start_idx,
+                         size_t& end_idx,
+                         size_t& invalid_char_idx)
   {
     start_idx = sentence.find_first_of(NOVATEL_ASCII_FLAGS, current_idx);
     end_idx = std::string::npos;
@@ -1026,8 +1026,8 @@ namespace novatel_oem628
 
     end_idx = sentence.find(NOVATEL_ENDLINE, start_idx);
 
-    uint64_t search_stop_idx = std::min(end_idx, sentence.length());
-    for (uint64_t i = start_idx; i < search_stop_idx; i++)
+    size_t search_stop_idx = std::min(end_idx, sentence.length());
+    for (size_t i = start_idx; i < search_stop_idx; i++)
     {
       if (sentence[i] == 9 || sentence[i] == 10 || sentence[i] == 11 || sentence[i] == 13 ||
           (sentence[i] >= 32 && sentence[i] <= 126))
@@ -1072,10 +1072,10 @@ namespace novatel_oem628
     size_t sentence_start = 0;
     while(sentence_start != std::string::npos && sentence_start < input.size())
     {
-      uint64_t ascii_start_idx;
-      uint64_t ascii_end_idx;
-      uint64_t invalid_ascii_idx;
-      uint64_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES, sentence_start);
+      size_t ascii_start_idx;
+      size_t ascii_end_idx;
+      size_t invalid_ascii_idx;
+      size_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES, sentence_start);
 
       FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
