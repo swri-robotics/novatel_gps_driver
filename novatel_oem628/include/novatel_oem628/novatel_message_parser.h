@@ -300,10 +300,10 @@ namespace novatel_oem628
    *        start and end, its index
    */
   void FindAsciiSentence(const std::string& sentence,
-                         uint64_t current_idx,
-                         uint64_t& start_idx,
-                         uint64_t& end_idx,
-                         uint64_t& invalid_char_idx);
+                         size_t current_idx,
+                         size_t& start_idx,
+                         size_t& end_idx,
+                         size_t& invalid_char_idx);
 
   bool ParseNovatelBinaryHeader(
       const BinaryMessage& bin_msg,
