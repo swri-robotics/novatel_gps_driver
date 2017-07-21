@@ -2,6 +2,15 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Use size_t responsibly
+* Remove duplicate message ID definition
+* Reorganize parsing code
+* Add binary message support
+* Publish IMU data from NovAtel SPAN devices
+* Contributors: Edward Venator, P. J. Reed
+
 3.1.0 (2017-06-27)
 ------------------
 * Add ethernet support
