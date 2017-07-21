@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.2.0 (2017-07-21)
+------------------
 * Use size_t responsibly
 * Remove duplicate message ID definition
 * Reorganize parsing code
