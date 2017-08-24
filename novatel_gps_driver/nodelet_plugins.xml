@@ -1,0 +1,7 @@
+<library path="lib/libnovatel_gps_driver_nodelets">
+  <class name="novatel_gps_driver/novatel_gps_nodelet" type="novatel_gps_driver::NovatelGpsNodelet" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for reading data from Novatel GPS devices.
+    </description>
+  </class>
+</library>
