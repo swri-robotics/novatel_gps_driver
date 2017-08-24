@@ -37,11 +37,13 @@ int main(int argc, char **argv)
 
   nodelet::Loader manager(false);  // Don't bring up the manager ROS API
 
+  ros::spinOnce();
+
   nodelet::M_string remappings;
   nodelet::V_string my_argv;
   manager.load(
       ros::this_node::getName(),
-      "novatel_oem628/novatel_gps_nodelet",
+      "novatel_gps_driver/novatel_gps_nodelet",
       remappings,
       my_argv);
 

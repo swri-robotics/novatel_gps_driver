@@ -10,4 +10,4 @@
 # 4-7  0xF0        <Reserved>
 uint32 original_mask
 bool advance_rtk_verified
-string psueorange_iono_correction
+string psuedorange_iono_correction

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 
-project(novatel_oem628)
+project(novatel_gps_driver)
 
 set(DEPS
   diagnostic_msgs 
@@ -35,12 +35,25 @@ catkin_package(CATKIN_DEPENDS ${DEPS}
 
 add_library(${PROJECT_NAME} 
   src/novatel_gps.cpp
-  src/novatel_message_parser.cpp
+  src/novatel_message_extractor.cpp
+  src/parsers/bestpos.cpp
+  src/parsers/bestvel.cpp
+  src/parsers/corrimudata.cpp
+  src/parsers/gpgga.cpp
+  src/parsers/gpgsa.cpp
+  src/parsers/gpgsv.cpp
+  src/parsers/gprmc.cpp
+  src/parsers/header.cpp
+  src/parsers/parsing_utils.cpp
+  src/parsers/range.cpp
+  src/parsers/time.cpp
+  src/parsers/trackstat.cpp
 )
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
 )
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 ### Nodelets ###
 add_library(${PROJECT_NAME}_nodelets 
@@ -50,6 +63,7 @@ target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+set_target_properties(${PROJECT_NAME}_nodelets PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 ### Nodes ###
 add_executable(novatel_gps_node
@@ -58,6 +72,14 @@ add_executable(novatel_gps_node
 target_link_libraries(novatel_gps_node 
   ${catkin_LIBRARIES}
 )
+set_target_properties(novatel_gps_node PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+### Build unit tests
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(gpgsv_test test/parser_tests.cpp)
+  target_link_libraries(gpgsv_test ${PROJECT_NAME})
+  set_target_properties(gpgsv_test PROPERTIES COMPILE_FLAGS "-std=c++11")
+endif()
 
 ### Install Libraries and Headers ###
 install(TARGETS 
