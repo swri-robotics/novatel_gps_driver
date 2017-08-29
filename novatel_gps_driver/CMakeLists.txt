@@ -5,7 +5,7 @@ project(novatel_gps_driver)
 set(DEPS
   diagnostic_msgs 
   diagnostic_updater 
-  gps_common 
+  gps_common
   nav_msgs 
   nodelet 
   novatel_gps_msgs
@@ -19,7 +19,12 @@ set(DEPS
   tf
 )
 
-find_package(catkin REQUIRED COMPONENTS ${DEPS})
+set(BUILD_DEPENDS
+  ${DEPS}
+  swri_nodelet
+)
+
+find_package(catkin REQUIRED COMPONENTS ${BUILD_DEPENDS})
 
 find_package(Boost REQUIRED COMPONENTS system)
 
@@ -27,10 +32,14 @@ include_directories(include
   ${catkin_INCLUDE_DIRS}
 )
 
+# libpcap doesn't provide PkgConfig or CMake modules
+set(libpcap_FOUND TRUE)
+set(libpcap_LIBRARIES -lpcap)
+
 catkin_package(CATKIN_DEPENDS ${DEPS}
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME} ${PROJECT_NAME}_nodelets
-  DEPENDS Boost
+  DEPENDS Boost libpcap
 )
 
 add_library(${PROJECT_NAME} 
@@ -44,6 +53,9 @@ add_library(${PROJECT_NAME}
   src/parsers/gpgsv.cpp
   src/parsers/gprmc.cpp
   src/parsers/header.cpp
+  src/parsers/inscov.cpp
+  src/parsers/inspva.cpp
+  src/parsers/insstdev.cpp
   src/parsers/parsing_utils.cpp
   src/parsers/range.cpp
   src/parsers/time.cpp
@@ -52,6 +64,7 @@ add_library(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
+  ${libpcap_LIBRARIES}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 
@@ -66,19 +79,24 @@ target_link_libraries(${PROJECT_NAME}_nodelets
 set_target_properties(${PROJECT_NAME}_nodelets PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 ### Nodes ###
-add_executable(novatel_gps_node
-  src/nodes/novatel_gps_node.cpp
-)
-target_link_libraries(novatel_gps_node 
+swri_nodelet_add_node(novatel_gps_node ${PROJECT_NAME} NovatelGpsNodelet)
+target_link_libraries(novatel_gps_node
   ${catkin_LIBRARIES}
+  ${PROJECT_NAME}_nodelets
 )
 set_target_properties(novatel_gps_node PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 ### Build unit tests
 if(CATKIN_ENABLE_TESTING)
-  catkin_add_gtest(gpgsv_test test/parser_tests.cpp)
-  target_link_libraries(gpgsv_test ${PROJECT_NAME})
-  set_target_properties(gpgsv_test PROPERTIES COMPILE_FLAGS "-std=c++11")
+  find_package(rostest REQUIRED)
+
+  catkin_add_gtest(parser_tests test/parser_tests.cpp)
+  target_link_libraries(parser_tests ${PROJECT_NAME})
+  set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+  add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
+  target_link_libraries(novatel_gps_tests ${PROJECT_NAME})
+  set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
 endif()
 
 ### Install Libraries and Headers ###

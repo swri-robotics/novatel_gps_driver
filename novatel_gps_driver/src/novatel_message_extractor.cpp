@@ -149,15 +149,29 @@ namespace novatel_gps_driver
     {
       // The shortest a binary message can be (header + no data + CRC)
       // is 32 bytes, so just return if we don't have at least that many.
-      ROS_WARN("Binary message was too short.");
+      ROS_DEBUG("Binary message was too short to parse.");
       return -1;
     }
 
     ROS_DEBUG("Reading binary header.");
-    std::copy(&str[start_idx], &str[start_idx+HeaderParser::BINARY_HEADER_LENGTH],
-              reinterpret_cast<char*>(&msg.header_));
-    uint16_t data_start = static_cast<uint16_t>(HeaderParser::BINARY_HEADER_LENGTH + start_idx);
+    msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
+    uint16_t data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
     uint16_t data_length = msg.header_.message_length_;
+
+    if (msg.header_.sync0_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[0]) ||
+        msg.header_.sync1_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[1]) ||
+        msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]))
+    {
+      ROS_ERROR("Sync bytes were incorrect; this should never happen and is definitely a bug: %x %x %x",
+               msg.header_.sync0_, msg.header_.sync1_, msg.header_.sync2_);
+      return -2;
+    }
+
+    if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH)
+    {
+      ROS_WARN("Binary header length was unexpected: %u (expected %u)",
+               msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH);
+    }
 
     ROS_DEBUG("Msg ID: %u    Data start / length: %u / %u",
               msg.header_.message_id_, data_start, data_length);
@@ -174,7 +188,7 @@ namespace novatel_gps_driver
 
     ROS_DEBUG("Calculating CRC.");
 
-    uint32_t crc = CalculateBlockCRC32(static_cast<uint32_t>(HeaderParser::BINARY_HEADER_LENGTH) + data_length,
+    uint32_t crc = CalculateBlockCRC32(static_cast<uint32_t>(msg.header_.header_length_) + data_length,
                                        reinterpret_cast<const uint8_t*>(&str[start_idx]));
 
     ROS_DEBUG("Reading CRC.");
@@ -190,7 +204,7 @@ namespace novatel_gps_driver
     // On success, return how many bytes we read
 
     ROS_DEBUG("Finishing reading binary message.");
-    return static_cast<int32_t>(HeaderParser::BINARY_HEADER_LENGTH + data_length + 4);
+    return static_cast<int32_t>(msg.header_.header_length_ + data_length + 4);
   }
 
   int32_t NovatelMessageExtractor::GetNovatelSentence(
@@ -216,21 +230,23 @@ namespace novatel_gps_driver
       // Compare the checksums
       sentence = str.substr(start_idx + 1, checksum_start - start_idx - 1);
       std::string checksum_str = str.substr(checksum_start + 1, 8);
-      unsigned long checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t calculated_checksum = CalculateBlockCRC32(
+          static_cast<uint32_t>(sentence.size()),
+          reinterpret_cast<const uint8_t*>(sentence.c_str()));
 
-       if (checksum == ULONG_MAX)
+      if (checksum == ULONG_MAX)
       {
         // Invalid checksum -- strtoul failed
         return 1;
       }
-      else if(static_cast<uint32_t>(checksum) == CalculateBlockCRC32(
-           static_cast<uint32_t>(sentence.size()),
-           reinterpret_cast<const uint8_t*>(sentence.c_str())))
+      else if(static_cast<uint32_t>(checksum) == calculated_checksum)
       {
         return 0;
       }
       else
       {
+        ROS_WARN("Expected checksum: [%lx]", calculated_checksum);
         // Invalid checksum
         return 1;
       }
@@ -261,13 +277,14 @@ namespace novatel_gps_driver
       // Compare the checksums
       sentence = str.substr(start_idx + 1, checksum_start - start_idx - 1);
       std::string checksum_str = str.substr(checksum_start + 1, 2);
-      unsigned long checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t calculated_checksum = NmeaChecksum(sentence);
       if (checksum == ULONG_MAX)
       {
         // Invalid checksum
         return 1;
       }
-      else if(static_cast<uint32_t>(checksum) == NmeaChecksum(sentence))
+      else if(static_cast<uint32_t>(checksum) == calculated_checksum)
       {
         if (keep_container)
         {
@@ -282,6 +299,7 @@ namespace novatel_gps_driver
       }
       else
       {
+        ROS_WARN("Expected: [%lx]", calculated_checksum);
         // Invalid checksum
         return 1;
       }
@@ -373,11 +391,11 @@ namespace novatel_gps_driver
         // If we see a binary header or if there's both a binary and ASCII header but
         // the binary one comes first, try to parse it.
         BinaryMessage cur_msg;
-        int32_t result = GetBinaryMessage(input, sentence_start, cur_msg);
+        int32_t result = GetBinaryMessage(input, binary_start_idx, cur_msg);
         if (result > 0)
         {
           binary_messages.push_back(cur_msg);
-          sentence_start += result;
+          sentence_start += binary_start_idx + result;
           ROS_DEBUG("Parsed a binary message with %u bytes.", result);
         }
         else if (result == -1)
@@ -412,7 +430,7 @@ namespace novatel_gps_driver
         {
           // If we've got a start, an end, and no invalid characters, we've
           // got a valid ASCII message.
-          ROS_DEBUG("ASCII sentence: [%s]", input.substr(ascii_start_idx, ascii_len).c_str());
+          ROS_DEBUG("ASCII sentence:\n[%s]", input.substr(ascii_start_idx, ascii_len).c_str());
           if (input[ascii_start_idx] == NMEA_SENTENCE_FLAG[0])
           {
             std::string cur_sentence;
@@ -425,7 +443,7 @@ namespace novatel_gps_driver
             {
               nmea_sentences.push_back(NmeaSentence());
               VectorizeNmeaSentence(cur_sentence, nmea_sentences.back());
-              sentence_start += ascii_len;
+              sentence_start = ascii_end_idx;
             }
             else if (result < 0)
             {
@@ -460,7 +478,7 @@ namespace novatel_gps_driver
                 parse_error = true;
                 ROS_ERROR_THROTTLE(1.0, "Unable to vectorize novatel sentence");
               }
-              sentence_start += ascii_len;
+              sentence_start = ascii_end_idx;
             }
             else if (result < 0)
             {

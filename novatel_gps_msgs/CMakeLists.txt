@@ -14,6 +14,9 @@ add_message_files(DIRECTORY msg FILES
   Gpgsa.msg
   Gpgsv.msg
   Gprmc.msg
+  Inscov.msg
+  Inspva.msg
+  Insstdev.msg
   NovatelCorrectedImuData.msg
   NovatelExtendedSolutionStatus.msg
   NovatelMessageHeader.msg
