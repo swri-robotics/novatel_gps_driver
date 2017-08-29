@@ -28,12 +28,17 @@
 // *****************************************************************************
 
 #include <sstream>
+#include <net/ethernet.h>
+#include <netinet/udp.h>
+#include <netinet/tcp.h>
+#include <netinet/ip.h>
 #include <novatel_gps_driver/novatel_gps.h>
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/make_shared.hpp>
 
 #include <ros/ros.h>
+#include <tf/tf.h>
 
 namespace novatel_gps_driver
 {
@@ -45,18 +50,25 @@ namespace novatel_gps_driver
       is_connected_(false),
       utc_offset_(0),
       tcp_socket_(io_service_),
+      pcap_(NULL),
+      corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       gprmc_sync_buffer_(SYNC_BUFFER_SIZE),
+      imu_msgs_(MAX_BUFFER_SIZE),
+      inscov_msgs_(MAX_BUFFER_SIZE),
+      inspva_msgs_(MAX_BUFFER_SIZE),
+      insstdev_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
       position_sync_buffer_(SYNC_BUFFER_SIZE),
       range_msgs_(MAX_BUFFER_SIZE),
       time_msgs_(MAX_BUFFER_SIZE),
-      trackstat_msgs_(MAX_BUFFER_SIZE)
+      trackstat_msgs_(MAX_BUFFER_SIZE),
+      imu_rate_(-1.0)
   {
   }
 
@@ -95,6 +107,10 @@ namespace novatel_gps_driver
     {
       return CreateIpConnection(device, opts);
     }
+    else if (connection_ == PCAP)
+    {
+      return CreatePcapConnection(device, opts);
+    }
 
     error_msg_ = "Invalid connection type.";
 
@@ -115,6 +131,10 @@ namespace novatel_gps_driver
     else if (connection == "tcp")
     {
       return TCP;
+    }
+    else if (connection == "pcap")
+    {
+      return PCAP;
     }
 
     return INVALID;
@@ -140,6 +160,14 @@ namespace novatel_gps_driver
       if (udp_endpoint_)
       {
         udp_endpoint_.reset();
+      }
+    }
+    else if (connection_ == PCAP)
+    {
+      if (pcap_ != NULL)
+      {
+        pcap_close(pcap_);
+        pcap_ = NULL;
       }
     }
     is_connected_ = false;
@@ -407,8 +435,8 @@ namespace novatel_gps_driver
   void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages)
   {
     imu_messages.clear();
-    imu_messages.insert(imu_messages.end(), imu_messages_.begin(), imu_messages_.end());
-    imu_messages_.clear();
+    imu_messages.insert(imu_messages.end(), corrimudata_msgs_.begin(), corrimudata_msgs_.end());
+    corrimudata_msgs_.clear();
   }
 
   void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_msgs::GpggaPtr>& gpgga_messages)
@@ -438,7 +466,28 @@ namespace novatel_gps_driver
     gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());
     gprmc_msgs_.clear();
   }
-  
+
+  void NovatelGps::GetInscovMessages(std::vector<novatel_gps_msgs::InscovPtr>& inscov_messages)
+  {
+    inscov_messages.clear();
+    inscov_messages.insert(inscov_messages.end(), inscov_msgs_.begin(), inscov_msgs_.end());
+    inscov_msgs_.clear();
+  }
+
+  void NovatelGps::GetInspvaMessages(std::vector<novatel_gps_msgs::InspvaPtr>& inspva_messages)
+  {
+    inspva_messages.clear();
+    inspva_messages.insert(inspva_messages.end(), inspva_msgs_.begin(), inspva_msgs_.end());
+    inspva_msgs_.clear();
+  }
+
+  void NovatelGps::GetInsstdevMessages(std::vector<novatel_gps_msgs::InsstdevPtr>& insstdev_messages)
+  {
+    insstdev_messages.clear();
+    insstdev_messages.insert(insstdev_messages.end(), insstdev_msgs_.begin(), insstdev_msgs_.end());
+    insstdev_msgs_.clear();
+  }
+
   void NovatelGps::GetRangeMessages(std::vector<novatel_gps_msgs::RangePtr>& range_messages)
   {
     range_messages.resize(range_msgs_.size());
@@ -458,6 +507,22 @@ namespace novatel_gps_driver
     trackstat_msgs.resize(trackstat_msgs_.size());
     std::copy(trackstat_msgs_.begin(), trackstat_msgs_.end(), trackstat_msgs.begin());
     trackstat_msgs_.clear();
+  }
+
+  bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
+  {
+    ROS_INFO("Opening pcap file: %s", device.c_str());
+
+    if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == NULL)
+    {
+      ROS_FATAL("Unable to open pcap file.");
+      return false;
+    }
+
+    pcap_compile(pcap_, &pcap_packet_filter_, "tcp dst port 3001", 1, PCAP_NETMASK_UNKNOWN);
+    is_connected_ = true;
+
+    return true;
   }
 
   bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)
@@ -664,10 +729,244 @@ namespace novatel_gps_driver
         ROS_WARN("TCP connection error: %s", e.what());
       }
     }
+    else if (connection_ == PCAP)
+    {
+      struct pcap_pkthdr* header;
+      const u_char *pkt_data;
+
+      int result;
+      result = pcap_next_ex(pcap_, &header, &pkt_data);
+      if (result >= 0)
+      {
+        struct iphdr* iph = (struct iphdr*)(pkt_data + sizeof(struct ethhdr));
+        uint32_t iphdrlen = iph->ihl * 4;
+
+        switch (iph->protocol)
+        {
+          case 6: // TCP
+          {
+            if (header->len == 54)
+            {
+              // Empty packet, skip it.
+              return READ_SUCCESS;
+            }
+
+            // It's possible to get multiple subsequent TCP packets with the same seq
+            // but latter ones have more data than previous ones.  In case that happens,
+            // we need to only process the one with the most data.  We do that by
+            // storing the most recently received message in a buffer, replacing it if
+            // we get a new one with the same seq but more data, and only sending it to
+            // the parser when we get a new packet with a different seq.
+            // Note that when we copy data into last_tcp_packet_, we omit the ethernet
+            // header because we don't care about it; we still need the IP and TCP
+            // headers.  After we move it from last_tcp_packet_ into data_buffer, we
+            // can skip the IP header and the TCP data offset.
+            bool store_packet = true;
+            if (!last_tcp_packet_.empty())
+            {
+              struct tcphdr* tcph = (struct tcphdr*) (pkt_data + iphdrlen + sizeof(struct ethhdr));
+              struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
+              uint32_t last_iphdrlen = last_iph->ihl * 4;
+              struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + last_iphdrlen);
+              uint16_t last_len = ntohs(static_cast<uint16_t>(last_iph->tot_len));
+              uint16_t new_len = ntohs(static_cast<uint16_t>(iph->tot_len));
+              uint32_t last_seq = ntohl(last_tcph->seq);
+              uint32_t new_seq = ntohl(tcph->seq);
+
+              if (new_seq != last_seq)
+              {
+                // If we got a packet that has a different seq than our previous one, send
+                // the previous one and store the new one.
+                uint32_t data_offset = last_tcph->doff * 4;
+                data_buffer_.insert(data_buffer_.end(),
+                                    last_tcp_packet_.begin() + last_iphdrlen + data_offset,
+                                    last_tcp_packet_.end());
+              }
+              else if (new_len <= last_len)
+              {
+                // If we got a packet with the same seq as the previous one but it doesn't
+                // have more data, do nothing.
+                store_packet = false;
+              }
+            }
+
+            if (store_packet)
+            {
+              // If we get here, we either just sent the previous packet, or we got
+              // a new packet with the same seq but more data.  In either case,
+              // store it.
+              last_tcp_packet_.clear();
+              last_tcp_packet_.insert(last_tcp_packet_.end(),
+                                      pkt_data + sizeof(struct ethhdr),
+                                      pkt_data + header->len);
+            }
+
+            break;
+          }
+          case 17: // UDP
+          {
+            uint16_t frag_off = ntohs(static_cast<uint16_t>(iph->frag_off));
+            uint16_t fragment_offset = frag_off & static_cast<uint16_t>(0x1FFF);
+            size_t header_size;
+            // UDP packets may be fragmented; this isn't really "correct", but for
+            // simplicity's sake we'll assume we get fragments in the right order.
+            if (fragment_offset == 0)
+            {
+              header_size = sizeof(struct ethhdr) + iphdrlen + sizeof(struct udphdr);
+            }
+            else
+            {
+              header_size = sizeof(struct ethhdr) + iphdrlen;
+            }
+
+            data_buffer_.insert(data_buffer_.end(), pkt_data + header_size, pkt_data + header->len);
+
+            break;
+          }
+          default:
+            ROS_WARN("Unexpected protocol: %u", iph->protocol);
+            return READ_ERROR;
+        }
+
+        // Add a slight delay after reading packets; if the node is being tested offline
+        // and this loop is hammering the TCP, logs won't output properly.
+        ros::Duration(0.001).sleep();
+
+        return READ_SUCCESS;
+      }
+      else if (result == -2)
+      {
+        ROS_INFO("Done reading pcap file.");
+        if (!last_tcp_packet_.empty())
+        {
+          // Don't forget to submit the last packet if we still have one!
+          struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
+          uint32_t iphdrlen = last_iph->ihl * 4;
+          struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + iphdrlen);
+          uint32_t data_offset = last_tcph->doff * 4;
+          data_buffer_.insert(data_buffer_.end(),
+                              last_tcp_packet_.begin() + iphdrlen + data_offset,
+                              last_tcp_packet_.end());
+          last_tcp_packet_.clear();
+        }
+        Disconnect();
+        return READ_SUCCESS;
+      }
+      else
+      {
+        ROS_WARN("Error reading pcap data: %s", pcap_geterr(pcap_));
+        return READ_ERROR;
+      }
+    }
 
     error_msg_ = "Unsupported connection type.";
 
     return READ_ERROR;
+  }
+
+  void NovatelGps::GetImuMessages(std::vector<sensor_msgs::ImuPtr>& imu_messages)
+  {
+    imu_messages.clear();
+    imu_messages.insert(imu_messages.end(), imu_msgs_.begin(), imu_msgs_.end());
+    imu_msgs_.clear();
+  }
+
+  void NovatelGps::GenerateImuMessages()
+  {
+    if (imu_rate_ <= 0.0)
+    {
+      ROS_WARN_ONCE("IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
+      return;
+    }
+
+    if (!latest_insstdev_ && !latest_inscov_)
+    {
+      // If we haven't received an INSSTDEV or an INSCOV message, don't do anything, just return.
+      ROS_WARN_THROTTLE(1.0, "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
+    }
+
+    size_t previous_size = imu_msgs_.size();
+    // Only do anything if we have both CORRIMUDATA and INSPVA messages.
+    while (!corrimudata_queue_.empty() && !inspva_queue_.empty())
+    {
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr corrimudata = corrimudata_queue_.front();
+      novatel_gps_msgs::InspvaPtr inspva = inspva_queue_.front();
+
+      double corrimudata_time = corrimudata->gps_week_num * SECONDS_PER_WEEK + corrimudata->gps_seconds;
+      double inspva_time = inspva->novatel_msg_header.gps_week_num *
+                               SECONDS_PER_WEEK + inspva->novatel_msg_header.gps_seconds;
+
+      if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
+      {
+        // If the two messages are too far apart to sync, discard the oldest one.
+        ROS_DEBUG("INSPVA and CORRIMUDATA were unacceptably far apart.");
+        if (corrimudata_time < inspva_time)
+        {
+          ROS_DEBUG("Discarding oldest CORRIMUDATA.");
+          corrimudata_queue_.pop();
+          continue;
+        }
+        else
+        {
+          ROS_DEBUG("Discarding oldest INSPVA.");
+          inspva_queue_.pop();
+          continue;
+        }
+      }
+      // If we've successfully matched up two messages, remove them from their queues.
+      inspva_queue_.pop();
+      corrimudata_queue_.pop();
+
+      // Now we can combine them together to make an Imu message.
+      sensor_msgs::ImuPtr imu = boost::make_shared<sensor_msgs::Imu>();
+
+      imu->header.stamp = corrimudata->header.stamp;
+      imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(inspva->roll * DEGREES_TO_RADIANS,
+                                              inspva->pitch * DEGREES_TO_RADIANS,
+                                              (90.0 - inspva->azimuth) * DEGREES_TO_RADIANS);
+
+      if (latest_inscov_)
+      {
+        imu->orientation_covariance = latest_inscov_->attitude_covariance;
+      }
+      else if (latest_insstdev_)
+      {
+        imu->orientation_covariance[0] = std::pow(2, latest_insstdev_->pitch_dev);
+        imu->orientation_covariance[4] = std::pow(2, latest_insstdev_->roll_dev);
+        imu->orientation_covariance[8] = std::pow(2, latest_insstdev_->azimuth_dev);
+      }
+      else
+      {
+        imu->orientation_covariance[0] =
+        imu->orientation_covariance[4] =
+        imu->orientation_covariance[8] = 1e-3;
+      }
+
+      imu->angular_velocity.x = corrimudata->pitch_rate * imu_rate_;
+      imu->angular_velocity.y = corrimudata->roll_rate * imu_rate_;
+      imu->angular_velocity.z = corrimudata->yaw_rate * imu_rate_;
+      imu->angular_velocity_covariance[0] =
+      imu->angular_velocity_covariance[4] =
+      imu->angular_velocity_covariance[8] = 1e-3;
+
+      imu->linear_acceleration.x = corrimudata->lateral_acceleration * imu_rate_;
+      imu->linear_acceleration.y = corrimudata->longitudinal_acceleration * imu_rate_;
+      imu->linear_acceleration.z = corrimudata->vertical_acceleration * imu_rate_;
+      imu->linear_acceleration_covariance[0] =
+      imu->linear_acceleration_covariance[4] =
+      imu->linear_acceleration_covariance[8] = 1e-3;
+
+      imu_msgs_.push_back(imu);
+    }
+
+    size_t new_size = imu_msgs_.size() - previous_size;
+    ROS_DEBUG("Created %lu new sensor_msgs/Imu messages.", new_size);
+  }
+
+  void NovatelGps::SetImuRate(double imu_rate)
+  {
+    ROS_INFO("IMU sample rate: %f", imu_rate);
+    imu_rate_ = imu_rate;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
@@ -694,7 +993,44 @@ namespace novatel_gps_driver
       {
         novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
-        imu_messages_.push_back(imu);
+        corrimudata_msgs_.push_back(imu);
+        corrimudata_queue_.push(imu);
+        if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
+        {
+          ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+          corrimudata_queue_.pop();
+        }
+        GenerateImuMessages();
+        break;
+      }
+      case InscovParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::InscovPtr inscov = inscov_parser_.ParseBinary(msg);
+        inscov->header.stamp = stamp;
+        inscov_msgs_.push_back(inscov);
+        latest_inscov_ = inscov;
+        break;
+      }
+      case InspvaParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::InspvaPtr inspva = inspva_parser_.ParseBinary(msg);
+        inspva->header.stamp = stamp;
+        inspva_msgs_.push_back(inspva);
+        inspva_queue_.push(inspva);
+        if (inspva_queue_.size() > MAX_BUFFER_SIZE)
+        {
+          ROS_WARN_THROTTLE(1.0, "INSPVA queue overflow.");
+          inspva_queue_.pop();
+        }
+        GenerateImuMessages();
+        break;
+      }
+      case InsstdevParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::InsstdevPtr insstdev = insstdev_parser_.ParseBinary(msg);
+        insstdev->header.stamp = stamp;
+        insstdev_msgs_.push_back(insstdev);
+        latest_insstdev_ = insstdev;
         break;
       }
       case RangeParser::MESSAGE_ID:
@@ -818,7 +1154,41 @@ namespace novatel_gps_driver
     {
       novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseAscii(sentence);
       imu->header.stamp = stamp;
-      imu_messages_.push_back(imu);
+      corrimudata_msgs_.push_back(imu);
+      corrimudata_queue_.push(imu);
+      if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
+      {
+        ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+        corrimudata_queue_.pop();
+      }
+      GenerateImuMessages();
+    }
+    else if (sentence.id == "INSCOVA")
+    {
+      novatel_gps_msgs::InscovPtr inscov = inscov_parser_.ParseAscii(sentence);
+      inscov->header.stamp = stamp;
+      inscov_msgs_.push_back(inscov);
+      latest_inscov_ = inscov;
+    }
+    else if (sentence.id == "INSPVAA")
+    {
+      novatel_gps_msgs::InspvaPtr inspva = inspva_parser_.ParseAscii(sentence);
+      inspva->header.stamp = stamp;
+      inspva_msgs_.push_back(inspva);
+      inspva_queue_.push(inspva);
+      if (inspva_queue_.size() > MAX_BUFFER_SIZE)
+      {
+        ROS_WARN_THROTTLE(1.0, "INSPVA queue overflow.");
+        inspva_queue_.pop();
+      }
+      GenerateImuMessages();
+    }
+    else if (sentence.id == "INSSTDEVA")
+    {
+      novatel_gps_msgs::InsstdevPtr insstdev = insstdev_parser_.ParseAscii(sentence);
+      insstdev->header.stamp = stamp;
+      insstdev_msgs_.push_back(insstdev);
+      latest_insstdev_ = insstdev;
     }
     else if (sentence.id == "TIMEA")
     {
@@ -885,6 +1255,11 @@ namespace novatel_gps_driver
         ROS_ERROR("Exception writing TCP data: %s", e.what());
       }
     }
+    else if (connection_ == PCAP)
+    {
+      ROS_WARN_ONCE("Writing data is unsupported in pcap mode.");
+      return true;
+    }
 
     return false;
   }
@@ -892,7 +1267,7 @@ namespace novatel_gps_driver
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
-    configured = configured && Write("unlogall true\n");
+    configured = configured && Write("unlogall\n");
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
       std::stringstream command;

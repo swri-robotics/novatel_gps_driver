@@ -10,6 +10,7 @@ Features:
 
 - Fast and robust
 - Supports serial, TCP, and UDP connections
+- Can play back PCAP capture logs to test behavior
 - Supports a variety of common NovAtel logs
 - Easy to add support for more log types
 - Supports ASCII and binary-format NovAtel logs
@@ -81,7 +82,7 @@ enabled.
 1. ### `novatel_gps_driver/novatel_gps_nodelet`
     1. **ROS Parameters**
         - `connection_type`: Type of physical connection to the device
-            - One of `serial`, `tcp`, or `udp`
+            - One of `serial`, `tcp`, `udp`, or `pcap`
             - Default: `serial`
         - `device`: Location of device connection.
             - For `serial` connections, the device node; e. g., `/dev/ttyUSB0`
@@ -89,6 +90,8 @@ enabled.
                 - If the host is omitted, it will listen for connections on the specified port.
                 - If the port is omitted, `3001` will be used as the default for TCP connections
                 and `3002` as the default for UDP connections.
+            - For `pcap` connections, the location of a `.pcap` capture file. 
+            Note that the node will exit automatically after finishing playback.
             - Default: Empty
         - `frame_id`: ROS TF frame to place in the header of published messages.
             - Default: Empty
@@ -111,7 +114,8 @@ enabled.
             - Default: `false`
         - `publish_gpgsv`: `true` to publish novatel_gps_msgs/Gpgsv messages.
             - Default: `false`
-        - `publish_imu`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData messages.
+        - `publish_imu`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
+         novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
             - Default: `false`
         - `publish_nmea_messages`: `true` to publish novatel_gps_msgs/Gpgga and novatel_gps_msgs/Gprmc messages.
             - Default: `false`

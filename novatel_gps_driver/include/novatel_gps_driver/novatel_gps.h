@@ -31,18 +31,24 @@
 #define NOVATEL_OEM628_NOVATEL_GPS_H_
 
 #include <map>
+#include <queue>
 #include <string>
 #include <vector>
 
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
 
+#include <pcap.h>
+
 #include <swri_serial_util/serial_port.h>
 
 #include <gps_common/GPSFix.h>
+
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Insstdev.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
@@ -59,9 +65,14 @@
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
+#include <novatel_gps_driver/parsers/inspva.h>
+#include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
 #include <novatel_gps_driver/parsers/time.h>
 #include <novatel_gps_driver/parsers/trackstat.h>
+
+#include <sensor_msgs/Imu.h>
+#include <novatel_gps_driver/parsers/inscov.h>
 
 namespace novatel_gps_driver
 {
@@ -71,7 +82,7 @@ namespace novatel_gps_driver
   class NovatelGps
   {
     public:
-      enum ConnectionType { SERIAL, TCP, UDP, INVALID };
+      enum ConnectionType { SERIAL, TCP, UDP, PCAP, INVALID };
 
       enum ReadResult
       {
@@ -148,6 +159,30 @@ namespace novatel_gps_driver
        */
       void GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages);
       /**
+       * @brief Provides any Imu messages that have been generated since the
+       * last time this was called.
+       * @param[out] imu_message New Imu messages.
+       */
+      void GetImuMessages(std::vector<sensor_msgs::ImuPtr>& imu_messages);
+      /**
+       * @brief Provides any INSCOV messages that have been received since the last
+       * time this was called.
+       * @param[out] inscov_messages New INSCOV messages.
+       */
+      void GetInscovMessages(std::vector<novatel_gps_msgs::InscovPtr>& inscov_messages);
+      /**
+       * @brief Provides any INSPVA messages that have been received since the last
+       * time this was called.
+       * @param[out] inspva_messages New INSPVA messages.
+       */
+      void GetInspvaMessages(std::vector<novatel_gps_msgs::InspvaPtr>& inspva_messages);
+      /**
+       * @brief Provides any INSSTDEV messages that have been received since the last
+       * time this was called.
+       * @param[out] insstdev_messages New INSSTDEV messages.
+       */
+      void GetInsstdevMessages(std::vector<novatel_gps_msgs::InsstdevPtr>& insstdev_messages);
+      /**
        * @brief Provides any CORRIMUDATA messages that have been received since the
        * last time this was called.
        * @param[out] imu_messages New CORRIMUDATA messages.
@@ -204,6 +239,12 @@ namespace novatel_gps_driver
        */
       ReadResult ProcessData();
 
+      /**
+       * @brief Sets the IMU rate; necessary for producing sensor_msgs/Imu messages.
+       * @param imu_rate The IMU rate in Hz.
+       */
+      void SetImuRate(double imu_rate);
+
       //parameters
       double gpgga_gprmc_sync_tol_; //seconds
       double gpgga_position_sync_tol_; //seconds
@@ -256,6 +297,21 @@ namespace novatel_gps_driver
       bool CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts);
 
       /**
+       * @brief Creates a pcap device for playing back recorded data.
+       *
+       * @param device
+       * @param opts
+       * @return
+       */
+      bool CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts);
+
+      /**
+       * @brief Processes any messages in our corrimudata & inspva queues in order to
+       * generate Imu messages from them.
+       */
+      void GenerateImuMessages();
+
+      /**
        * @brief Converts a BinaryMessage object into a ROS message of the appropriate type
        * and places it in the appropriate buffer.
        * @param[in] msg A valid binary message
@@ -304,6 +360,9 @@ namespace novatel_gps_driver
       static constexpr uint16_t DEFAULT_UDP_PORT = 3002;
       static constexpr size_t MAX_BUFFER_SIZE = 100;
       static constexpr size_t SYNC_BUFFER_SIZE = 10;
+      static constexpr uint32_t SECONDS_PER_WEEK = 604800;
+      static constexpr double IMU_TOLERANCE_S = 0.0002;
+      static constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
 
       ConnectionType connection_;
 
@@ -331,6 +390,12 @@ namespace novatel_gps_driver
       /// Fixed-size buffer for reading directly from sockets
       boost::array<uint8_t, 10000> socket_buffer_;
 
+      /// pcap device for testing
+      pcap_t* pcap_;
+      bpf_program pcap_packet_filter_;
+      char pcap_errbuf_[MAX_BUFFER_SIZE];
+      std::vector<uint8_t> last_tcp_packet_;
+
       /// Used to extract messages from the incoming data stream
       NovatelMessageExtractor extractor_;
 
@@ -342,24 +407,38 @@ namespace novatel_gps_driver
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;
       GprmcParser gprmc_parser_;
+      InscovParser inscov_parser_;
+      InspvaParser inspva_parser_;
+      InsstdevParser insstdev_parser_;
       RangeParser range_parser_;
       TimeParser time_parser_;
       TrackstatParser trackstat_parser_;
 
       // Message buffers
+      boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
-      boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_messages_;
+      boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::InscovPtr> inscov_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::InspvaPtr> inspva_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::InsstdevPtr> insstdev_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> novatel_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> position_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TimePtr> time_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TrackstatPtr> trackstat_msgs_;
+
+      // IMU data synchronization queues
+      std::queue<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_queue_;
+      std::queue<novatel_gps_msgs::InspvaPtr> inspva_queue_;
+      novatel_gps_msgs::InsstdevPtr latest_insstdev_;
+      novatel_gps_msgs::InscovPtr latest_inscov_;
+      double imu_rate_;
   };
 }
 

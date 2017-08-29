@@ -14,6 +14,8 @@
 
 #include <stdint.h>
 
+#include <novatel_gps_driver/parsers/parsing_utils.h>
+
 namespace novatel_gps_driver
 {
   /**
@@ -43,6 +45,25 @@ namespace novatel_gps_driver
     uint32_t receiver_status_;
     uint16_t reserved_;
     uint16_t receiver_sw_version_;
+
+    void ParseHeader(const uint8_t* data)
+    {
+      sync0_ = data[0];
+      sync1_ = data[1];
+      sync2_ = data[2];
+      header_length_ = data[3];
+      message_id_ = ParseUInt16(&data[4]);
+      message_type_ = data[6];
+      port_address_ = data[7];
+      message_length_ = ParseUInt16(&data[8]);
+      sequence_ = ParseUInt16(&data[10]);
+      idle_time_ = data[12];
+      time_status_ = data[13];
+      week_ = ParseUInt16(&data[14]);
+      gps_ms_ = ParseUInt32(&data[16]);
+      receiver_status_ = ParseUInt32(&data[20]);
+      receiver_sw_version_ = ParseUInt16(&data[26]);
+    }
   };
 }
 #endif //NOVATEL_GPS_DRIVER_BINARY_HEADER_H
