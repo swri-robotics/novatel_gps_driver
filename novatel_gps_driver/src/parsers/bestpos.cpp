@@ -62,7 +62,7 @@ namespace novatel_gps_driver
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
 
     uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
-    if (solution_status > 22)
+    if (solution_status > MAX_SOLUTION_STATUS)
     {
       std::stringstream error;
       error << "Unknown solution status: " << solution_status;
@@ -70,7 +70,7 @@ namespace novatel_gps_driver
     }
     ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
     uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
-    if (pos_type > 74)
+    if (pos_type > MAX_POSITION_TYPE)
     {
       std::stringstream error;
       error << "Unknown position type: " << pos_type;
@@ -82,7 +82,7 @@ namespace novatel_gps_driver
     ros_msg->height = ParseDouble(&bin_msg.data_[24]);
     ros_msg->undulation = ParseFloat(&bin_msg.data_[32]);
     uint16_t datum_id = ParseUInt16(&bin_msg.data_[36]);
-    if (datum_id > 86)
+    if (datum_id > MAX_DATUM)
     {
       std::stringstream error;
       error << "Unknown datum: " << datum_id;
