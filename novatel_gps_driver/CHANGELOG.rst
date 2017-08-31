@@ -2,6 +2,15 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fix crash for unexpected position type
+* Add three-clause BSD license
+* Publish sensor_msgs/Imu messages
+* Use unlogall true
+* Code cleanup
+* Contributors: Edward Venator, P. J. Reed
+
 3.2.0 (2017-07-21)
 ------------------
 * Use size_t responsibly

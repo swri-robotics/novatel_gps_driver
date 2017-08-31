@@ -2,6 +2,12 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Publish sensor_msgs/Imu messages
+* Code cleanup
+* Contributors: Edward Venator, P. J. Reed
+
 3.2.0 (2017-07-21)
 ------------------
 * Publish IMU data from NovAtel SPAN devices
