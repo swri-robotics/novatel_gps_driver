@@ -2,8 +2,8 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.3.0 (2017-08-31)
+------------------
 * Publish sensor_msgs/Imu messages
 * Code cleanup
 * Contributors: Edward Venator, P. J. Reed

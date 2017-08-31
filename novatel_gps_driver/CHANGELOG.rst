@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.3.0 (2017-08-31)
+------------------
 * Fix crash for unexpected position type
 * Add three-clause BSD license
 * Publish sensor_msgs/Imu messages
