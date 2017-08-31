@@ -55,7 +55,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
   }
 
   uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
-  if (solution_status > 22)
+  if (solution_status > MAX_SOLUTION_STATUS)
   {
     std::stringstream error;
     error << "Unknown solution status: " << solution_status;
@@ -65,7 +65,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
   novatel_gps_msgs::TrackstatPtr ros_msg = boost::make_shared<novatel_gps_msgs::Trackstat>();
   ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
   uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
-  if (pos_type > 74)
+  if (pos_type > MAX_DATUM)
   {
     std::stringstream error;
     error << "Unknown position type: " << pos_type;
