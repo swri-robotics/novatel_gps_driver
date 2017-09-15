@@ -33,8 +33,12 @@ include_directories(include
 )
 
 # libpcap doesn't provide PkgConfig or CMake modules
-set(libpcap_FOUND TRUE)
-set(libpcap_LIBRARIES -lpcap)
+find_library(libpcap_LIBRARIES pcap)
+if ("${libpcap_LIBRARIES}" STREQUAL "pcap-NOTFOUND")
+  set(libpcap_FOUND FALSE)
+else()
+  set(libpcap_FOUND TRUE)
+endif()
 
 catkin_package(CATKIN_DEPENDS ${DEPS}
   INCLUDE_DIRS include
