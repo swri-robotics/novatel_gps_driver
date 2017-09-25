@@ -29,7 +29,7 @@ or failure in using this with other devices so we can update this page appropria
 The driver should function on ROS Indigo, Jade, Kinetic, and Lunar, and will hopefully
 soon be provided in the binary package repositories.
 
-In the meantime, to build it from source:
+In the meantime, to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
 
 ```bash
 mkdir -p novatel/src
@@ -37,7 +37,7 @@ cd novatel
 catkin init
 catkin config --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cd src
-git clone https://github.com/swri-robotics/novatel_gps
+git clone https://github.com/swri-robotics/novatel_gps_driver
 rosdep install . --from-paths -i
 catkin build
 ```
