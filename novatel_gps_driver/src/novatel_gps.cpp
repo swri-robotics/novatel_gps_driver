@@ -1238,7 +1238,7 @@ namespace novatel_gps_driver
         { "34", 200 }, // Northrop Grumman Litef ISA-100
         { "38", 400 }, // Northrop Grumman Litef ISA-100 400Hz
         { "39", 400 }, // Northrop Grumman Litef ISA-100C 400Hz
-        { "45", 100 }, // KVH 1725 IMU (This was a guess based on the 1750
+        { "45", 200 }, // KVH 1725 IMU (This was a guess based on the 1750
                        // as the actual rate is not documented and the specs are similar)
         { "52", 200 }, // Litef microIMU
        };
