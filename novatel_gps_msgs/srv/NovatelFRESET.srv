@@ -1,0 +1,10 @@
+# Request to send a FRESET command to the Novatel unit
+#Request
+
+string target
+
+---
+
+#Response
+bool success
+

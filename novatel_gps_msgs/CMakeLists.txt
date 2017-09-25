@@ -9,6 +9,11 @@ find_package(catkin REQUIRED COMPONENTS
   ${MSG_DEPS}
 )
 
+add_service_files(
+  FILES
+  NovatelFRESET.srv
+)
+
 add_message_files(DIRECTORY msg FILES
   Gpgga.msg
   Gpgsa.msg
