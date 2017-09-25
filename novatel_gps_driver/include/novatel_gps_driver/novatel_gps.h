@@ -242,8 +242,9 @@ namespace novatel_gps_driver
       /**
        * @brief Sets the IMU rate; necessary for producing sensor_msgs/Imu messages.
        * @param imu_rate The IMU rate in Hz.
+       * @param force If this value should be used instead of an autodetected one
        */
-      void SetImuRate(double imu_rate);
+      void SetImuRate(double imu_rate, bool force = true);
 
       //parameters
       double gpgga_gprmc_sync_tol_; //seconds
@@ -369,6 +370,7 @@ namespace novatel_gps_driver
       std::string error_msg_;
 
       bool is_connected_;
+      bool imu_rate_forced_;
 
       double utc_offset_;
 
