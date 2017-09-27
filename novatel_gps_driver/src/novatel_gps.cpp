@@ -922,8 +922,8 @@ namespace novatel_gps_driver
 
       imu->header.stamp = corrimudata->header.stamp;
       imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(inspva->roll * DEGREES_TO_RADIANS,
-                                              inspva->pitch * DEGREES_TO_RADIANS,
-                                              (90.0 - inspva->azimuth) * DEGREES_TO_RADIANS);
+                                              -(inspva->pitch) * DEGREES_TO_RADIANS,
+                                              -(inspva->azimuth) * DEGREES_TO_RADIANS);
 
       if (latest_inscov_)
       {
