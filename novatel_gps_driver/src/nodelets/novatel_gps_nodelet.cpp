@@ -64,6 +64,12 @@
  * \e trackstat <tt>novatel_gps_msgs/Trackstat</tt> - Novatel-specific trackstat
  *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
  *
+ * <b>Services:</b>
+ *
+ * \e freset <tt>novatel_gps_msgs/NovatelFRESET</tt> - Sends a freset message to the
+ *    device with the specified target string to reset. By default does
+ *    FRESET standard
+ *
  * <b>Parameters:</b>
  *
  * \e connection_type <tt>str</tt> - "serial", "udp", or "tcp" as appropriate
@@ -235,7 +241,7 @@ namespace novatel_gps_driver
       swri::param(priv, "wait_for_position", gps_.wait_for_position_, false);
 
       // Reset Service
-      reset_service_ = node.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
+      reset_service_ = priv.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
 
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
@@ -553,6 +559,11 @@ namespace novatel_gps_driver
       command += req.target.length() ? "STANDARD" : req.target;
       command += '\n';
       gps_.Write(command);
+
+      if (req.target.length() == 0)
+      {
+        ROS_WARN("No FRESET target specified. Doing FRESET STANDARD. This may be undesired behavior.");
+      }
 
       res.success = true;
       return true;
