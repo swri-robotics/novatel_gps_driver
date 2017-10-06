@@ -64,6 +64,12 @@
  * \e trackstat <tt>novatel_gps_msgs/Trackstat</tt> - Novatel-specific trackstat
  *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
  *
+ * <b>Services:</b>
+ *
+ * \e freset <tt>novatel_gps_msgs/NovatelFRESET</tt> - Sends a freset message to the
+ *    device with the specified target string to reset. By default does
+ *    FRESET standard
+ *
  * <b>Parameters:</b>
  *
  * \e connection_type <tt>str</tt> - "serial", "udp", or "tcp" as appropriate
@@ -130,6 +136,7 @@
 #include <gps_common/GPSFix.h>
 #include <nodelet/nodelet.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
+#include <novatel_gps_msgs/NovatelFRESET.h>
 #include <novatel_gps_msgs/NovatelMessageHeader.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
@@ -232,6 +239,9 @@ namespace novatel_gps_driver
       swri::param(priv, "gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol_, 0.01);
       swri::param(priv, "gpgga_position_sync_tol", gps_.gpgga_position_sync_tol_, 0.01);
       swri::param(priv, "wait_for_position", gps_.wait_for_position_, false);
+
+      // Reset Service
+      reset_service_ = priv.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
 
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
@@ -491,6 +501,8 @@ namespace novatel_gps_driver
     ros::Publisher time_pub_;
     ros::Publisher trackstat_pub_;
 
+    ros::ServiceServer reset_service_;
+
     NovatelGps::ConnectionType connection_;
     NovatelGps gps_;
 
@@ -530,6 +542,32 @@ namespace novatel_gps_driver
 
     std::string imu_frame_id_;
     std::string frame_id_;
+
+    /**
+     * @brief Service request to reset the gps through FRESET
+     */
+    bool resetService(novatel_gps_msgs::NovatelFRESET::Request& req,
+                      novatel_gps_msgs::NovatelFRESET::Response& res)
+    {
+      if (gps_.IsConnected() == false)
+      {
+        res.success = false;
+      }
+      
+      // Formulate the reset command and send it to the device
+      std::string command = "FRESET ";
+      command += req.target.length() ? "STANDARD" : req.target;
+      command += '\n';
+      gps_.Write(command);
+
+      if (req.target.length() == 0)
+      {
+        ROS_WARN("No FRESET target specified. Doing FRESET STANDARD. This may be undesired behavior.");
+      }
+
+      res.success = true;
+      return true;
+    }
 
     /**
      * @brief Reads data from the device and publishes any parsed messages.

@@ -245,6 +245,13 @@ namespace novatel_gps_driver
        */
       void SetImuRate(double imu_rate);
 
+      /**
+       * @brief Writes the given string of characters to a connected NovAtel device.
+       * @param command A string to transmit.
+       * @return true if we successfully wrote all of the data, false otherwise.
+       */
+      bool Write(const std::string& command);
+
       //parameters
       double gpgga_gprmc_sync_tol_; //seconds
       double gpgga_position_sync_tol_; //seconds
@@ -348,13 +355,6 @@ namespace novatel_gps_driver
        * @return The status of the read operation.
        */
       ReadResult ReadData();
-
-      /**
-       * @brief Writes the given string of characters to a connected NovAtel device.
-       * @param command A string to transmit.
-       * @return true if we successfully wrote all of the data, false otherwise.
-       */
-      bool Write(const std::string& command);
 
       static constexpr uint16_t DEFAULT_TCP_PORT = 3001;
       static constexpr uint16_t DEFAULT_UDP_PORT = 3002;
