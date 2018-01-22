@@ -2,6 +2,13 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.0 (2017-10-06)
+------------------
+* Fixes RPY orientation in IMU output (based on testing).
+* Add service to novatel_gps_nodelet that issues a FRESET command on the indicated target, or STANDARD if none is provided
+* Use find_library to look up the location of libpcap.so
+* Contributors: Joshua Whitley, Matthew Bries, P. J. Reed
+
 3.3.0 (2017-08-31)
 ------------------
 * Fix crash for unexpected position type

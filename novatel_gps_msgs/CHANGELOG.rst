@@ -2,6 +2,11 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.4.0 (2017-10-06)
+------------------
+* Add service to novatel_gps_nodelet that issues a FRESET command on the indicated target, or STANDARD if none is provided
+* Contributors: Matthew Bries, P. J. Reed
+
 3.3.0 (2017-08-31)
 ------------------
 * Publish sensor_msgs/Imu messages
