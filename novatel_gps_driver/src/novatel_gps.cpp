@@ -1215,41 +1215,41 @@ namespace novatel_gps_driver
       trackstat->header.stamp = stamp;
       trackstat_msgs_.push_back(trackstat);
     }
-    else if (sentence.id == "RAWIMUX")
+    else if (sentence.id == "RAWIMUXA")
     {
-      static std::map<std::string, double> rates = {
-        { "0",  100 }, // Unknown
-        { "1",  100 }, // Honeywell HG1700 AG11
-        { "4",  100 }, // Honeywell HG1700 AG17
-        { "5",  100 }, // Honeywell HG1700 CA29
-        { "8",  200 }, // Litton LN-200 (200hz model)
-        { "11", 100 }, // Honeywell HG1700 AG58
-        { "12", 100 }, // Honeywell HG1700 AG62
-        { "13", 200 }, // iMAR ilMU-FSAS
-        { "16", 200 }, // KVH 1750 IMU
-        { "19", 200 }, // Northrop Grumman Litef LCI-1
-        { "20", 100 }, // Honeywell HG1930 AA99
-        { "26", 100 }, // Northrop Grumman Litef ISA-100C
-        { "27", 100 }, // Honeywell HG1900 CA50
-        { "28", 100 }, // Honeywell HG1930 CA50
-        { "31", 200 }, // Analog Devices ADIS16488
-        { "32", 125 }, // Sensonor STIM300
-        { "33", 200 }, // KVH1750 IMU
-        { "34", 200 }, // Northrop Grumman Litef ISA-100
-        { "38", 400 }, // Northrop Grumman Litef ISA-100 400Hz
-        { "39", 400 }, // Northrop Grumman Litef ISA-100C 400Hz
-        { "45", 200 }, // KVH 1725 IMU (This was a guess based on the 1750
+      static std::map<std::string, std::pair<double, std::string>> rates = {
+        { "0",  std::pair<double, std::string>(100, "Unknown") },
+        { "1",  std::pair<double, std::string>(100, "Honeywell HG1700 AG11") },
+        { "4",  std::pair<double, std::string>(100, "Honeywell HG1700 AG17") },
+        { "5",  std::pair<double, std::string>(100, "Honeywell HG1700 CA29") },
+        { "8",  std::pair<double, std::string>(200, "Litton LN-200 (200hz model)") },
+        { "11", std::pair<double, std::string>(100, "Honeywell HG1700 AG58") },
+        { "12", std::pair<double, std::string>(100, "Honeywell HG1700 AG62") },
+        { "13", std::pair<double, std::string>(200, "iMAR ilMU-FSAS") },
+        { "16", std::pair<double, std::string>(200, "KVH 1750 IMU") },
+        { "19", std::pair<double, std::string>(200, "Northrop Grumman Litef LCI-1") },
+        { "20", std::pair<double, std::string>(100, "Honeywell HG1930 AA99") },
+        { "26", std::pair<double, std::string>(100, "Northrop Grumman Litef ISA-100C") },
+        { "27", std::pair<double, std::string>(100, "Honeywell HG1900 CA50") },
+        { "28", std::pair<double, std::string>(100, "Honeywell HG1930 CA50") },
+        { "31", std::pair<double, std::string>(200, "Analog Devices ADIS16488") },
+        { "32", std::pair<double, std::string>(125, "Sensonor STIM300") },
+        { "33", std::pair<double, std::string>(200, "KVH1750 IMU") },
+        { "34", std::pair<double, std::string>(200, "Northrop Grumman Litef ISA-100") },
+        { "38", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100 400Hz") },
+        { "39", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100C 400Hz") },
+        { "45", std::pair<double, std::string>(200, "KVH 1725 IMU?") }, //(This was a guess based on the 1750
                        // as the actual rate is not documented and the specs are similar)
-        { "52", 200 }, // Litef microIMU
+        { "52", std::pair<double, std::string>(200, "Litef microIMU") },
        };
       
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
       std::string id = sentence.body.size() > 2 ? sentence.body[2] : "";
       if (rates.find(id) != rates.end())
       {
-        double rate = rates[id];
+        double rate = rates[id].first;
  
-        ROS_INFO("IMU Type %s Found, Rate: %f Hz", id.c_str(), (float)rate);
+        ROS_INFO("IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
         
         // Set the rate only if it hasnt been forced already
         if (imu_rate_forced_ == false)
@@ -1330,7 +1330,7 @@ namespace novatel_gps_driver
     }
 
     // Log the IMU data once to get the IMU type
-    configured = configured && Write("log rawimux\n");
+    configured = configured && Write("log rawimuxa\n");
 
     return configured;
   }
