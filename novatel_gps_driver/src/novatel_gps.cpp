@@ -1244,7 +1244,7 @@ namespace novatel_gps_driver
        };
       
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
-      std::string id = sentence.body.size() > 2 ? sentence.body[2] : "";
+      std::string id = sentence.body.size() > 1 ? sentence.body[1] : "";
       if (rates.find(id) != rates.end())
       {
         double rate = rates[id].first;
