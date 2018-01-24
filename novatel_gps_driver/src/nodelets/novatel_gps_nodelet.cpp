@@ -168,7 +168,7 @@ namespace novatel_gps_driver
       publish_gpgsa_(false),
       publish_gpgsv_(false),
       imu_rate_(100.0),
-      imu_sample_rate_(200.0),
+      imu_sample_rate_(-1),
       publish_imu_messages_(false),
       publish_novatel_positions_(false),
       publish_novatel_velocity_(false),
@@ -379,7 +379,12 @@ namespace novatel_gps_driver
           NODELET_WARN("Using the ASCII message format with CORRIMUDATA logs is not recommended.  "
                        "A serial link will not be able to keep up with the data rate.");
         }
-        gps_.SetImuRate(imu_sample_rate_);
+
+        // Only configure the imu rate if we set the param
+        if (imu_sample_rate_ > 0)
+        {
+          gps_.SetImuRate(imu_sample_rate_, true);
+        }
       }
       if (publish_novatel_velocity_)
       {
