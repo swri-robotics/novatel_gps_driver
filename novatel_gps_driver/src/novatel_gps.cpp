@@ -1238,9 +1238,11 @@ namespace novatel_gps_driver
         { "34", std::pair<double, std::string>(200, "Northrop Grumman Litef ISA-100") },
         { "38", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100 400Hz") },
         { "39", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100C 400Hz") },
+        { "41", std::pair<double, std::string>(125, "Epson G320N") },
         { "45", std::pair<double, std::string>(200, "KVH 1725 IMU?") }, //(This was a guess based on the 1750
                        // as the actual rate is not documented and the specs are similar)
         { "52", std::pair<double, std::string>(200, "Litef microIMU") },
+        { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
        };
       
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
