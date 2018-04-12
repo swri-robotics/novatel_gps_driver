@@ -116,6 +116,9 @@
  *    messages.  [false]
  * \e wait_for_position <tt>bool</tt> - Wait for BESTPOS messages to arrive
  *    before publishing GPSFix messages. [false]
+ * \e span_frame_to_ros_frame <tt>bool</tt> - Translate the SPAN coordinate
+ *    frame to a ROS coordinate frame using the VEHICLEBODYROTATION and
+ *    APPLYVEHICLEBODYROTATION commands. [false]
  */
 #include <exception>
 #include <string>
@@ -180,6 +183,7 @@ namespace novatel_gps_driver
       publish_sync_diagnostic_(true),
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
+      span_frame_to_ros_frame_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -228,6 +232,7 @@ namespace novatel_gps_driver
       swri::param(priv, "polling_period", polling_period_, polling_period_);
       swri::param(priv, "reconnect_delay_s", reconnect_delay_s_, reconnect_delay_s_);
       swri::param(priv, "use_binary_messages", use_binary_messages_, use_binary_messages_);
+      swri::param(priv, "span_frame_to_ros_frame", span_frame_to_ros_frame_, span_frame_to_ros_frame_);
 
       swri::param(priv, "connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
@@ -325,6 +330,9 @@ namespace novatel_gps_driver
               &NovatelGpsNodelet::SyncDiagnostic);
         }
       }
+
+      gps_.ApplyVehicleBodyRotation(span_frame_to_ros_frame_);
+
       thread_ = boost::thread(&NovatelGpsNodelet::Spin, this);
       NODELET_INFO("%s initialized", hw_id_.c_str());
     }
@@ -477,6 +485,7 @@ namespace novatel_gps_driver
     double imu_rate_;
     /// How frequently the device samples the IMU, in Hz
     double imu_sample_rate_;
+    bool span_frame_to_ros_frame_;
     bool publish_imu_messages_;
     bool publish_novatel_positions_;
     bool publish_novatel_velocity_;
