@@ -69,7 +69,8 @@ namespace novatel_gps_driver
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0),
-      imu_rate_forced_(false)
+      imu_rate_forced_(false),
+      apply_vehicle_body_rotation_(false)
   {
   }
 
@@ -172,6 +173,11 @@ namespace novatel_gps_driver
       }
     }
     is_connected_ = false;
+  }
+
+  void NovatelGps::ApplyVehicleBodyRotation(const bool& apply_rotation)
+  {
+    apply_vehicle_body_rotation_ = apply_rotation;
   }
 
   NovatelGps::ReadResult NovatelGps::ProcessData()
@@ -1323,6 +1329,13 @@ namespace novatel_gps_driver
   {
     bool configured = true;
     configured = configured && Write("unlogall\n");
+
+    if (apply_vehicle_body_rotation_)
+    {
+      configured = configured && Write("vehiclebodyrotation 0 0 90\n");
+      configured = configured && Write("applyvehiclebodyrotation\n");
+    }
+
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
       std::stringstream command;
