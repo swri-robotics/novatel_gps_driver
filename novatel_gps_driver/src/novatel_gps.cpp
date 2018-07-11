@@ -1328,24 +1328,24 @@ namespace novatel_gps_driver
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
-    configured = configured && Write("unlogall\n");
+    configured = configured && Write("unlogall\r\n");
 
     if (apply_vehicle_body_rotation_)
     {
-      configured = configured && Write("vehiclebodyrotation 0 0 90\n");
-      configured = configured && Write("applyvehiclebodyrotation\n");
+      configured = configured && Write("vehiclebodyrotation 0 0 90\r\n");
+      configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
 
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
       std::stringstream command;
       command << std::setprecision(3);
-      command << "log " << option->first << " ontime " << option->second << "\n";
+      command << "log " << option->first << " ontime " << option->second << "\r\n";
       configured = configured && Write(command.str());
     }
 
     // Log the IMU data once to get the IMU type
-    configured = configured && Write("log rawimuxa\n");
+    configured = configured && Write("log rawimuxa\r\n");
 
     return configured;
   }

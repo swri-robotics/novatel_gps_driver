@@ -571,7 +571,7 @@ namespace novatel_gps_driver
       // Formulate the reset command and send it to the device
       std::string command = "FRESET ";
       command += req.target.length() ? "STANDARD" : req.target;
-      command += '\n';
+      command += "\r\n";
       gps_.Write(command);
 
       if (req.target.length() == 0)
