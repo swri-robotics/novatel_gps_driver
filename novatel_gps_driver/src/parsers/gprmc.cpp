@@ -46,12 +46,18 @@ const std::string novatel_gps_driver::GprmcParser::GetMessageName() const
 novatel_gps_msgs::GprmcPtr novatel_gps_driver::GprmcParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) throw(ParseException)
 {
   // Check the length first -- should be 15 elements long
-  const size_t EXPECTED_LEN = 13;
-  if (sentence.body.size() != EXPECTED_LEN)
+  const size_t EXPECTED_LEN_OEM6 = 13;
+  // NOTE: For OEM4 Family the GPRMC has only 12 fields
+  const size_t EXPECTED_LEN_OEM4 = 12;
+
+  if (sentence.body.size() != EXPECTED_LEN_OEM4 &&
+      sentence.body.size() != EXPECTED_LEN_OEM6)
   {
     std::stringstream error;
-    error << "Expected GPRMC length = " << EXPECTED_LEN
-          << ", actual length = " << sentence.body.size();
+    error << "Expected GPRMC lengths = "
+          << EXPECTED_LEN_OEM4 << " (for OEM4), "
+          << EXPECTED_LEN_OEM6 << " (for OEM6), "
+          << "actual length = " << sentence.body.size();
     throw ParseException(error.str());
   }
 
@@ -108,7 +114,9 @@ novatel_gps_msgs::GprmcPtr novatel_gps_driver::GprmcParser::ParseAscii(const nov
   }
   valid = valid && ParseFloat(sentence.body[10], msg->mag_var);
   msg->mag_var_direction = sentence.body[11];
-  msg->mode_indicator = sentence.body[12];
+  if (sentence.body.size() == EXPECTED_LEN_OEM6) {
+    msg->mode_indicator = sentence.body[12];
+  }
 
   if (!valid)
   {
