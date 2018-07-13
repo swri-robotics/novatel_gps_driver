@@ -45,9 +45,9 @@ const std::string novatel_gps_driver::GprmcParser::GetMessageName() const
 
 novatel_gps_msgs::GprmcPtr novatel_gps_driver::GprmcParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) throw(ParseException)
 {
-  // Check the length first -- should be 15 elements long
+  // Check the length first; should be 13 elements long for OEM6 & 7,
+  // but only 12 elements for OEM4.
   const size_t EXPECTED_LEN_OEM6 = 13;
-  // NOTE: For OEM4 Family the GPRMC has only 12 fields
   const size_t EXPECTED_LEN_OEM4 = 12;
 
   if (sentence.body.size() != EXPECTED_LEN_OEM4 &&
