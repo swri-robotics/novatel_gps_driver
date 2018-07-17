@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.5.0 (2018-07-17)
+------------------
 * Update documentation
 * Fix parsing of gprmc messages for OEM4 models (#22)
 * Finish serial commands with [CR][LF] (Carriage-Return Line-Feed) (#21)
