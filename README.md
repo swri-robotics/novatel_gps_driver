@@ -4,7 +4,7 @@ NovAtel GPS Driver [![Build Status](https://travis-ci.org/swri-robotics/novatel_
 1. Overview
 -----------
 
-This is a C++ ROS driver for NovAtel GPS / GNSS Receivers.  
+This is a C++ [ROS](http://www.ros.org/) driver for [NovAtel](https://www.novatel.com/) GPS / GNSS Receivers.  
 
 Features:
 
@@ -16,20 +16,25 @@ Features:
 - Supports ASCII and binary-format NovAtel logs
 - Can synchronize `GPGGA`, `GPRMC`, and `BESTPOS` logs together in order to produce 
 [gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html) messages
-- Compatible with OEM6, OEM7, and SPAN receivers
+- Compatible with OEM4, OEM6, and OEM7 receivers
+- Can produce IMU data from receives with SPAN support
 
-It has been tested primarily on NovAtel OEM628 receivers, but in theory it should work 
-with any OEM6, OEM7, or SPAN device. Please let 
-[us](mailto:preed@swri.org,kkozak@swri.org,evenator@swri.org) know of your success
+It has been tested primarily on NovAtel OEM628 receivers, but it has been used with
+various OEM4, OEM6, and OEM7 devices. Please let 
+[the maintainers](mailto:preed@swri.org,kkozak@swri.org) know of your success
 or failure in using this with other devices so we can update this page appropriately.
 
 2. Usage
 --------
 
-The driver should function on ROS Indigo, Jade, Kinetic, and Lunar, and will hopefully
-soon be provided in the binary package repositories.
+The driver should function on ROS Indigo, Jade, Kinetic, Lunar, and Melodic, and binary
+packages are available for all of them.  To install them, first install ROS, then just run:
 
-In the meantime, to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
+```bash
+sudo apt-get install ros-${ROSDISTRO}-novatel-gps-driver
+```
+
+If you'd like to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
 
 ```bash
 mkdir -p novatel/src
