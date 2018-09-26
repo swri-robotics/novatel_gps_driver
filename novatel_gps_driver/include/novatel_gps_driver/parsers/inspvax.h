@@ -31,7 +31,7 @@
 #define NOVATEL_GPS_DRIVER_INSPVAX_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/msg/Inspvax.h>
+#include <novatel_gps_msgs/Inspvax.h>
 
 namespace novatel_gps_driver
 {
