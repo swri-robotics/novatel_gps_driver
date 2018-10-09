@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.6.0 (2018-10-09)
+------------------
 * Allow setting the serial baud rate through serial_baud ROS parameter
 * Add support for BESTUTM log
 * Add support for INSPVAX log (#27)
