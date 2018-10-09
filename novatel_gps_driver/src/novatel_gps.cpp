@@ -49,6 +49,7 @@ namespace novatel_gps_driver
       connection_(SERIAL),
       is_connected_(false),
       utc_offset_(0),
+      serial_baud_(115200),
       tcp_socket_(io_service_),
       pcap_(NULL),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
@@ -543,7 +544,7 @@ namespace novatel_gps_driver
   bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
     swri_serial_util::SerialConfig config;
-    config.baud = 115200;
+    config.baud = serial_baud_;
     config.parity = swri_serial_util::SerialConfig::NO_PARITY;
     config.flow_control = false;
     config.data_bits = 8;
@@ -986,6 +987,12 @@ namespace novatel_gps_driver
     {
       imu_rate_forced_ = true;
     }
+  }
+
+  void NovatelGps::SetSerialBaud(int32_t serial_baud)
+  {
+    ROS_INFO("Serial baud rate : %d", serial_baud);
+    serial_baud_ = serial_baud;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,

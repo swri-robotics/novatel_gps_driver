@@ -141,6 +141,8 @@ enabled.
             - Default: `false`
         - `reconnect_delay_s`: Second delay between reconnection attempts.
             - Default: `0.5`
+        - `serial_baud`: Select the serial baud rate to be used in a serial connection.
+            - Default: `115200`
         - `use_binary_messages`: `true` to request binary NovAtel logs, `false` to request ASCII.
             - Binary logs are much more efficient and effectively required for IMU data,
             but ASCII logs are easier to parse for a human.

@@ -262,6 +262,12 @@ namespace novatel_gps_driver
       void SetImuRate(double imu_rate, bool force = true);
 
       /**
+       * @brief Sets the serial baud rate; should be called before configuring a serial connection.
+       * @param serial_baud_rate The serial baud rate.
+       */
+      void SetSerialBaud(int32_t serial_baud);
+
+      /**
        * @brief Writes the given string of characters to a connected NovAtel device.
        * @param command A string to transmit.
        * @return true if we successfully wrote all of the data, false otherwise.
@@ -308,9 +314,9 @@ namespace novatel_gps_driver
       /**
        * @brief Establishes a serial port connection with a NovAtel device.
        *
-       * It will create a connection set at 115200 baud, no parity, no flow control, and
-       * 8N1 bits, then it will call Configure() on that connection.  After this
-       * method has succeeded, RedData() and Write() can be used to communicate with
+       * It will create a connection set at the baud set by SetSerialBaudRate(), no parity, 
+       * no flow control, and 8N1 bits, then it will call Configure() on that connection.  After
+       * this method has succeeded, RedData() and Write() can be used to communicate with
        * the device.
        *
        * @param device The device node to connect to; e. g., "/dev/ttyUSB0"
@@ -390,6 +396,7 @@ namespace novatel_gps_driver
       double utc_offset_;
 
       // Serial connection
+      int32_t serial_baud_;
       swri_serial_util::SerialPort serial_;
 
       // TCP / UDP connections

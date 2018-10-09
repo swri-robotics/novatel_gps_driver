@@ -242,6 +242,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
+      swri::param(priv, "serial_baud", serial_baud_, 115200);
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
@@ -421,6 +422,11 @@ namespace novatel_gps_driver
       {
         opts["trackstat" + format_suffix] = 1.0;  // Trackstat
       }
+      // Set the serial baud rate if needed
+      if (connection_ == NovatelGps::SERIAL)
+      {
+        gps_.SetSerialBaud(serial_baud_);
+      }
       while (ros::ok())
       {
         if (gps_.Connect(device_, connection_, opts))
@@ -493,6 +499,8 @@ namespace novatel_gps_driver
     std::string device_;
     /// The connection type, ("serial", "tcp", or "udp")
     std::string connection_type_;
+    /// The baud rate used for serial connection
+    int32_t serial_baud_;
     double polling_period_;
     bool publish_gpgsa_;
     bool publish_gpgsv_;
