@@ -126,6 +126,8 @@ enabled.
             - Default: `false`
         - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.
             - Default: `false`
+        - `publish_novatel_utm_positions`: `true` to publish novatel_gps_msgs/NovatelUtmPosition messages.
+            - Default: `false`
         - `publish_novatel_velocity`: `true` to publish novatel_gps_msgs/NovatelVelocity messages.
             - Default: `false`
         - `publish_range_messages`: `true` to publish novatel_gps_msgs/Range messages.
@@ -152,6 +154,7 @@ enabled.
     These are used to improve the accuracy of the time stamps of the messages published.
     3. **ROS Topic Publications**
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
+        - `/bestutm` *(novatel_gps_msgs/NovatelUtmPosition)*: [BESTUTM](http://docs.novatel.com/OEM7/Content/Logs/BESTUTM.htm) logs
         - `/bestvel` *(novatel_gps_msgs/NovatelVelocity)*: [BESTVEL](http://docs.novatel.com/OEM7/Content/Logs/BESTVEL.htm) logs
         - `/corrimudata` *(novatel_gps_msgs/NovatelCorrectedImuData)*: [CORRIMUDATA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/CORRIMUDATA.htm) logs
         - `/diagnostics` *(diagnostic_msgs/DiagnosticArray)*: ROS diagnostics

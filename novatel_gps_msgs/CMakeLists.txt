@@ -21,11 +21,13 @@ add_message_files(DIRECTORY msg FILES
   Gprmc.msg
   Inscov.msg
   Inspva.msg
+  Inspvax.msg
   Insstdev.msg
   NovatelCorrectedImuData.msg
   NovatelExtendedSolutionStatus.msg
   NovatelMessageHeader.msg
   NovatelPosition.msg
+  NovatelUtmPosition.msg
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg
   NovatelVelocity.msg
