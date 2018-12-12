@@ -49,6 +49,7 @@ namespace novatel_gps_driver
       connection_(SERIAL),
       is_connected_(false),
       utc_offset_(0),
+      serial_baud_(115200),
       tcp_socket_(io_service_),
       pcap_(NULL),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
@@ -63,6 +64,7 @@ namespace novatel_gps_driver
       inspva_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
+      novatel_utm_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
       position_sync_buffer_(SYNC_BUFFER_SIZE),
       range_msgs_(MAX_BUFFER_SIZE),
@@ -290,6 +292,13 @@ namespace novatel_gps_driver
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
+  }
+
+  void NovatelGps::GetNovatelUtmPositions(std::vector<novatel_gps_msgs::NovatelUtmPositionPtr>& utm_positions)
+  {
+    utm_positions.clear();
+    utm_positions.insert(utm_positions.end(), novatel_utm_positions_.begin(), novatel_utm_positions_.end());
+    novatel_utm_positions_.clear();
   }
 
   void NovatelGps::GetNovatelVelocities(std::vector<novatel_gps_msgs::NovatelVelocityPtr>& velocities)
@@ -535,7 +544,7 @@ namespace novatel_gps_driver
   bool NovatelGps::CreateSerialConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
     swri_serial_util::SerialConfig config;
-    config.baud = 115200;
+    config.baud = serial_baud_;
     config.parity = swri_serial_util::SerialConfig::NO_PARITY;
     config.flow_control = false;
     config.data_bits = 8;
@@ -980,6 +989,12 @@ namespace novatel_gps_driver
     }
   }
 
+  void NovatelGps::SetSerialBaud(int32_t serial_baud)
+  {
+    ROS_INFO("Serial baud rate : %d", serial_baud);
+    serial_baud_ = serial_baud;
+  }
+
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
                                                         const ros::Time& stamp) throw(ParseException)
   {
@@ -991,6 +1006,13 @@ namespace novatel_gps_driver
         position->header.stamp = stamp;
         novatel_positions_.push_back(position);
         position_sync_buffer_.push_back(position);
+        break;
+      }
+      case BestutmParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseBinary(msg);
+        utm_position->header.stamp = stamp;
+        novatel_utm_positions_.push_back(utm_position);
         break;
       }
       case BestvelParser::MESSAGE_ID:
@@ -1154,6 +1176,12 @@ namespace novatel_gps_driver
       position->header.stamp = stamp;
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
+    }
+    if (sentence.id == "BESTUTMA")
+    {
+      novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseAscii(sentence);
+      utm_position->header.stamp = stamp;
+      novatel_utm_positions_.push_back(utm_position);
     }
     else if (sentence.id == "BESTVELA")
     {
@@ -1328,24 +1356,24 @@ namespace novatel_gps_driver
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
-    configured = configured && Write("unlogall\n");
+    configured = configured && Write("unlogall\r\n");
 
     if (apply_vehicle_body_rotation_)
     {
-      configured = configured && Write("vehiclebodyrotation 0 0 90\n");
-      configured = configured && Write("applyvehiclebodyrotation\n");
+      configured = configured && Write("vehiclebodyrotation 0 0 90\r\n");
+      configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
 
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
       std::stringstream command;
       command << std::setprecision(3);
-      command << "log " << option->first << " ontime " << option->second << "\n";
+      command << "log " << option->first << " ontime " << option->second << "\r\n";
       configured = configured && Write(command.str());
     }
 
     // Log the IMU data once to get the IMU type
-    configured = configured && Write("log rawimuxa\n");
+    configured = configured && Write("log rawimuxa\r\n");
 
     return configured;
   }

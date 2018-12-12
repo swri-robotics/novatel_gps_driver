@@ -54,6 +54,9 @@
  * \e bestpos <tt>novatel_gps_msgs/NovatelPosition</tt> - High fidelity Novatel-
  *    specific position and receiver status data. (only published if
  *    `publish_novatel_positions` is set `true`)
+ * \e bestutm <tt>novatel_gps_msgs/NovatelUtmPosition</tt> - High fidelity Novatel-
+ *    specific position in UTM coordinates and receiver status data. (only published
+ *    if `publish_novatel_utm_positions` is set `true`)
  * \e bestvel <tt>novatel_gps_msgs/NovatelVelocity</tt> - High fidelity Novatel-
  *    specific velocity and receiver status data. (only published if
  *    `publish_novatel_velocity` is set `true`)
@@ -142,6 +145,7 @@
 #include <novatel_gps_msgs/NovatelFRESET.h>
 #include <novatel_gps_msgs/NovatelMessageHeader.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
+#include <novatel_gps_msgs/NovatelUtmPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gprmc.h>
@@ -174,6 +178,7 @@ namespace novatel_gps_driver
       imu_sample_rate_(-1),
       publish_imu_messages_(false),
       publish_novatel_positions_(false),
+      publish_novatel_utm_positions_(false),
       publish_novatel_velocity_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
@@ -222,6 +227,7 @@ namespace novatel_gps_driver
       swri::param(priv, "publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
       swri::param(priv, "publish_imu_messages", publish_imu_messages_, publish_imu_messages_);
       swri::param(priv, "publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
+      swri::param(priv, "publish_novatel_utm_positions", publish_novatel_utm_positions_, publish_novatel_utm_positions_);
       swri::param(priv, "publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv, "publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv, "publish_range_messages", publish_range_messages_, publish_range_messages_);
@@ -236,6 +242,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
+      swri::param(priv, "serial_baud", serial_baud_, 115200);
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
@@ -282,6 +289,11 @@ namespace novatel_gps_driver
       if (publish_novatel_positions_)
       { 
         novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
+      }
+
+      if (publish_novatel_utm_positions_)
+      { 
+        novatel_utm_pub_ = swri::advertise<novatel_gps_msgs::NovatelUtmPosition>(node, "bestutm", 100);
       }
 
       if (publish_novatel_velocity_)
@@ -367,6 +379,10 @@ namespace novatel_gps_driver
       opts["bestpos" + format_suffix] = polling_period_;  // Best position
       opts["time" + format_suffix] = 1.0;  // Time
 
+      if (publish_novatel_utm_positions_)
+      {
+        opts["bestutm" + format_suffix] = polling_period_;
+      }
       if (publish_gpgsa_)
       {
         opts["gpgsa"] = polling_period_;
@@ -405,6 +421,11 @@ namespace novatel_gps_driver
       if (publish_trackstat_)
       {
         opts["trackstat" + format_suffix] = 1.0;  // Trackstat
+      }
+      // Set the serial baud rate if needed
+      if (connection_ == NovatelGps::SERIAL)
+      {
+        gps_.SetSerialBaud(serial_baud_);
       }
       while (ros::ok())
       {
@@ -478,6 +499,8 @@ namespace novatel_gps_driver
     std::string device_;
     /// The connection type, ("serial", "tcp", or "udp")
     std::string connection_type_;
+    /// The baud rate used for serial connection
+    int32_t serial_baud_;
     double polling_period_;
     bool publish_gpgsa_;
     bool publish_gpgsv_;
@@ -488,6 +511,7 @@ namespace novatel_gps_driver
     bool span_frame_to_ros_frame_;
     bool publish_imu_messages_;
     bool publish_novatel_positions_;
+    bool publish_novatel_utm_positions_;
     bool publish_novatel_velocity_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
@@ -506,6 +530,7 @@ namespace novatel_gps_driver
     ros::Publisher insstdev_pub_;
     ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
+    ros::Publisher novatel_utm_pub_;
     ros::Publisher novatel_velocity_pub_;
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsv_pub_;
@@ -571,7 +596,7 @@ namespace novatel_gps_driver
       // Formulate the reset command and send it to the device
       std::string command = "FRESET ";
       command += req.target.length() ? "STANDARD" : req.target;
-      command += '\n';
+      command += "\r\n";
       gps_.Write(command);
 
       if (req.target.length() == 0)
@@ -592,6 +617,7 @@ namespace novatel_gps_driver
     void CheckDeviceForData()
     {
       std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
+      std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
@@ -633,6 +659,7 @@ namespace novatel_gps_driver
       gps_.GetGpggaMessages(gpgga_msgs);
       gps_.GetGprmcMessages(gprmc_msgs);
       gps_.GetNovatelPositions(position_msgs);
+      gps_.GetNovatelUtmPositions(utm_msgs);
       gps_.GetFixMessages(fix_msgs);
 
       // Increment the measurement count by the number of messages we just
@@ -725,6 +752,16 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
           novatel_position_pub_.publish(msg);
+        }
+      }
+
+      if (publish_novatel_utm_positions_)
+      {
+        for (const auto& msg : utm_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = frame_id_;
+          novatel_utm_pub_.publish(msg);
         }
       }
 

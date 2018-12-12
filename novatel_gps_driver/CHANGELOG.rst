@@ -2,6 +2,23 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.0 (2018-10-09)
+------------------
+* Allow setting the serial baud rate through serial_baud ROS parameter
+* Add support for BESTUTM log
+* Add support for INSPVAX log (#27)
+* Contributors: Ellon Paiva Mendes, Sagnik Basu
+
+3.5.0 (2018-07-17)
+------------------
+* Update documentation
+* Fix parsing of gprmc messages for OEM4 models (#22)
+* Finish serial commands with [CR][LF] (Carriage-Return Line-Feed) (#21)
+* Adds configuration parameter span_frame_to_ros_frame. (#20)
+* Adds additional IMUs defined in the OEM7 firmware. (#17)
+* Enable the driver to determine IMU sample rate from the IMU type (#9)
+* Contributors: Ellon Paiva Mendes, Joshua Whitley, Matthew, P. J. Reed
+
 3.4.0 (2017-10-06)
 ------------------
 * Fixes RPY orientation in IMU output (based on testing).

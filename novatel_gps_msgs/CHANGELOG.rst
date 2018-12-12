@@ -2,6 +2,17 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.6.0 (2018-10-09)
+------------------
+* Add NovatelUtmPosition message
+* Add Inspvax message (#27)
+* Contributors: Ellon Paiva Mendes, Sagnik Basu
+
+3.5.0 (2018-07-17)
+------------------
+* Update documentation
+* Contributors: P. J. Reed
+
 3.4.0 (2017-10-06)
 ------------------
 * Add service to novatel_gps_nodelet that issues a FRESET command on the indicated target, or STANDARD if none is provided

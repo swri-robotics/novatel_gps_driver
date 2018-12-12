@@ -1,13 +1,12 @@
 <?xml version="1.0" ?>
 <package format="2">
   <name>novatel_gps_driver</name>
-  <version>3.4.0</version>
+  <version>3.6.0</version>
   <description>
   Driver for NovAtel receivers
   </description>
 
   <maintainer email="preed@swri.org">P. J. Reed</maintainer>
-  <maintainer email="evenator@swri.org">Ed Venator</maintainer>
   <maintainer email="kkozak@swri.org">Kris Kozak</maintainer>
 
   <license>BSD</license>

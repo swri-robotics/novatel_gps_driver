@@ -4,7 +4,7 @@ NovAtel GPS Driver [![Build Status](https://travis-ci.org/swri-robotics/novatel_
 1. Overview
 -----------
 
-This is a C++ ROS driver for NovAtel GPS / GNSS Receivers.  
+This is a C++ [ROS](http://www.ros.org/) driver for [NovAtel](https://www.novatel.com/) GPS / GNSS Receivers.  
 
 Features:
 
@@ -16,20 +16,25 @@ Features:
 - Supports ASCII and binary-format NovAtel logs
 - Can synchronize `GPGGA`, `GPRMC`, and `BESTPOS` logs together in order to produce 
 [gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html) messages
-- Compatible with OEM6, OEM7, and SPAN receivers
+- Compatible with OEM4, OEM6, and OEM7 receivers
+- Can produce IMU data from receives with SPAN support
 
-It has been tested primarily on NovAtel OEM628 receivers, but in theory it should work 
-with any OEM6, OEM7, or SPAN device. Please let 
-[us](mailto:preed@swri.org,kkozak@swri.org,evenator@swri.org) know of your success
+It has been tested primarily on NovAtel OEM628 receivers, but it has been used with
+various OEM4, OEM6, and OEM7 devices. Please let 
+[the maintainers](mailto:preed@swri.org,kkozak@swri.org) know of your success
 or failure in using this with other devices so we can update this page appropriately.
 
 2. Usage
 --------
 
-The driver should function on ROS Indigo, Jade, Kinetic, and Lunar, and will hopefully
-soon be provided in the binary package repositories.
+The driver should function on ROS Indigo, Jade, Kinetic, Lunar, and Melodic, and binary
+packages are available for all of them.  To install them, first install ROS, then just run:
 
-In the meantime, to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
+```bash
+sudo apt-get install ros-${ROSDISTRO}-novatel-gps-driver
+```
+
+If you'd like to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
 
 ```bash
 mkdir -p novatel/src
@@ -121,6 +126,8 @@ enabled.
             - Default: `false`
         - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.
             - Default: `false`
+        - `publish_novatel_utm_positions`: `true` to publish novatel_gps_msgs/NovatelUtmPosition messages.
+            - Default: `false`
         - `publish_novatel_velocity`: `true` to publish novatel_gps_msgs/NovatelVelocity messages.
             - Default: `false`
         - `publish_range_messages`: `true` to publish novatel_gps_msgs/Range messages.
@@ -134,6 +141,8 @@ enabled.
             - Default: `false`
         - `reconnect_delay_s`: Second delay between reconnection attempts.
             - Default: `0.5`
+        - `serial_baud`: Select the serial baud rate to be used in a serial connection.
+            - Default: `115200`
         - `use_binary_messages`: `true` to request binary NovAtel logs, `false` to request ASCII.
             - Binary logs are much more efficient and effectively required for IMU data,
             but ASCII logs are easier to parse for a human.
@@ -145,6 +154,7 @@ enabled.
     These are used to improve the accuracy of the time stamps of the messages published.
     3. **ROS Topic Publications**
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
+        - `/bestutm` *(novatel_gps_msgs/NovatelUtmPosition)*: [BESTUTM](http://docs.novatel.com/OEM7/Content/Logs/BESTUTM.htm) logs
         - `/bestvel` *(novatel_gps_msgs/NovatelVelocity)*: [BESTVEL](http://docs.novatel.com/OEM7/Content/Logs/BESTVEL.htm) logs
         - `/corrimudata` *(novatel_gps_msgs/NovatelCorrectedImuData)*: [CORRIMUDATA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/CORRIMUDATA.htm) logs
         - `/diagnostics` *(diagnostic_msgs/DiagnosticArray)*: ROS diagnostics
