@@ -79,6 +79,8 @@ add_library(${PROJECT_NAME}_nodelets
   src/nodelets/novatel_gps_nodelet.cpp
 )
 
+add_dependencies(${PROJECT_NAME}_nodelets novatel_gps_msgs_generate_messages_cpp)
+
 target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
