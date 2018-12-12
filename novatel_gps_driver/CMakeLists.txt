@@ -65,6 +65,8 @@ add_library(${PROJECT_NAME}
   src/parsers/time.cpp
   src/parsers/trackstat.cpp
 )
+add_dependencies(${PROJECT_NAME} novatel_gps_msgs_generate_messages_cpp)
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}
@@ -76,6 +78,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 add_library(${PROJECT_NAME}_nodelets 
   src/nodelets/novatel_gps_nodelet.cpp
 )
+
 target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
