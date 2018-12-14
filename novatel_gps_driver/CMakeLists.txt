@@ -3,19 +3,19 @@ cmake_minimum_required(VERSION 2.8.3)
 project(novatel_gps_driver)
 
 set(DEPS
-  diagnostic_msgs 
-  diagnostic_updater 
+  diagnostic_msgs
+  diagnostic_updater
   gps_common
-  nav_msgs 
-  nodelet 
+  nav_msgs
+  nodelet
   novatel_gps_msgs
   roscpp
   sensor_msgs
   std_msgs
-  swri_math_util 
+  swri_math_util
   swri_roscpp
   swri_serial_util
-  swri_string_util 
+  swri_string_util
   tf
 )
 
@@ -46,13 +46,14 @@ catkin_package(CATKIN_DEPENDS ${DEPS}
   DEPENDS Boost libpcap
 )
 
-add_library(${PROJECT_NAME} 
+add_library(${PROJECT_NAME}
   src/novatel_gps.cpp
   src/novatel_message_extractor.cpp
   src/parsers/bestpos.cpp
   src/parsers/bestutm.cpp
   src/parsers/bestvel.cpp
   src/parsers/corrimudata.cpp
+  src/parsers/imuratecorrimus.cpp
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
   src/parsers/gpgsv.cpp
@@ -77,7 +78,7 @@ target_link_libraries(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 
 ### Nodelets ###
-add_library(${PROJECT_NAME}_nodelets 
+add_library(${PROJECT_NAME}_nodelets
   src/nodelets/novatel_gps_nodelet.cpp
 )
 
@@ -111,9 +112,9 @@ if(CATKIN_ENABLE_TESTING)
 endif()
 
 ### Install Libraries and Headers ###
-install(TARGETS 
+install(TARGETS
     novatel_gps_node
-    ${PROJECT_NAME} 
+    ${PROJECT_NAME}
     ${PROJECT_NAME}_nodelets
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
