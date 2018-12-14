@@ -51,8 +51,9 @@ namespace novatel_gps_driver
   const std::string NovatelMessageExtractor::NOVATEL_SENTENCE_FLAG = "#";
   const std::string NovatelMessageExtractor::NOVATEL_ASCII_FLAGS = "$#";
   const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
+  const std::string NovatelMessageExtractor::NOVATEL_BINARY_SHORT_SYNC_BYTES = "\xAA\x44\x13";
   const std::string NovatelMessageExtractor::NOVATEL_ENDLINE = "\r\n";
-  
+
   uint32_t NovatelMessageExtractor::CRC32Value(int32_t i)
   {
     int32_t j;
@@ -145,7 +146,7 @@ namespace novatel_gps_driver
                            size_t start_idx,
                            BinaryMessage& msg)
   {
-    if (str.length() < HeaderParser::BINARY_HEADER_LENGTH + 4)
+    if (str.length() < HeaderParser::BINARY_HEADER_SHORT_LENGTH + 4)
     {
       // The shortest a binary message can be (header + no data + CRC)
       // is 32 bytes, so just return if we don't have at least that many.
@@ -153,24 +154,33 @@ namespace novatel_gps_driver
       return -1;
     }
 
-    ROS_DEBUG("Reading binary header.");
+    ROS_DEBUG("Reading binary header.");  
     msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
+
     uint16_t data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
     uint16_t data_length = msg.header_.message_length_;
 
     if (msg.header_.sync0_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[0]) ||
         msg.header_.sync1_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[1]) ||
-        msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]))
+
+         (msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]) &&
+          msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SHORT_SYNC_BYTES[2])
+         )
+       )
     {
       ROS_ERROR("Sync bytes were incorrect; this should never happen and is definitely a bug: %x %x %x",
                msg.header_.sync0_, msg.header_.sync1_, msg.header_.sync2_);
       return -2;
     }
 
-    if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH)
+    if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH
+        &&
+        msg.header_.header_length_ != HeaderParser::BINARY_HEADER_SHORT_LENGTH
+       )
     {
-      ROS_WARN("Binary header length was unexpected: %u (expected %u)",
-               msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH);
+      ROS_WARN("Binary header length was unexpected: %u (expected %u or %u)",
+               msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH
+               , HeaderParser::BINARY_HEADER_SHORT_LENGTH);
     }
 
     ROS_DEBUG("Msg ID: %u    Data start / length: %u / %u",

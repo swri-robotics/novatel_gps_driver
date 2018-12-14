@@ -31,7 +31,7 @@
 #include <novatel_gps_driver/parsers/header.h>
 #include <boost/make_shared.hpp>
 
-const std::string novatel_gps_driver::ImuRateCorrImuSParser::MESSAGE_NAME = "CORRIMUDATA";
+const std::string novatel_gps_driver::ImuRateCorrImuSParser::MESSAGE_NAME = "IMURATECORRIMUS";
 
 uint32_t novatel_gps_driver::ImuRateCorrImuSParser::GetMessageId() const
 {
@@ -75,7 +75,7 @@ novatel_gps_driver::ImuRateCorrImuSParser::ParseAscii(const novatel_gps_driver::
   if (sentence.body.size() != ASCII_FIELDS)
   {
     std::stringstream error;
-    error << "Unexpected number of fields in CORRIMUDATA log: " << sentence.body.size();
+    error << "Unexpected number of fields in IMURATECORRIMUS log: " << sentence.body.size();
     throw ParseException(error.str());
   }
   novatel_gps_msgs::NovatelCorrectedImuDataPtr msg = boost::make_shared<novatel_gps_msgs::NovatelCorrectedImuData>();

@@ -63,6 +63,7 @@
 #include <novatel_gps_driver/parsers/bestutm.h>
 #include <novatel_gps_driver/parsers/bestvel.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
+#include <novatel_gps_driver/parsers/imuratecorrimus.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
@@ -314,7 +315,7 @@ namespace novatel_gps_driver
       /**
        * @brief Establishes a serial port connection with a NovAtel device.
        *
-       * It will create a connection set at the baud set by SetSerialBaudRate(), no parity, 
+       * It will create a connection set at the baud set by SetSerialBaudRate(), no parity,
        * no flow control, and 8N1 bits, then it will call Configure() on that connection.  After
        * this method has succeeded, RedData() and Write() can be used to communicate with
        * the device.
@@ -427,7 +428,8 @@ namespace novatel_gps_driver
       BestposParser bestpos_parser_;
       BestutmParser bestutm_parser_;
       BestvelParser bestvel_parser_;
-      CorrImuDataParser corrimudata_parser_;
+      // CorrImuDataParser corrimudata_parser_;
+      ImuRateCorrImuSParser imuratecorrimus_parser_;
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;

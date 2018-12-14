@@ -49,6 +49,7 @@ namespace novatel_gps_driver
     novatel_gps_msgs::NovatelMessageHeader ParseAscii(const NovatelSentence& sentence) throw(ParseException) override;
 
     static constexpr uint32_t BINARY_HEADER_LENGTH = 28;
+    static constexpr uint32_t BINARY_HEADER_SHORT_LENGTH = 12;
   };
 }
 

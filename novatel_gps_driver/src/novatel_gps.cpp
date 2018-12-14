@@ -915,10 +915,10 @@ namespace novatel_gps_driver
       if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
       {
         // If the two messages are too far apart to sync, discard the oldest one.
-        ROS_DEBUG("INSPVA and CORRIMUDATA were unacceptably far apart.");
+        ROS_DEBUG("INSPVA and IMURATECORRIMUS were unacceptably far apart.");
         if (corrimudata_time < inspva_time)
         {
-          ROS_DEBUG("Discarding oldest CORRIMUDATA.");
+          ROS_DEBUG("Discarding oldest IMURATECORRIMUS.");
           corrimudata_queue_.pop();
           continue;
         }
@@ -1022,15 +1022,15 @@ namespace novatel_gps_driver
         novatel_velocities_.push_back(velocity);
         break;
       }
-      case CorrImuDataParser::MESSAGE_ID:
+      case ImuRateCorrImuSParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseBinary(msg);
+        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = imuratecorrimus_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
         corrimudata_msgs_.push_back(imu);
         corrimudata_queue_.push(imu);
         if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
         {
-          ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+          ROS_WARN_THROTTLE(1.0, "IMURATECORRIMUS queue overflow.");
           corrimudata_queue_.pop();
         }
         GenerateImuMessages();
