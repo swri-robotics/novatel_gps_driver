@@ -50,48 +50,55 @@ novatel_gps_msgs::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseBi
   msg.port = PORT_IDENTIFIERS[bin_msg.header_.port_address_];
   msg.sequence_num = bin_msg.header_.sequence_;
   msg.percent_idle_time = bin_msg.header_.idle_time_;
-  switch (bin_msg.header_.time_status_)
+
+  if (bin_msg.header_.isShortHeaderType())
   {
-    case 20:
+    msg.gps_time_status = "FINESTEERING";
+  } else {
+    switch (bin_msg.header_.time_status_)
+    {
+      case 20:
       msg.gps_time_status = "UNKNOWN";
       break;
-    case 60:
+      case 60:
       msg.gps_time_status = "APPROXIMATE";
       break;
-    case 80:
+      case 80:
       msg.gps_time_status = "COARSEADJUSTING";
       break;
-    case 100:
+      case 100:
       msg.gps_time_status = "COARSE";
       break;
-    case 120:
+      case 120:
       msg.gps_time_status = "COARSESTEERING";
       break;
-    case 130:
+      case 130:
       msg.gps_time_status = "FREEWHEELING";
       break;
-    case 140:
+      case 140:
       msg.gps_time_status = "FINEADJUSTING";
       break;
-    case 160:
+      case 160:
       msg.gps_time_status = "FINE";
       break;
-    case 170:
+      case 170:
       msg.gps_time_status = "FINEBACKUPSTEERING";
       break;
-    case 180:
+      case 180:
       msg.gps_time_status = "FINESTEERING";
       break;
-    case 200:
+      case 200:
       msg.gps_time_status = "SATTIME";
       break;
-    default:
-    {
-      std::stringstream error;
-      error << "Unknown GPS time status: " << bin_msg.header_.time_status_;
-      throw ParseException(error.str());
+      default:
+      {
+        std::stringstream error;
+        error << "Unknown GPS time status: " << bin_msg.header_.time_status_;
+        throw ParseException(error.str());
+      }
     }
   }
+
   msg.gps_week_num = bin_msg.header_.week_;
   msg.gps_seconds = static_cast<double>(bin_msg.header_.gps_ms_) / 1000.0;
   GetNovatelReceiverStatusMessage(bin_msg.header_.receiver_status_, msg.receiver_status);

@@ -65,6 +65,10 @@ namespace novatel_gps_driver
     uint16_t reserved_;
     uint16_t receiver_sw_version_;
 
+    bool isShortHeaderType() const {
+      return sync2_ == 0x13;
+    }
+
     void ParseHeader(const uint8_t* data)
     {
       sync0_ = data[0];
