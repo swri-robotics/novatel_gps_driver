@@ -1191,7 +1191,7 @@ namespace novatel_gps_driver
     }
     else if (sentence.id == "CORRIMUDATAA")
     {
-      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseAscii(sentence);
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = imuratecorrimus_parser_.ParseAscii(sentence);
       imu->header.stamp = stamp;
       corrimudata_msgs_.push_back(imu);
       corrimudata_queue_.push(imu);

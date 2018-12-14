@@ -31,6 +31,7 @@
 #define NOVATEL_GPS_DRIVER_BINARY_HEADER_H
 
 #include <stdint.h>
+#include <iostream>
 
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 
@@ -94,7 +95,7 @@ namespace novatel_gps_driver
 
         header_length_ = 12;
       } else {
-        ROS_ERROR("No known parser type")
+        std::cerr << "No known parser type" << std::endl;
       }
 
     }
