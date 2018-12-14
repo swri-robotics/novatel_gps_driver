@@ -46,7 +46,7 @@ namespace novatel_gps_driver
 
     novatel_gps_msgs::NovatelCorrectedImuDataPtr ParseAscii(const NovatelSentence& sentence) throw(ParseException) override;
 
-    static constexpr uint16_t MESSAGE_ID = 812;
+    static constexpr uint16_t MESSAGE_ID = 1362;
     static constexpr size_t BINARY_LENGTH = 60;
     static constexpr size_t ASCII_FIELDS = 8;
     static const std::string MESSAGE_NAME;

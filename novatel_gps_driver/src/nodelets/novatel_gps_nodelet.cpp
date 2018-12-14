@@ -246,7 +246,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
-      
+
       //set NovatelGps parameters
       swri::param(priv, "gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol_, 0.01);
       swri::param(priv, "gpgga_position_sync_tol", gps_.gpgga_position_sync_tol_, 0.01);
@@ -287,12 +287,12 @@ namespace novatel_gps_driver
       }
 
       if (publish_novatel_positions_)
-      { 
+      {
         novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
       }
 
       if (publish_novatel_utm_positions_)
-      { 
+      {
         novatel_utm_pub_ = swri::advertise<novatel_gps_msgs::NovatelUtmPosition>(node, "bestutm", 100);
       }
 
@@ -592,7 +592,7 @@ namespace novatel_gps_driver
       {
         res.success = false;
       }
-      
+
       // Formulate the reset command and send it to the device
       std::string command = "FRESET ";
       command += req.target.length() ? "STANDARD" : req.target;
