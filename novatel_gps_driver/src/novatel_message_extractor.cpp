@@ -42,6 +42,20 @@
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
 
+void print_bytes(const void *object, size_t size)
+{
+  // This is for C++; in C just drop the static_cast<>() and assign.
+  const unsigned char * const bytes = static_cast<const unsigned char *>(object);
+  size_t i;
+
+  printf("[ ");
+  for(i = 0; i < size; i++)
+  {
+    printf("%02x ", bytes[i]);
+  }
+  printf("]\n");
+}
+
 namespace novatel_gps_driver
 {
   const std::string NovatelMessageExtractor::CHECKSUM_FLAG = "*";
@@ -154,7 +168,7 @@ namespace novatel_gps_driver
       return -1;
     }
 
-    ROS_DEBUG("Reading binary header.");  
+    ROS_DEBUG("Reading binary header.");
     msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
 
     uint16_t data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
@@ -383,6 +397,11 @@ namespace novatel_gps_driver
       size_t ascii_end_idx;
       size_t invalid_ascii_idx;
       size_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES, sentence_start);
+
+      if (binary_start_idx == std::string::npos)
+      {
+        binary_start_idx = input.find(NOVATEL_BINARY_SHORT_SYNC_BYTES, sentence_start);
+      }
 
       FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
