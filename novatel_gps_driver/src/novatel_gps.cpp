@@ -1365,17 +1365,16 @@ namespace novatel_gps_driver
       configured = configured && Write("vehiclebodyrotation 0 0 90\r\n");
       configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
+    std::stringstream command;
+    command << std::setprecision(3);
+    command << "log imuratecorrimusb onnew" << "\r\n";
+    configured = configured && Write(command.str());
 
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
       std::stringstream command;
       command << std::setprecision(3);
-      if (option->first == "imuratecorrimusb")
-      {
-        command << "log " << option->first << " onnew" << "\r\n";
-      } else {
-        command << "log " << option->first << " ontime " << option->second << "\r\n";
-      }
+      command << "log " << option->first << " ontime " << option->second << "\r\n";
       configured = configured && Write(command.str());
     }
 

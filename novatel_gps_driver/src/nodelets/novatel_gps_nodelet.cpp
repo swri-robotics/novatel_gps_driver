@@ -394,7 +394,7 @@ namespace novatel_gps_driver
       if (publish_imu_messages_)
       {
         double period = 1.0 / imu_rate_;
-        opts["corrimudata" + format_suffix] = period;
+        // opts["corrimudata" + format_suffix] = period;
         opts["inscov" + format_suffix] = 1.0;
         opts["inspva" + format_suffix] = period;
         opts["insstdev" + format_suffix] = 1.0;
