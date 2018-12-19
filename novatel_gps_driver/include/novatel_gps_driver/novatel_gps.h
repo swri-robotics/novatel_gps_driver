@@ -384,7 +384,7 @@ namespace novatel_gps_driver
       static constexpr size_t MAX_BUFFER_SIZE = 100;
       static constexpr size_t SYNC_BUFFER_SIZE = 10;
       static constexpr uint32_t SECONDS_PER_WEEK = 604800;
-      static constexpr double IMU_TOLERANCE_S = 0.0002;
+      static constexpr double IMU_TOLERANCE_S = 0.005;
       static constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
 
       ConnectionType connection_;
