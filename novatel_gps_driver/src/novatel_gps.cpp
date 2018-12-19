@@ -918,6 +918,8 @@ namespace novatel_gps_driver
         ROS_DEBUG("INSPVA and IMURATECORRIMUS were unacceptably far apart.");
         if (corrimudata_time < inspva_time)
         {
+          ROS_DEBUG("corrimudata_time %f", corrimudata_time);
+          ROS_DEBUG("inspva_time %f", inspva_time);
           ROS_DEBUG("Discarding oldest IMURATECORRIMUS.");
           corrimudata_queue_.pop();
           continue;
