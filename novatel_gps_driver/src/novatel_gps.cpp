@@ -912,25 +912,28 @@ namespace novatel_gps_driver
       double inspva_time = inspva->novatel_msg_header.gps_week_num *
                                SECONDS_PER_WEEK + inspva->novatel_msg_header.gps_seconds;
 
-      if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
-      {
-        // If the two messages are too far apart to sync, discard the oldest one.
-        ROS_DEBUG("INSPVA and IMURATECORRIMUS were unacceptably far apart.");
-        if (corrimudata_time < inspva_time)
-        {
-          ROS_DEBUG("corrimudata_time %f", corrimudata_time);
-          ROS_DEBUG("inspva_time %f", inspva_time);
-          ROS_DEBUG("Discarding oldest IMURATECORRIMUS.");
-          corrimudata_queue_.pop();
-          continue;
-        }
-        else
-        {
-          ROS_DEBUG("Discarding oldest INSPVA.");
-          inspva_queue_.pop();
-          continue;
-        }
-      }
+      //TODO: Breaking time check behavior
+      // if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
+      // {
+      //   // If the two messages are too far apart to sync, discard the oldest one.
+      //   ROS_DEBUG("INSPVA and IMURATECORRIMUS were unacceptably far apart.");
+      //   if (corrimudata_time < inspva_time)
+      //   {
+      //     ROS_DEBUG("corrimudata_time %f", corrimudata_time);
+      //     ROS_DEBUG("inspva_time %f", inspva_time);
+      //     ROS_DEBUG("Discarding oldest IMURATECORRIMUS.");
+      //     corrimudata_queue_.pop();
+      //     continue;
+      //   }
+      //   else
+      //   {
+      //     ROS_DEBUG("Discarding oldest INSPVA.");
+      //     inspva_queue_.pop();
+      //     continue;
+      //   }
+      // }
+
+
       // If we've successfully matched up two messages, remove them from their queues.
       inspva_queue_.pop();
       corrimudata_queue_.pop();
