@@ -560,7 +560,7 @@ namespace novatel_gps_driver
       if (!Configure(opts))
       {
         // We will not kill the connection here, because the device may already
-        // be setup to communicate correctly, but we will print a warning         
+        // be setup to communicate correctly, but we will print a warning
         ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
@@ -912,13 +912,16 @@ namespace novatel_gps_driver
       double inspva_time = inspva->novatel_msg_header.gps_week_num *
                                SECONDS_PER_WEEK + inspva->novatel_msg_header.gps_seconds;
 
+      // TODO: Breaking time check behavior
       if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
       {
         // If the two messages are too far apart to sync, discard the oldest one.
-        ROS_DEBUG("INSPVA and CORRIMUDATA were unacceptably far apart.");
+        ROS_DEBUG("INSPVA and IMURATECORRIMUS were unacceptably far apart.");
         if (corrimudata_time < inspva_time)
         {
-          ROS_DEBUG("Discarding oldest CORRIMUDATA.");
+          ROS_DEBUG("corrimudata_time %f", corrimudata_time);
+          ROS_DEBUG("inspva_time %f", inspva_time);
+          ROS_DEBUG("Discarding oldest IMURATECORRIMUS.");
           corrimudata_queue_.pop();
           continue;
         }
@@ -929,6 +932,8 @@ namespace novatel_gps_driver
           continue;
         }
       }
+
+
       // If we've successfully matched up two messages, remove them from their queues.
       inspva_queue_.pop();
       corrimudata_queue_.pop();
@@ -1022,15 +1027,15 @@ namespace novatel_gps_driver
         novatel_velocities_.push_back(velocity);
         break;
       }
-      case CorrImuDataParser::MESSAGE_ID:
+      case ImuRateCorrImuSParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseBinary(msg);
+        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = imuratecorrimus_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
         corrimudata_msgs_.push_back(imu);
         corrimudata_queue_.push(imu);
         if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
         {
-          ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+          ROS_WARN_THROTTLE(1.0, "IMURATECORRIMUS queue overflow.");
           corrimudata_queue_.pop();
         }
         GenerateImuMessages();
@@ -1191,7 +1196,7 @@ namespace novatel_gps_driver
     }
     else if (sentence.id == "CORRIMUDATAA")
     {
-      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseAscii(sentence);
+      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = imuratecorrimus_parser_.ParseAscii(sentence);
       imu->header.stamp = stamp;
       corrimudata_msgs_.push_back(imu);
       corrimudata_queue_.push(imu);
@@ -1278,18 +1283,18 @@ namespace novatel_gps_driver
         { "52", std::pair<double, std::string>(200, "Litef microIMU") },
         { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
        };
-      
+
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
       std::string id = sentence.body.size() > 1 ? sentence.body[1] : "";
       if (rates.find(id) != rates.end())
       {
         double rate = rates[id].first;
- 
+
         ROS_INFO("IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
-        
+
         // Set the rate only if it hasnt been forced already
         if (imu_rate_forced_ == false)
-        {        
+        {
           SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
         }
       }
@@ -1357,12 +1362,18 @@ namespace novatel_gps_driver
   {
     bool configured = true;
     configured = configured && Write("unlogall\r\n");
+    // allow asynchronous logging
+    configured = configured && Write("asynchinslogging enable\r\n");
 
     if (apply_vehicle_body_rotation_)
     {
       configured = configured && Write("vehiclebodyrotation 0 0 90\r\n");
       configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
+    std::stringstream command;
+    command << std::setprecision(3);
+    command << "log imuratecorrimusb onnew" << "\r\n";
+    configured = configured && Write(command.str());
 
     for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
     {
