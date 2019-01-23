@@ -4,9 +4,9 @@
         pkg="nodelet" type="nodelet"
         args="standalone novatel_gps_driver/novatel_gps_nodelet">
     <rosparam>
-      verbose: false
-      connection_type: serial
-      device: /dev/ttyUSB0
+      verbose: true
+      connection_type: tcp
+      device: 192.168.74.10:2000
       publish_novatel_positions: true
       frame_id: /gps
     </rosparam>
