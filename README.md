@@ -119,7 +119,7 @@ enabled.
             - Default: `false`
         - `publish_gpgsv`: `true` to publish novatel_gps_msgs/Gpgsv messages.
             - Default: `false`
-        - `publish_imu`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
+        - `publish_imu_messages`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
          novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
             - Default: `false`
         - `publish_nmea_messages`: `true` to publish novatel_gps_msgs/Gpgga and novatel_gps_msgs/Gprmc messages.
