@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.7.0 (2019-03-22)
+------------------
 * Added IMU: Honeywell HG4930 AN01 (`#31 <https://github.com/swri-robotics/novatel_gps_driver/issues/31>`_)
 * Added launch file to test an Ethernet interface. (`#33 <https://github.com/swri-robotics/novatel_gps_driver/issues/33>`_)
 * Contributors: Rinda Gunjala, Zach Oakes
