@@ -2,6 +2,12 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Added IMU: Honeywell HG4930 AN01 (`#31 <https://github.com/swri-robotics/novatel_gps_driver/issues/31>`_)
+* Added launch file to test an Ethernet interface. (`#33 <https://github.com/swri-robotics/novatel_gps_driver/issues/33>`_)
+* Contributors: Rinda Gunjala, Zach Oakes
+
 3.6.0 (2018-10-09)
 ------------------
 * Allow setting the serial baud rate through serial_baud ROS parameter
