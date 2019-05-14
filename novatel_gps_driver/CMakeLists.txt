@@ -125,3 +125,5 @@ install(FILES nodelet_plugins.xml
 
 ### Install Launch Files ###
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
