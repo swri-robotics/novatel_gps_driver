@@ -160,6 +160,8 @@
 #include <swri_roscpp/parameters.h>
 #include <swri_roscpp/publisher.h>
 #include <swri_roscpp/subscriber.h>
+#include <cav_msgs/SystemAlert.h>
+#include <cav_msgs/DriverStatus.h>
 
 namespace stats = boost::accumulators;
 
@@ -168,6 +170,7 @@ namespace novatel_gps_driver
   class NovatelGpsNodelet : public nodelet::Nodelet
   {
   public:
+    //void alertCallback(const cav_msgs::SystemAlertConstPtr &msg);
     NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
@@ -246,7 +249,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
-      
+
       //set NovatelGps parameters
       swri::param(priv, "gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol_, 0.01);
       swri::param(priv, "gpgga_position_sync_tol", gps_.gpgga_position_sync_tol_, 0.01);
@@ -256,7 +259,7 @@ namespace novatel_gps_driver
       reset_service_ = priv.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
 
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
-
+      alert_sub = swri::Subscriber(node,"system_alert",100,&NovatelGpsNodelet::alertCallback,this);
       std::string gps_topic = node.resolveName("gps");
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
@@ -287,12 +290,12 @@ namespace novatel_gps_driver
       }
 
       if (publish_novatel_positions_)
-      { 
+      {
         novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
       }
 
       if (publish_novatel_utm_positions_)
-      { 
+      {
         novatel_utm_pub_ = swri::advertise<novatel_gps_msgs::NovatelUtmPosition>(node, "bestutm", 100);
       }
 
@@ -356,6 +359,16 @@ namespace novatel_gps_driver
     }
 
     /**
+        * SystemAlert to shutdown the sensor node
+        */
+      void alertCallback(const cav_msgs::SystemAlertConstPtr &msg)
+       {
+         if( msg->type==cav_msgs::SystemAlert::FATAL || msg->type==cav_msgs::SystemAlert::SHUTDOWN)
+           {
+            ros::shutdown();
+           }
+       }
+       /**
      * Main spin loop connects to device, then reads data from it and publishes
      * messages.
      */
@@ -550,6 +563,7 @@ namespace novatel_gps_driver
 
     /// Subscriber to listen for sync times from a DIO
     swri::Subscriber sync_sub_;
+    swri::Subscriber alert_sub;
     ros::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<ros::Time> sync_times_;
@@ -592,7 +606,7 @@ namespace novatel_gps_driver
       {
         res.success = false;
       }
-      
+
       // Formulate the reset command and send it to the device
       std::string command = "FRESET ";
       command += req.target.length() ? "STANDARD" : req.target;
