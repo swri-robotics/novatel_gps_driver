@@ -163,6 +163,7 @@
 #include <cav_msgs/SystemAlert.h>
 #include <cav_msgs/DriverStatus.h>
 
+
 namespace stats = boost::accumulators;
 
 namespace novatel_gps_driver
@@ -170,8 +171,10 @@ namespace novatel_gps_driver
   class NovatelGpsNodelet : public nodelet::Nodelet
   {
   public:
-    //void alertCallback(const cav_msgs::SystemAlertConstPtr &msg);
-    NovatelGpsNodelet() :
+      uint8_t status_gps;
+      uint8_t status_imu;
+      cav_msgs::DriverStatus status_;
+      NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
       polling_period_(0.05),
@@ -263,6 +266,7 @@ namespace novatel_gps_driver
       std::string gps_topic = node.resolveName("gps");
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
+      status_pub=swri::advertise<cav_msgs::DriverStatus>(node,"driver_discovery", 1);
 
       if (publish_nmea_messages_)
       {
@@ -368,6 +372,29 @@ namespace novatel_gps_driver
             ros::shutdown();
            }
        }
+
+      /**
+          * SystemAlert to shutdown the sensor node
+          */
+      void publish_status()
+      {  //Various driver status conditions
+          status_.gps=true;
+          status_.imu=true;
+
+          if (status_gps==cav_msgs::DriverStatus::OFF ||status_imu==cav_msgs::DriverStatus::OFF)
+          {
+           status_.status=cav_msgs::DriverStatus::OFF;
+          }
+          else if (status_gps==cav_msgs::DriverStatus::OPERATIONAL && status_imu==cav_msgs::DriverStatus::OPERATIONAL)
+          {
+          status_.status=cav_msgs::DriverStatus::OPERATIONAL;
+          }
+          else if (status_gps==cav_msgs::DriverStatus::FAULT ||status_imu==cav_msgs::DriverStatus::FAULT )
+          {
+          status_.status=cav_msgs::DriverStatus::FAULT;
+          }
+          status_pub.publish(status_);
+      }
        /**
      * Main spin loop connects to device, then reads data from it and publishes
      * messages.
@@ -552,6 +579,7 @@ namespace novatel_gps_driver
     ros::Publisher range_pub_;
     ros::Publisher time_pub_;
     ros::Publisher trackstat_pub_;
+    ros::Publisher status_pub;
 
     ros::ServiceServer reset_service_;
 
