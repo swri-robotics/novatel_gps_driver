@@ -380,13 +380,17 @@ namespace novatel_gps_driver
       /**
           * DriverStatus for both gps and IMU
           */
-     /* void publish_status()
+      void publish_status(const ros::TimerEvent&)
       {  //Various driver status conditions
           status_.gps=true;
-          //status_.imu=true;
-         // time_difference=ros::Time::now()-last_update_time_;
+          status_.imu=true;
+          time_difference=ros::Time::now()-last_update_time_;
 
-          //if (last_update_time_.isZero() || ((time_difference>ros::Duration(2.0)) && (status_gps==cav_msgs::DriverStatus::OPERATIONAL && status_imu==cav_msgs::DriverStatus::OPERATIONAL)))
+          if (last_update_time_.isZero() || ((time_difference>ros::Duration(3.0)) && (status_gps==cav_msgs::DriverStatus::OPERATIONAL)))
+          {
+            status_gps=cav_msgs::DriverStatus::OFF;
+          }
+
           if (status_gps==cav_msgs::DriverStatus::OFF)
           {
            status_.status=cav_msgs::DriverStatus::OFF;
@@ -400,10 +404,12 @@ namespace novatel_gps_driver
           status_.status=cav_msgs::DriverStatus::FAULT;
           }
           status_pub.publish(status_);
-      } */
-      void publish_status(const ros::TimerEvent&)
+      }
+    /*  void publish_status(const ros::TimerEvent&)
       {
           status_.gps=true;
+          status_.imu=true;
+
           if(gps_.IsConnected()==false)
           {
               status_.status=cav_msgs::DriverStatus::OFF;
@@ -413,7 +419,7 @@ namespace novatel_gps_driver
               status_.status=cav_msgs::DriverStatus::OPERATIONAL;
           }
           status_pub.publish(status_);
-     }
+     }*/
 
        /**
      * Main spin loop connects to device, then reads data from it and publishes
@@ -496,8 +502,8 @@ namespace novatel_gps_driver
           while (gps_.IsConnected() && ros::ok())
           {
            //   ROS_WARN("GPS_Status=%d",gps_.IsConnected());
-              //last_update_time_ = ros::Time::now();
-             // status_gps=cav_msgs::DriverStatus::OPERATIONAL;
+              last_update_time_ = ros::Time::now();
+              status_gps=cav_msgs::DriverStatus::OPERATIONAL;
             // Read data from the device and publish any received messages
             CheckDeviceForData();
 
