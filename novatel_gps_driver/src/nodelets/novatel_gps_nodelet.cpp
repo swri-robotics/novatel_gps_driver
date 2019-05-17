@@ -172,8 +172,11 @@ namespace novatel_gps_driver
   {
   public:
       uint8_t status_gps;
-      uint8_t status_imu;
+     // uint8_t status_imu;
+      ros::Time last_update_time_;
       cav_msgs::DriverStatus status_;
+      ros::Duration time_difference;
+      ros::Timer timer;
       NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
@@ -267,6 +270,7 @@ namespace novatel_gps_driver
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
       status_pub=swri::advertise<cav_msgs::DriverStatus>(node,"driver_discovery", 1);
+      timer = node.createTimer(ros::Duration(1.0), &NovatelGpsNodelet::publish_status,this);
 
       if (publish_nmea_messages_)
       {
@@ -374,27 +378,43 @@ namespace novatel_gps_driver
        }
 
       /**
-          * SystemAlert to shutdown the sensor node
+          * DriverStatus for both gps and IMU
           */
-      void publish_status()
+     /* void publish_status()
       {  //Various driver status conditions
           status_.gps=true;
-          status_.imu=true;
+          //status_.imu=true;
+         // time_difference=ros::Time::now()-last_update_time_;
 
-          if (status_gps==cav_msgs::DriverStatus::OFF ||status_imu==cav_msgs::DriverStatus::OFF)
+          //if (last_update_time_.isZero() || ((time_difference>ros::Duration(2.0)) && (status_gps==cav_msgs::DriverStatus::OPERATIONAL && status_imu==cav_msgs::DriverStatus::OPERATIONAL)))
+          if (status_gps==cav_msgs::DriverStatus::OFF)
           {
            status_.status=cav_msgs::DriverStatus::OFF;
           }
-          else if (status_gps==cav_msgs::DriverStatus::OPERATIONAL && status_imu==cav_msgs::DriverStatus::OPERATIONAL)
+          else if (status_gps==cav_msgs::DriverStatus::OPERATIONAL)
           {
           status_.status=cav_msgs::DriverStatus::OPERATIONAL;
           }
-          else if (status_gps==cav_msgs::DriverStatus::FAULT ||status_imu==cav_msgs::DriverStatus::FAULT )
+          else if (status_gps==cav_msgs::DriverStatus::FAULT)
           {
           status_.status=cav_msgs::DriverStatus::FAULT;
           }
           status_pub.publish(status_);
-      }
+      } */
+      void publish_status(const ros::TimerEvent&)
+      {
+          status_.gps=true;
+          if(gps_.IsConnected()==false)
+          {
+              status_.status=cav_msgs::DriverStatus::OFF;
+          }
+          else if(gps_.IsConnected()==true)
+          {
+              status_.status=cav_msgs::DriverStatus::OPERATIONAL;
+          }
+          status_pub.publish(status_);
+     }
+
        /**
      * Main spin loop connects to device, then reads data from it and publishes
      * messages.
@@ -475,6 +495,9 @@ namespace novatel_gps_driver
           NODELET_INFO("%s connected to device", hw_id_.c_str());
           while (gps_.IsConnected() && ros::ok())
           {
+           //   ROS_WARN("GPS_Status=%d",gps_.IsConnected());
+              //last_update_time_ = ros::Time::now();
+             // status_gps=cav_msgs::DriverStatus::OPERATIONAL;
             // Read data from the device and publish any received messages
             CheckDeviceForData();
 
@@ -664,6 +687,7 @@ namespace novatel_gps_driver
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
 
+
       // This call appears to block if the serial device is disconnected
       NovatelGps::ReadResult result = gps_.ProcessData();
       if (result == NovatelGps::READ_ERROR)
@@ -789,6 +813,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_positions_)
       {
+
         for (const auto& msg : position_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -853,6 +878,7 @@ namespace novatel_gps_driver
       }
       if (publish_imu_messages_)
       {
+
         std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> novatel_imu_msgs;
         gps_.GetNovatelCorrectedImuData(novatel_imu_msgs);
         for (const auto& msg : novatel_imu_msgs)
