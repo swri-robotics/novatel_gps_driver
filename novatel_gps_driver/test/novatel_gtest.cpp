@@ -21,16 +21,16 @@ TEST(NovatelTest, DriverStatus)
 {
 
     status_gps = cav_msgs::DriverStatus::OFF;
-    publish_status();
+    publish_status(const ros::TimerEvent&);
     EXPECT_EQ(cav_msgs::DriverStatus::OFF, status_.status);
     status_gps = cav_msgs::DriverStatus::OPERATIONAL;
-    publish_status();
+    publish_status(const ros::TimerEvent&);
     EXPECT_EQ(cav_msgs::DriverStatus::OPERATIONAL, status_.status);
     status_gps = cav_msgs::DriverStatus::FAULT;
-    publish_status();
+    publish_status(const ros::TimerEvent&);
     EXPECT_EQ(cav_msgs::DriverStatus::FAULT, status_.status);
     status_gps = cav_msgs::DriverStatus::DEGRADED;
-    publish_status();
+    publish_status(const ros::TimerEvent&);
     EXPECT_EQ(cav_msgs::DriverStatus::DEGRADED, status_.status);
 }
 
