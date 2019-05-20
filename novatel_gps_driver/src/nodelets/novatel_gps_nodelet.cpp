@@ -172,10 +172,11 @@ namespace novatel_gps_driver
   {
   private:
       volatile uint8_t status_gps_;
+      volatile uint8_t previous_status_;
       ros::Time last_update_time_;
       cav_msgs::DriverStatus status_;
-      ros::Duration time_difference;
-      ros::Timer timer;
+      ros::Duration time_difference_;
+      ros::Timer timer_;
   public:
       NovatelGpsNodelet() :
       device_(""),
@@ -273,7 +274,7 @@ namespace novatel_gps_driver
       //Driver discovery publisher object
       status_pub_=swri::advertise<cav_msgs::DriverStatus>(node,"driver_discovery", 1);
       //ros timer for publishing every 1 sec
-      timer = node.createTimer(ros::Duration(1.0), &NovatelGpsNodelet::publish_status,this);
+      timer_ = node.createTimer(ros::Duration(1.0), &NovatelGpsNodelet::publish_status,this);
 
       if (publish_nmea_messages_)
       {
@@ -389,32 +390,38 @@ namespace novatel_gps_driver
           status_.gps=true;
           status_.imu=true;
 
-          time_difference=ros::Time::now()-last_update_time_;
+          time_difference_=ros::Time::now()-last_update_time_;
 
-          if (last_update_time_.isZero() || ((time_difference>ros::Duration(1.0)) && (status_gps_==cav_msgs::DriverStatus::OPERATIONAL)))
+          if (last_update_time_.isZero() || ((time_difference_>ros::Duration(1.0)) && (status_gps_==cav_msgs::DriverStatus::OPERATIONAL)))
           {
             status_gps_=cav_msgs::DriverStatus::OFF;
+          }
+
+          if(previous_status_!=status_gps_)
+          {
+             ROS_INFO("DriverStatus->%d",status_gps_);
           }
 
           if (status_gps_==cav_msgs::DriverStatus::OFF)
           {
            status_.status=status_gps_;
-           ROS_INFO("DriverStatus->OFF");
+           previous_status_=status_gps_;
+
           }
           else if (status_gps_==cav_msgs::DriverStatus::OPERATIONAL)
           {
           status_.status=status_gps_;
-          ROS_INFO("DriverStatus->OPERATIONAL");
+          previous_status_=status_gps_;
           }
           else if (status_gps_==cav_msgs::DriverStatus::FAULT)
           {
           status_.status=status_gps_;
-          ROS_INFO("DriverStatus->FAULT");
+          previous_status_=status_gps_;
           }
           else if(status_gps_==cav_msgs::DriverStatus::DEGRADED)
           {
            status_.status=status_gps_;
-           ROS_INFO("DriverStatus->DEGRADED");
+           previous_status_=status_gps_;
           }
           status_pub_.publish(status_);
       }

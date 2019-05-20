@@ -74,9 +74,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 
-### Install Launch Files ###
-install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
 ### Nodelets ###
@@ -131,5 +128,8 @@ install(DIRECTORY include/${PROJECT_NAME}/
 install(FILES nodelet_plugins.xml
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
+
+### Install Launch Files ###
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 
