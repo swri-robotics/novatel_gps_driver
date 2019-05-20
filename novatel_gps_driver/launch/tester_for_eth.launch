@@ -2,7 +2,7 @@
 <launch>
   <node name="novatel"
         pkg="nodelet" type="nodelet"
-        args="standalone novatel_gps_driver/novatel_gps_nodelet">
+        args="standalone novatel_gps_driver/novatel_gps_nodelet" output="screen" >
     <rosparam>
       verbose: true
       connection_type: tcp

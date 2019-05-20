@@ -172,7 +172,6 @@ namespace novatel_gps_driver
   {
   public:
       uint8_t status_gps;
-     // uint8_t status_imu;
       ros::Time last_update_time_;
       cav_msgs::DriverStatus status_;
       ros::Duration time_difference;
@@ -265,11 +264,14 @@ namespace novatel_gps_driver
       reset_service_ = priv.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
 
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
+      //System alert subcriber object decleration
       alert_sub = swri::Subscriber(node,"system_alert",100,&NovatelGpsNodelet::alertCallback,this);
       std::string gps_topic = node.resolveName("gps");
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
+      //Driver discovery publisher object
       status_pub=swri::advertise<cav_msgs::DriverStatus>(node,"driver_discovery", 1);
+      //ros timer for publishing every 1 sec
       timer = node.createTimer(ros::Duration(1.0), &NovatelGpsNodelet::publish_status,this);
 
       if (publish_nmea_messages_)
@@ -378,15 +380,16 @@ namespace novatel_gps_driver
        }
 
       /**
-          * DriverStatus for both gps and IMU
+          * DriverStatus function definition various novatel driver status
           */
       void publish_status(const ros::TimerEvent&)
-      {  //Various driver status conditions
+      {  // Set driver type
           status_.gps=true;
           status_.imu=true;
+
           time_difference=ros::Time::now()-last_update_time_;
 
-          if (last_update_time_.isZero() || ((time_difference>ros::Duration(3.0)) && (status_gps==cav_msgs::DriverStatus::OPERATIONAL)))
+          if (last_update_time_.isZero() || ((time_difference>ros::Duration(2.0)) && (status_gps==cav_msgs::DriverStatus::OPERATIONAL)))
           {
             status_gps=cav_msgs::DriverStatus::OFF;
           }
@@ -403,23 +406,12 @@ namespace novatel_gps_driver
           {
           status_.status=cav_msgs::DriverStatus::FAULT;
           }
+          else if(status_gps==cav_msgs::DriverStatus::DEGRADED)
+          {
+           status_.status=cav_msgs::DriverStatus::DEGRADED;
+          }
           status_pub.publish(status_);
       }
-    /*  void publish_status(const ros::TimerEvent&)
-      {
-          status_.gps=true;
-          status_.imu=true;
-
-          if(gps_.IsConnected()==false)
-          {
-              status_.status=cav_msgs::DriverStatus::OFF;
-          }
-          else if(gps_.IsConnected()==true)
-          {
-              status_.status=cav_msgs::DriverStatus::OPERATIONAL;
-          }
-          status_pub.publish(status_);
-     }*/
 
        /**
      * Main spin loop connects to device, then reads data from it and publishes
@@ -501,10 +493,11 @@ namespace novatel_gps_driver
           NODELET_INFO("%s connected to device", hw_id_.c_str());
           while (gps_.IsConnected() && ros::ok())
           {
-           //   ROS_WARN("GPS_Status=%d",gps_.IsConnected());
+
               last_update_time_ = ros::Time::now();
               status_gps=cav_msgs::DriverStatus::OPERATIONAL;
-            // Read data from the device and publish any received messages
+
+              // Read data from the device and publish any received messages
             CheckDeviceForData();
 
             // Poke the diagnostic updater. It will only fire diagnostics if
@@ -703,6 +696,7 @@ namespace novatel_gps_driver
                                device_.c_str(),
                                gps_.ErrorMsg().c_str());
         device_errors_++;
+        status_gps==cav_msgs::DriverStatus::FAULT;
       }
       else if (result == NovatelGps::READ_TIMEOUT)
       {
@@ -725,6 +719,7 @@ namespace novatel_gps_driver
       else if (result == NovatelGps::READ_INSUFFICIENT_DATA)
       {
         gps_insufficient_data_warnings_++;
+        status_gps==cav_msgs::DriverStatus::DEGRADED;
       }
 
       // Read messages from the driver into the local message lists
