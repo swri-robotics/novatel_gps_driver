@@ -103,6 +103,10 @@ if(CATKIN_ENABLE_TESTING)
   add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
   target_link_libraries(novatel_gps_tests ${PROJECT_NAME})
   set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+  add_rostest_gtest(novatel_gtest test/novatel_gtest.test test/novatel_gtest.cpp)
+  target_link_libraries(novatel_gtest ${PROJECT_NAME})
+  set_target_properties(novatel_gtest PROPERTIES COMPILE_FLAGS "-std=c++11")
 endif()
 
 ### Install Libraries and Headers ###
