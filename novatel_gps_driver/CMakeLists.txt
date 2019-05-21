@@ -102,9 +102,9 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(parser_tests ${PROJECT_NAME})
   set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
 
-  catkin_add_gtest(novatel_DriverDiscovery_gtest test/novatel_gtest.cpp)
-  target_link_libraries(novatel_DriverDiscovery_gtest ${PROJECT_NAME})
-  set_target_properties(novatel_DriverDiscovery_gtest PROPERTIES COMPILE_FLAGS "-std=c++11")
+  #  target_link_libraries(novatel_DriverDiscovery_gtest ${PROJECT_NAME} ${catkin_LIBRARIES})
+  # add_dependencies( novatel_DriverDiscovery_gtest ${catkin_EXPORTED_TARGETS})
+  # set_target_properties(novatel_DriverDiscovery_gtest PROPERTIES COMPILE_FLAGS "-std=c++11")
 
   add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
   target_link_libraries(novatel_gps_tests ${PROJECT_NAME})

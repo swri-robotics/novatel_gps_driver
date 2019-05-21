@@ -170,14 +170,14 @@ namespace novatel_gps_driver
 {
   class NovatelGpsNodelet : public nodelet::Nodelet
   {
-  private:
+      private:
       volatile uint8_t status_gps_;
       volatile uint8_t previous_status_;
       ros::Time last_update_time_;
       cav_msgs::DriverStatus status_;
       ros::Duration time_difference_;
       ros::Timer timer_;
-  public:
+      public:
       NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
