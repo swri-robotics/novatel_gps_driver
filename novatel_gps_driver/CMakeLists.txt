@@ -77,6 +77,8 @@ target_link_libraries(${PROJECT_NAME}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
 
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+
 ### Nodelets ###
 add_library(${PROJECT_NAME}_nodelets 
   src/nodelets/novatel_gps_nodelet.cpp
@@ -103,6 +105,10 @@ if(CATKIN_ENABLE_TESTING)
   target_link_libraries(parser_tests ${PROJECT_NAME})
   set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
 
+  #  target_link_libraries(novatel_DriverDiscovery_gtest ${PROJECT_NAME} ${catkin_LIBRARIES})
+  # add_dependencies( novatel_DriverDiscovery_gtest ${catkin_EXPORTED_TARGETS})
+  # set_target_properties(novatel_DriverDiscovery_gtest PROPERTIES COMPILE_FLAGS "-std=c++11")
+
   add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
   target_link_libraries(novatel_gps_tests ${PROJECT_NAME})
   set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
@@ -128,3 +134,5 @@ install(FILES nodelet_plugins.xml
 
 ### Install Launch Files ###
 install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+
