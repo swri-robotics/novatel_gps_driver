@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: xenial
 language: generic
 
 notifications:
@@ -12,14 +12,14 @@ script: source .ci_config/travis.sh
 
 jobs:
   include:
-    - stage: build-shadow-fixed
-      env: 
-        - ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-        - ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - stage: build-released
-      env:
-        - ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-        - ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
+    - stage: build-kinetic-released
+      env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
+    - stage: build-kinetic-shadow-fixed
+      env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
+    - stage: build-melodic-released
+      env: ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
+    - stage: build-melodic-shadow-fixed
+      env: ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
     - stage: lint
       sudo: false
       install: pip install -q catkin-lint
