@@ -29,7 +29,7 @@ matrix:
     - sudo: false
       language: python
       python: 3.7
-      install: pip install -q catkin-lint
+      install: pip install -q catkin-lint rosdep
       script: catkin_lint -W2 --explain .
       env: JOB="catkin_lint"
   allow_failures:
