@@ -27,8 +27,8 @@ or failure in using this with other devices so we can update this page appropria
 2. Usage
 --------
 
-The driver should function on ROS Indigo, Jade, Kinetic, Lunar, and Melodic, and binary
-packages are available for all of them.  To install them, first install ROS, then just run:
+The driver should function on ROS Kinetic and Melodic, and binary packages are available
+for both of them.  To install them, first install ROS, then just run:
 
 ```bash
 sudo apt-get install ros-${ROSDISTRO}-novatel-gps-driver
