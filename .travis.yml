@@ -2,30 +2,39 @@ sudo: required
 dist: xenial
 language: generic
 
+service:
+  - docker
+
 notifications:
   email:
     on_success: always
     on_failure: always
 
-install: git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
-script: source .ci_config/travis.sh
+cache:
+  directories:
+    - $HOME/.ccache
+
+env:
+  global:
+    - ROS_REPO=ros
+    - CCACHE_DIR=$HOME/.ccache
+  matrix:
+    - ROS_DISTRO="kinetic" ROS_REPO="ros-shadow-fixed"
+    - ROS_DISTRO="kinetic"
+    - ROS_DISTRO="melodic" ROS_REPO="ros-shadow-fixed"
+    - ROS_DISTRO="melodic"
 
 matrix:
   include:
-    - stage: build-kinetic-released
-      env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - stage: build-kinetic-shadow-fixed
-      env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - stage: build-melodic-released
-      env: ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - stage: build-melodic-shadow-fixed
-      env: ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - stage: lint
-      sudo: false
+    - sudo: false
       install: pip install -q catkin-lint
       script: catkin_lint -W2 --explain .
       env: JOB="catkin_lint"
   allow_failures:
-    - env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="melodic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
+    - env: ROS_DISTRO="kinetic" ROS_REPO="ros-shadow-fixed"
+    - env: ROS_DISTRO="melodic" ROS_REPO="ros-shadow-fixed"
     - env: JOB="catkin_lint"
+
+install: git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
+script: source .ci_config/travis.sh
+
