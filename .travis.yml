@@ -1,6 +1,8 @@
 sudo: required
 dist: xenial
-language: generic
+language: cpp
+compiler:
+  - gcc
 
 service:
   - docker
@@ -31,11 +33,11 @@ matrix:
       python: 3.7
       install: pip install -q catkin-lint rosdep
       script: catkin_lint -W2 --explain .
-      env: JOB="catkin_lint"
+      env: JOB="catkin_lint" ROS_DISTRO="kinetic"
   allow_failures:
     - env: ROS_DISTRO="kinetic"
     - env: ROS_DISTRO="melodic"
-    - env: JOB="catkin_lint"
+    - env: JOB="catkin_lint" ROS_DISTRO="kinetic"
 
 install: git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: source .ci_config/travis.sh
