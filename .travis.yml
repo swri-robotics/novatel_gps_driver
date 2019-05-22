@@ -10,7 +10,7 @@ notifications:
 install: git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: source .ci_config/travis.sh
 
-jobs:
+matrix:
   include:
     - stage: build-kinetic-released
       env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
