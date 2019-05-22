@@ -32,7 +32,7 @@ matrix:
       python: 3.7
       install: 
       - pip install -q catkin-lint rosdep
-      - sudo rosdep init
+      - sudo -E rosdep init
       - rosdep update
       script: catkin_lint -W2 --explain .
       env: JOB="catkin_lint" ROS_DISTRO="kinetic"
