@@ -28,10 +28,12 @@ env:
 
 matrix:
   include:
-    - sudo: false
-      language: python
+    - language: python
       python: 3.7
-      install: pip install -q catkin-lint rosdep
+      install: 
+      - pip install -q catkin-lint rosdep
+      - rosdep init
+      - rosdep update
       script: catkin_lint -W2 --explain .
       env: JOB="catkin_lint" ROS_DISTRO="kinetic"
   allow_failures:
