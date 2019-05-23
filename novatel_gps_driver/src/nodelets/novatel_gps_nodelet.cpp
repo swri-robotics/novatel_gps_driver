@@ -387,7 +387,7 @@ namespace novatel_gps_driver
           */
       void publish_status(const ros::TimerEvent&)
       {  // Set driver type
-          status_.gps=true;
+          status_.gnss=true;
           status_.imu=true;
 
           time_difference_=ros::Time::now()-last_update_time_;
