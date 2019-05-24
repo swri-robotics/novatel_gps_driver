@@ -26,8 +26,7 @@
 
   <node name="novatel_gnss_imu"
         pkg="nodelet" type="nodelet"
-        args="standalone novatel_gps_driver/novatel_gps_nodelet"
-  />
+        args="standalone novatel_gps_driver/novatel_gps_nodelet" >
 
     <param name="verbose" value="$(arg verbose)" />
     <param name="device" value="$(arg ip):$(arg port)" />
