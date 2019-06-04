@@ -1357,7 +1357,7 @@ namespace novatel_gps_driver
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
-    configured = configured && Write("unlogall\r\n");
+    configured = configured && Write("unlogall THISPORT_ALL\r\n");
 
     if (apply_vehicle_body_rotation_)
     {
