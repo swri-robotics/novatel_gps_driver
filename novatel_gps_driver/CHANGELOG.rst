@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.8.0 (2019-06-04)
+------------------
 * Add fix for messages build order (`#41 <https://github.com/swri-robotics/novatel_gps_driver/issues/41>`_)
 * Add clocksteering parsing (`#40 <https://github.com/swri-robotics/novatel_gps_driver/issues/40>`_)
 * Only unlogall for the current port (`#36 <https://github.com/swri-robotics/novatel_gps_driver/issues/36>`_)
