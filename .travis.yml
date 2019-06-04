@@ -1,35 +1,46 @@
 sudo: required
-dist: trusty
-language: generic
+dist: xenial
+language: cpp
+compiler:
+  - gcc
+
+service:
+  - docker
 
 notifications:
   email:
     on_success: always
     on_failure: always
 
+cache:
+  directories:
+    - $HOME/.ccache
+
+env:
+  global:
+    - ROS_REPO=ros
+    - CCACHE_DIR=$HOME/.ccache
+  matrix:
+    - ROS_DISTRO="kinetic" ROS_REPO="ros-shadow-fixed"
+    - ROS_DISTRO="kinetic"
+    - ROS_DISTRO="melodic" ROS_REPO="ros-shadow-fixed"
+    - ROS_DISTRO="melodic"
+
+matrix:
+  include:
+    - language: python
+      python: 3.7
+      install: 
+      - pip install -q catkin-lint rosdep
+      - sudo $(which rosdep) init
+      - rosdep update
+      script: catkin_lint -W2 --explain .
+      env: JOB="catkin_lint" ROS_DISTRO="kinetic"
+  allow_failures:
+    - env: ROS_DISTRO="kinetic"
+    - env: ROS_DISTRO="melodic"
+    - env: JOB="catkin_lint" ROS_DISTRO="kinetic"
+
 install: git clone https://github.com/ros-industrial/industrial_ci.git .ci_config
 script: source .ci_config/travis.sh
 
-jobs:
-  include:
-    - stage: build-shadow-fixed
-      env: ROS_DISTRO="indigo" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - env: ROS_DISTRO="jade" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - env: ROS_DISTRO="lunar" ROS_REPOSITORY_PATH=http://packages.ros.org/ros-shadow-fixed/ubuntu
-    - stage: build-released
-      env: ROS_DISTRO="indigo" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="jade" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="lunar" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - stage: lint
-      sudo: false
-      install: pip install -q catkin-lint
-      script: catkin_lint -W2 --explain .
-      env: JOB="catkin_lint"
-  allow_failures:
-    - env: ROS_DISTRO="indigo" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="jade" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="kinetic" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: ROS_DISTRO="lunar" ROS_REPOSITORY_PATH=http://packages.ros.org/ros/ubuntu
-    - env: JOB="catkin_lint"
