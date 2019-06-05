@@ -27,8 +27,8 @@ or failure in using this with other devices so we can update this page appropria
 2. Usage
 --------
 
-The driver should function on ROS Indigo, Jade, Kinetic, Lunar, and Melodic, and binary
-packages are available for all of them.  To install them, first install ROS, then just run:
+The driver should function on ROS Kinetic and Melodic, and binary packages are available
+for both of them.  To install them, first install ROS, then just run:
 
 ```bash
 sudo apt-get install ros-${ROSDISTRO}-novatel-gps-driver
@@ -113,6 +113,8 @@ enabled.
             - This will be set as the period for `GPGGA`, `GPRMC`, `GPGSA`, `BESTPOS`, 
             and `BESTVEL` logs.
             - Default: `0.05` (20 Hz)
+        - `publish_clocksteering`: `true` to publish novatel_gps_msgs/ClockSteering messages.
+            - Default: `false`
         - `publish_diagnostics`: `true` to publish node diagnostics.
             - Default: `false`
         - `publish_gpgsa`: `true` to publish novatel_gps_msgs/Gpgsa messages.
@@ -156,6 +158,7 @@ enabled.
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
         - `/bestutm` *(novatel_gps_msgs/NovatelUtmPosition)*: [BESTUTM](http://docs.novatel.com/OEM7/Content/Logs/BESTUTM.htm) logs
         - `/bestvel` *(novatel_gps_msgs/NovatelVelocity)*: [BESTVEL](http://docs.novatel.com/OEM7/Content/Logs/BESTVEL.htm) logs
+        - `/clocksteering` *(novatel_gps_msgs/ClockSteering)*: [CLOCKSTEERING](http://docs.novatel.com/OEM7/Content/Logs/CLOCKSTEERING.htm) logs
         - `/corrimudata` *(novatel_gps_msgs/NovatelCorrectedImuData)*: [CORRIMUDATA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/CORRIMUDATA.htm) logs
         - `/diagnostics` *(diagnostic_msgs/DiagnosticArray)*: ROS diagnostics
         - `/gpgga` *(novatel_gps_msgs/Gpgga)*: [GPGGA](http://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm) logs

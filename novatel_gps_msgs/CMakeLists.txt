@@ -15,6 +15,7 @@ add_service_files(
 )
 
 add_message_files(DIRECTORY msg FILES
+  ClockSteering.msg
   Gpgga.msg
   Gpgsa.msg
   Gpgsv.msg

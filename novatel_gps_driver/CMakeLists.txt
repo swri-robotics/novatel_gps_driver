@@ -53,6 +53,7 @@ add_library(${PROJECT_NAME}
   src/parsers/bestutm.cpp
   src/parsers/bestvel.cpp
   src/parsers/corrimudata.cpp
+  src/parsers/clocksteering.cpp
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
   src/parsers/gpgsv.cpp

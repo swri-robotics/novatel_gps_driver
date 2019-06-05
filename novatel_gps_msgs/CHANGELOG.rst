@@ -2,6 +2,11 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.8.0 (2019-06-04)
+------------------
+* Add clocksteering parsing (`#40 <https://github.com/swri-robotics/novatel_gps_driver/issues/40>`_)
+* Contributors: Matthew
+
 3.7.0 (2019-03-22)
 ------------------
 

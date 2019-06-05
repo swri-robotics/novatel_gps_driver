@@ -2,6 +2,13 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.8.0 (2019-06-04)
+------------------
+* Add fix for messages build order (`#41 <https://github.com/swri-robotics/novatel_gps_driver/issues/41>`_)
+* Add clocksteering parsing (`#40 <https://github.com/swri-robotics/novatel_gps_driver/issues/40>`_)
+* Only unlogall for the current port (`#36 <https://github.com/swri-robotics/novatel_gps_driver/issues/36>`_)
+* Contributors: Matthew, P. J. Reed
+
 3.7.0 (2019-03-22)
 ------------------
 * Added IMU: Honeywell HG4930 AN01 (`#31 <https://github.com/swri-robotics/novatel_gps_driver/issues/31>`_)

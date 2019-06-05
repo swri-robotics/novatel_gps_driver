@@ -62,6 +62,7 @@
 #include <novatel_gps_driver/parsers/bestpos.h>
 #include <novatel_gps_driver/parsers/bestutm.h>
 #include <novatel_gps_driver/parsers/bestvel.h>
+#include <novatel_gps_driver/parsers/clocksteering.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
@@ -226,6 +227,12 @@ namespace novatel_gps_driver
        * @param[out] trackstat_msgs New TRACKSTAT messages.
        */
       void GetTrackstatMessages(std::vector<novatel_gps_msgs::TrackstatPtr>& trackstat_msgs);
+      /**
+       * @brief Provides any CLOCKSTEERING messages that have been received since the
+       * last time this was called.
+       * @param[out] clocksteering_msgs New CLOCKSTEERING messages.
+       */
+      void GetClockSteeringMessages(std::vector<novatel_gps_msgs::ClockSteeringPtr>& clocksteering_msgs);
 
       /**
        * @return true if we are connected to a NovAtel device, false otherwise.
@@ -427,6 +434,7 @@ namespace novatel_gps_driver
       BestposParser bestpos_parser_;
       BestutmParser bestutm_parser_;
       BestvelParser bestvel_parser_;
+      ClockSteeringParser clocksteering_parser_;
       CorrImuDataParser corrimudata_parser_;
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
@@ -440,6 +448,7 @@ namespace novatel_gps_driver
       TrackstatParser trackstat_parser_;
 
       // Message buffers
+      boost::circular_buffer<novatel_gps_msgs::ClockSteeringPtr> clocksteering_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
