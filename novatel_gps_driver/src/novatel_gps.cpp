@@ -65,6 +65,7 @@ namespace novatel_gps_driver
       inspva_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
+      novatel_xyz_positions_(MAX_BUFFER_SIZE),
       novatel_utm_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
       position_sync_buffer_(SYNC_BUFFER_SIZE),
@@ -293,6 +294,13 @@ namespace novatel_gps_driver
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
+  }
+
+  void NovatelGps::GetNovatelXYZPositions(std::vector<novatel_gps_msgs::NovatelXYZPtr>& positions)
+  {
+    positions.clear();
+    positions.insert(positions.end(), novatel_xyz_positions_.begin(), novatel_xyz_positions_.end());
+    novatel_xyz_positions_.clear();
   }
 
   void NovatelGps::GetNovatelUtmPositions(std::vector<novatel_gps_msgs::NovatelUtmPositionPtr>& utm_positions)
@@ -1016,6 +1024,13 @@ namespace novatel_gps_driver
         position_sync_buffer_.push_back(position);
         break;
       }
+      case BestxyzParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelXYZPtr xyz_position = bestxyz_parser_.ParseBinary(msg);
+        xyz_position->header.stamp = stamp;
+        novatel_xyz_positions_.push_back(xyz_position);
+        break;
+      }
       case BestutmParser::MESSAGE_ID:
       {
         novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseBinary(msg);
@@ -1184,6 +1199,12 @@ namespace novatel_gps_driver
       position->header.stamp = stamp;
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
+    }
+    if (sentence.id == "BESTXYZ")
+    {
+      novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
+      position->header.stamp = stamp;
+      novatel_xyz_positions_.push_back(position);
     }
     if (sentence.id == "BESTUTMA")
     {

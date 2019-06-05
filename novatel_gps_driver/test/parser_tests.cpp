@@ -30,6 +30,7 @@
 #include <novatel_gps_driver/parsers/bestpos.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/novatel_message_extractor.h>
+#include <novatel_gps_driver/parsers/bestxyz.h>
 
 #include <gtest/gtest.h>
 #include <novatel_gps_driver/parsers/inspva.h>
@@ -289,6 +290,65 @@ TEST(ParserTestSuite, testInsstdevAsciiParsing)
   ASSERT_FLOAT_EQ(3.7534, msg->pitch_dev);
   ASSERT_FLOAT_EQ(5.1857, msg->azimuth_dev);
   ASSERT_EQ(26000005, msg->extended_solution_status.original_mask);
+}
+
+TEST(ParserTestSuite, testBestxyzAsciiParsing)
+{
+  novatel_gps_driver::BestxyzParser parser;
+  std::string bestxyz_str = "#BESTXYZA,COM1,0,55.0,FINESTEERING,1419,340033.000,02000040,d821,2724;"
+  "SOL_COMPUTED,NARROW_INT,-1634531.5683,-3664618.0326,4942496.3270,0.0099,"
+  "0.0219,0.0115,SOL_COMPUTED,NARROW_INT,0.0011,-0.0049,-0.0001,0.0199,0.0439,"
+  "0.0230,\"AAAA\",0.250,1.000,0.000,12,11,11,11,0,01,0,33*1fe2f509\r\n";
+
+  std::string extracted_str;
+
+  novatel_gps_driver::NovatelMessageExtractor extractor;
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(bestxyz_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(0, nmea_sentences.size());
+  ASSERT_EQ(0, binary_messages.size());
+  ASSERT_EQ(1, novatel_sentences.size());
+
+  novatel_gps_driver::NovatelSentence sentence = novatel_sentences.front();
+
+  ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
+
+  novatel_gps_msgs::NovatelXYZPtr msg = parser.ParseAscii(sentence);
+
+  ASSERT_NE(msg.get(), nullptr);
+
+  ASSERT_EQ("SOL_COMPUTED", msg->solution_status);
+  ASSERT_EQ("NARROW_INT", msg->position_type);
+  ASSERT_DOUBLE_EQ(-1634531.5683, msg->x);
+  ASSERT_DOUBLE_EQ(-3664618.0326, msg->y);
+  ASSERT_DOUBLE_EQ(4942496.3270, msg->z);
+  ASSERT_FLOAT_EQ(0.0099, msg->x_sigma);
+  ASSERT_FLOAT_EQ(0.0219, msg->y_sigma);
+  ASSERT_FLOAT_EQ(0.0115, msg->z_sigma);
+  ASSERT_EQ("SOL_COMPUTED", msg->velocity_solution_status);
+  ASSERT_EQ("NARROW_INT", msg->velocity_type);
+  ASSERT_DOUBLE_EQ(0.0011, msg->x_vel);
+  ASSERT_DOUBLE_EQ(-0.0049, msg->y_vel);
+  ASSERT_DOUBLE_EQ(-0.0001, msg->z_vel);
+  ASSERT_FLOAT_EQ(0.0199, msg->x_vel_sigma);
+  ASSERT_FLOAT_EQ(0.0439, msg->y_vel_sigma);
+  ASSERT_FLOAT_EQ(0.0230, msg->z_vel_sigma);
+  ASSERT_EQ("\"AAAA\"", msg->base_station_id);
+  ASSERT_FLOAT_EQ(0.250, msg->velocity_latency);
+  ASSERT_FLOAT_EQ(1.000, msg->diff_age);
+  ASSERT_FLOAT_EQ(0.000, msg->solution_age);
+  ASSERT_EQ(12, msg->num_satellites_tracked);
+  ASSERT_EQ(11, msg->num_satellites_used_in_solution);
+  ASSERT_EQ(11, msg->num_gps_and_glonass_l1_used_in_solution);
+  ASSERT_EQ(11, msg->num_gps_and_glonass_l1_and_l2_used_in_solution);
+  ASSERT_EQ(1, msg->extended_solution_status.original_mask);
 }
 
 int main(int argc, char **argv)
