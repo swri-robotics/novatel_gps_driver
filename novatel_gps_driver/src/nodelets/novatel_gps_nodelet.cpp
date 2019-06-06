@@ -321,7 +321,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-        novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading", 100);
+        novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
       }
 
       if (publish_range_messages_)
