@@ -174,10 +174,10 @@ namespace novatel_gps_driver
   }
 
   uint8_t Heading2Parser::SolutionSourceToMsgEnum(uint8_t source_mask) throw(ParseException) {
-    uint8_t source_bits = source_mask & 0x00001100;
-    if (source_mask == 0x0000) {
+    uint8_t source_bits = source_mask & 0b00001100;
+    if (source_mask == 0b0000) {
       return novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
-    } else if (source_mask == 0x0100) {
+    } else if (source_mask == 0b0100) {
       return novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
     } else {
       throw ParseException("HEADING2 Solution Source could not be parsed due to unknown source");
