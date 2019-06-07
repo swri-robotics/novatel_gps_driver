@@ -52,6 +52,7 @@ add_library(${PROJECT_NAME}
   src/parsers/bestpos.cpp
   src/parsers/bestutm.cpp
   src/parsers/bestvel.cpp
+  src/parsers/bestxyz.cpp
   src/parsers/corrimudata.cpp
   src/parsers/clocksteering.cpp
   src/parsers/gpgga.cpp

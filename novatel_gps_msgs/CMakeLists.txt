@@ -32,6 +32,7 @@ add_message_files(DIRECTORY msg FILES
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg
   NovatelVelocity.msg
+  NovatelXYZ.msg
   RangeInformation.msg
   Range.msg
   Satellite.msg
