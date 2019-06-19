@@ -30,7 +30,7 @@ uint8 num_satellites_used_in_solution
 uint8 num_satellites_above_elevation_mask_angle
 uint8 num_satellites_above_elevation_mask_angle_l2
 
-# Enum for solution source #TODO
+# Enum for solution source
 uint8 solution_source
 
 uint8 SOURCE_PRIMARY_ANTENNA=0

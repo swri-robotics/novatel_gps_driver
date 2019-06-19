@@ -1228,13 +1228,13 @@ namespace novatel_gps_driver
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
     }
-    if (sentence.id == "BESTXYZ")
+    else if (sentence.id == "BESTXYZ")
     {
       novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
       novatel_xyz_positions_.push_back(position);
     }
-    if (sentence.id == "BESTUTMA")
+    else if (sentence.id == "BESTUTMA")
     {
       novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseAscii(sentence);
       utm_position->header.stamp = stamp;
@@ -1246,13 +1246,13 @@ namespace novatel_gps_driver
       velocity->header.stamp = stamp;
       novatel_velocities_.push_back(velocity);
     }
-    if (sentence.id == "HEADING2")
+    else if (sentence.id == "HEADING2")
     {
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
     }
-    if (sentence.id == "DUALANTENNAHEADING")
+    else if (sentence.id == "DUALANTENNAHEADING")
     {
       novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
