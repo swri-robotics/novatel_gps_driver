@@ -31,6 +31,7 @@
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/novatel_message_extractor.h>
 #include <novatel_gps_driver/parsers/bestxyz.h>
+#include <novatel_gps_driver/parsers/heading2.h>
 
 #include <gtest/gtest.h>
 #include <novatel_gps_driver/parsers/inspva.h>
@@ -348,6 +349,54 @@ TEST(ParserTestSuite, testBestxyzAsciiParsing)
   ASSERT_EQ(11, msg->num_satellites_used_in_solution);
   ASSERT_EQ(11, msg->num_gps_and_glonass_l1_used_in_solution);
   ASSERT_EQ(11, msg->num_gps_and_glonass_l1_and_l2_used_in_solution);
+  ASSERT_EQ(1, msg->extended_solution_status.original_mask);
+}
+
+TEST(ParserTestSuite, testHeading2AsciiParsing)
+{
+  novatel_gps_driver::Heading2Parser parser;
+  std::string heading2_str = "#HEADING2A,COM1,0,39.5,FINESTEERING,1622,422892.200,02040000,f9bf,6521;"
+  "SOL_COMPUTED,NARROW_INT,0.927607417,178.347869873,-1.3037414550,0,0.261901051,0.391376048,"
+  "\"R222\",\"AAAA\",18,17,17,16,0,01,0,33*8c48d77c\r\n";
+
+  std::string extracted_str;
+
+  novatel_gps_driver::NovatelMessageExtractor extractor;
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(heading2_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(0, nmea_sentences.size());
+  ASSERT_EQ(0, binary_messages.size());
+  ASSERT_EQ(1, novatel_sentences.size());
+
+  novatel_gps_driver::NovatelSentence sentence = novatel_sentences.front();
+
+  ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
+
+  novatel_gps_msgs::NovatelHeading2Ptr msg = parser.ParseAscii(sentence);
+
+  ASSERT_NE(msg.get(), nullptr);
+
+  ASSERT_EQ("SOL_COMPUTED", msg->solution_status);
+  ASSERT_EQ("NARROW_INT", msg->position_type);
+  ASSERT_FLOAT_EQ(0.927607417, msg->baseline_length);
+  ASSERT_FLOAT_EQ(178.347869873, msg->heading);
+  ASSERT_FLOAT_EQ(-1.3037414550, msg->pitch);
+  ASSERT_FLOAT_EQ(0.261901051, msg->heading_sigma);
+  ASSERT_FLOAT_EQ(0.391376048, msg->pitch_sigma);
+  ASSERT_EQ("\"R222\"", msg->rover_station_id);
+  ASSERT_EQ("\"AAAA\"", msg->master_station_id);
+  ASSERT_EQ(18, msg->num_satellites_tracked);
+  ASSERT_EQ(17, msg->num_satellites_used_in_solution);
+  ASSERT_EQ(17, msg->num_satellites_above_elevation_mask_angle);
+  ASSERT_EQ(16, msg->num_satellites_above_elevation_mask_angle_l2);
+  ASSERT_EQ(0, msg->solution_source);
   ASSERT_EQ(1, msg->extended_solution_status.original_mask);
 }
 
