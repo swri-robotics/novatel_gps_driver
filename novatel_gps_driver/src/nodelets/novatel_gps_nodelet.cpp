@@ -404,6 +404,7 @@ namespace novatel_gps_driver
       {  // Set driver type
           status_.gnss=true;
           status_.imu=true;
+          status_.name = ros::this_node::getName();
 
           time_difference_=ros::Time::now()-last_update_time_;
 
