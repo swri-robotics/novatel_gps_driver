@@ -52,6 +52,7 @@ namespace novatel_gps_driver
       serial_baud_(115200),
       tcp_socket_(io_service_),
       pcap_(NULL),
+      clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(SYNC_BUFFER_SIZE),
@@ -63,7 +64,9 @@ namespace novatel_gps_driver
       inscov_msgs_(MAX_BUFFER_SIZE),
       inspva_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
+      heading2_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
+      novatel_xyz_positions_(MAX_BUFFER_SIZE),
       novatel_utm_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
       position_sync_buffer_(SYNC_BUFFER_SIZE),
@@ -294,6 +297,13 @@ namespace novatel_gps_driver
     novatel_positions_.clear();
   }
 
+  void NovatelGps::GetNovatelXYZPositions(std::vector<novatel_gps_msgs::NovatelXYZPtr>& positions)
+  {
+    positions.clear();
+    positions.insert(positions.end(), novatel_xyz_positions_.begin(), novatel_xyz_positions_.end());
+    novatel_xyz_positions_.clear();
+  }
+
   void NovatelGps::GetNovatelUtmPositions(std::vector<novatel_gps_msgs::NovatelUtmPositionPtr>& utm_positions)
   {
     utm_positions.clear();
@@ -448,6 +458,12 @@ namespace novatel_gps_driver
     }  // while (gpgga and gprmc buffers contain messages)
   }
 
+  void  NovatelGps::GetNovatelHeading2Messages(std::vector<novatel_gps_msgs::NovatelHeading2Ptr>& headings) {
+    headings.clear();
+    headings.insert(headings.end(), heading2_msgs_.begin(), heading2_msgs_.end());
+    heading2_msgs_.clear();
+  }
+
   void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages)
   {
     imu_messages.clear();
@@ -523,6 +539,13 @@ namespace novatel_gps_driver
     trackstat_msgs.resize(trackstat_msgs_.size());
     std::copy(trackstat_msgs_.begin(), trackstat_msgs_.end(), trackstat_msgs.begin());
     trackstat_msgs_.clear();
+  }
+
+  void NovatelGps::GetClockSteeringMessages(std::vector<novatel_gps_msgs::ClockSteeringPtr>& clocksteering_msgs)
+  {
+    clocksteering_msgs.resize(clocksteering_msgs_.size());
+    std::copy(clocksteering_msgs_.begin(), clocksteering_msgs_.end(), clocksteering_msgs.begin());
+    clocksteering_msgs_.clear();
   }
 
   bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
@@ -1008,6 +1031,13 @@ namespace novatel_gps_driver
         position_sync_buffer_.push_back(position);
         break;
       }
+      case BestxyzParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelXYZPtr xyz_position = bestxyz_parser_.ParseBinary(msg);
+        xyz_position->header.stamp = stamp;
+        novatel_xyz_positions_.push_back(xyz_position);
+        break;
+      }
       case BestutmParser::MESSAGE_ID:
       {
         novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseBinary(msg);
@@ -1020,6 +1050,13 @@ namespace novatel_gps_driver
         novatel_gps_msgs::NovatelVelocityPtr velocity = bestvel_parser_.ParseBinary(msg);
         velocity->header.stamp = stamp;
         novatel_velocities_.push_back(velocity);
+        break;
+      }
+      case Heading2Parser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+        heading->header.stamp = stamp;
+        heading2_msgs_.push_back(heading);
         break;
       }
       case CorrImuDataParser::MESSAGE_ID:
@@ -1177,7 +1214,13 @@ namespace novatel_gps_driver
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
     }
-    if (sentence.id == "BESTUTMA")
+    else if (sentence.id == "BESTXYZ")
+    {
+      novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
+      position->header.stamp = stamp;
+      novatel_xyz_positions_.push_back(position);
+    }
+    else if (sentence.id == "BESTUTMA")
     {
       novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseAscii(sentence);
       utm_position->header.stamp = stamp;
@@ -1188,6 +1231,12 @@ namespace novatel_gps_driver
       novatel_gps_msgs::NovatelVelocityPtr velocity = bestvel_parser_.ParseAscii(sentence);
       velocity->header.stamp = stamp;
       novatel_velocities_.push_back(velocity);
+    }
+    else if (sentence.id == "HEADING2")
+    {
+      novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
+      heading->header.stamp = stamp;
+      heading2_msgs_.push_back(heading);
     }
     else if (sentence.id == "CORRIMUDATAA")
     {
@@ -1300,6 +1349,11 @@ namespace novatel_gps_driver
         ROS_ERROR("Unknown IMU Type Received: %s", id.c_str());
       }
     }
+    else if (sentence.id == "CLOCKSTEERINGA")
+    {
+      novatel_gps_msgs::ClockSteeringPtr clocksteering = clocksteering_parser_.ParseAscii(sentence);
+      clocksteering_msgs_.push_back(clocksteering);
+    }
 
     return READ_SUCCESS;
   }
@@ -1357,7 +1411,7 @@ namespace novatel_gps_driver
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
-    configured = configured && Write("unlogall\r\n");
+    configured = configured && Write("unlogall THISPORT_ALL\r\n");
 
     if (apply_vehicle_body_rotation_)
     {

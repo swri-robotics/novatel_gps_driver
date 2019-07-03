@@ -52,12 +52,15 @@ add_library(${PROJECT_NAME}
   src/parsers/bestpos.cpp
   src/parsers/bestutm.cpp
   src/parsers/bestvel.cpp
+  src/parsers/bestxyz.cpp
   src/parsers/corrimudata.cpp
+  src/parsers/clocksteering.cpp
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
   src/parsers/gpgsv.cpp
   src/parsers/gprmc.cpp
   src/parsers/header.cpp
+  src/parsers/heading2.cpp
   src/parsers/inscov.cpp
   src/parsers/inspva.cpp
   src/parsers/inspvax.cpp
@@ -67,6 +70,9 @@ add_library(${PROJECT_NAME}
   src/parsers/time.cpp
   src/parsers/trackstat.cpp
 )
+
+add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
+
 target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${Boost_LIBRARIES}

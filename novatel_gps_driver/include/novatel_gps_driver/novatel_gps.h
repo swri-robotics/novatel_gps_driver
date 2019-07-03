@@ -51,6 +51,7 @@
 #include <novatel_gps_msgs/Insstdev.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
+#include <novatel_gps_msgs/NovatelXYZ.h>
 #include <novatel_gps_msgs/NovatelUtmPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
 #include <novatel_gps_msgs/Range.h>
@@ -60,13 +61,16 @@
 #include <novatel_gps_driver/novatel_message_extractor.h>
 
 #include <novatel_gps_driver/parsers/bestpos.h>
+#include <novatel_gps_driver/parsers/bestxyz.h>
 #include <novatel_gps_driver/parsers/bestutm.h>
 #include <novatel_gps_driver/parsers/bestvel.h>
+#include <novatel_gps_driver/parsers/clocksteering.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
+#include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/inspva.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
@@ -161,6 +165,12 @@ namespace novatel_gps_driver
        */
       void GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages);
       /**
+       * @brief Provides any HEADING2 messages that have been received since the
+       * last time this was called.
+       * @param[out] headings New HEADING2 messages.
+       */
+      void GetNovatelHeading2Messages(std::vector<novatel_gps_msgs::NovatelHeading2Ptr>& headings);
+      /**
        * @brief Provides any Imu messages that have been generated since the
        * last time this was called.
        * @param[out] imu_message New Imu messages.
@@ -197,6 +207,12 @@ namespace novatel_gps_driver
        */
       void GetNovatelPositions(std::vector<novatel_gps_msgs::NovatelPositionPtr>& positions);
       /**
+       * @brief Provides any BESTXYZ messages that have been received since the
+       * last time this was called.
+       * @param[out] positions New BESTXYZ messages.
+       */
+      void GetNovatelXYZPositions(std::vector<novatel_gps_msgs::NovatelXYZPtr>& positions);
+      /**
        * @brief Provides any BESTUTM messages that have been received since the
        * last time this was called.
        * @param[out] positions New BESTUTM messages.
@@ -226,6 +242,12 @@ namespace novatel_gps_driver
        * @param[out] trackstat_msgs New TRACKSTAT messages.
        */
       void GetTrackstatMessages(std::vector<novatel_gps_msgs::TrackstatPtr>& trackstat_msgs);
+      /**
+       * @brief Provides any CLOCKSTEERING messages that have been received since the
+       * last time this was called.
+       * @param[out] clocksteering_msgs New CLOCKSTEERING messages.
+       */
+      void GetClockSteeringMessages(std::vector<novatel_gps_msgs::ClockSteeringPtr>& clocksteering_msgs);
 
       /**
        * @return true if we are connected to a NovAtel device, false otherwise.
@@ -425,8 +447,11 @@ namespace novatel_gps_driver
 
       // Message parsers
       BestposParser bestpos_parser_;
+      BestxyzParser bestxyz_parser_;
       BestutmParser bestutm_parser_;
       BestvelParser bestvel_parser_;
+      Heading2Parser heading2_parser_;
+      ClockSteeringParser clocksteering_parser_;
       CorrImuDataParser corrimudata_parser_;
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
@@ -440,6 +465,7 @@ namespace novatel_gps_driver
       TrackstatParser trackstat_parser_;
 
       // Message buffers
+      boost::circular_buffer<novatel_gps_msgs::ClockSteeringPtr> clocksteering_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
@@ -452,9 +478,11 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::InspvaPtr> inspva_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InsstdevPtr> insstdev_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> novatel_positions_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelXYZPtr> novatel_xyz_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelUtmPositionPtr> novatel_utm_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> position_sync_buffer_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TimePtr> time_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TrackstatPtr> trackstat_msgs_;

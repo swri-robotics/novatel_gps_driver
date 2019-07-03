@@ -94,6 +94,8 @@
  *    requested from the GPS. (Does not affect time messages) [0.05]
  * \e publish_diagnostics <tt>bool</tt> - If set true, the driver publishes
  *    ROS diagnostics [true]
+ * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
+ *    Novatel ClockSteering messages [false]
  * \e publish_imu_messages <tt>boot</tt> - If set true, the driver publishes
  *    Novatel CorrImuData, InsPva, InsStdev, and sensor_msgs/Imu messages [false]
  * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
@@ -147,6 +149,7 @@
 #include <novatel_gps_msgs/NovatelPosition.h>
 #include <novatel_gps_msgs/NovatelUtmPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
+#include <novatel_gps_msgs/NovatelHeading2.h>
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Range.h>
@@ -178,8 +181,10 @@ namespace novatel_gps_driver
       imu_sample_rate_(-1),
       publish_imu_messages_(false),
       publish_novatel_positions_(false),
+      publish_novatel_xyz_positions_(false),
       publish_novatel_utm_positions_(false),
       publish_novatel_velocity_(false),
+      publish_novatel_heading2_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
@@ -223,12 +228,15 @@ namespace novatel_gps_driver
       swri::param(priv, "device", device_, device_);
       swri::param(priv, "imu_rate", imu_rate_, imu_rate_);
       swri::param(priv, "imu_sample_rate", imu_sample_rate_, imu_sample_rate_);
+      swri::param(priv, "publish_clocksteering", publish_clock_steering_, false);
       swri::param(priv, "publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
       swri::param(priv, "publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
       swri::param(priv, "publish_imu_messages", publish_imu_messages_, publish_imu_messages_);
       swri::param(priv, "publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
+      swri::param(priv, "publish_novatel_xyz_positions", publish_novatel_xyz_positions_, publish_novatel_xyz_positions_);
       swri::param(priv, "publish_novatel_utm_positions", publish_novatel_utm_positions_, publish_novatel_utm_positions_);
       swri::param(priv, "publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
+      swri::param(priv, "publish_novatel_heading2", publish_novatel_heading2_, publish_novatel_heading2_);
       swri::param(priv, "publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv, "publish_range_messages", publish_range_messages_, publish_range_messages_);
       swri::param(priv, "publish_time_messages", publish_time_messages_, publish_time_messages_);
@@ -261,6 +269,11 @@ namespace novatel_gps_driver
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
 
+      if (publish_clock_steering_)
+      {
+        clocksteering_pub_ = swri::advertise<novatel_gps_msgs::ClockSteering>(node, "clocksteering", 100);
+      }
+
       if (publish_nmea_messages_)
       {
         gpgga_pub_ = swri::advertise<novatel_gps_msgs::Gpgga>(node,"gpgga", 100);
@@ -291,6 +304,11 @@ namespace novatel_gps_driver
         novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
       }
 
+      if (publish_novatel_xyz_positions_)
+      { 
+        novatel_xyz_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelXYZ>(node, "bestxyz", 100);
+      }
+
       if (publish_novatel_utm_positions_)
       { 
         novatel_utm_pub_ = swri::advertise<novatel_gps_msgs::NovatelUtmPosition>(node, "bestutm", 100);
@@ -299,6 +317,11 @@ namespace novatel_gps_driver
       if (publish_novatel_velocity_)
       {
         novatel_velocity_pub_ = swri::advertise<novatel_gps_msgs::NovatelVelocity>(node, "bestvel", 100);
+      }
+
+      if (publish_novatel_heading2_)
+      {
+        novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
       }
 
       if (publish_range_messages_)
@@ -378,10 +401,17 @@ namespace novatel_gps_driver
       opts["gprmc"] = polling_period_;
       opts["bestpos" + format_suffix] = polling_period_;  // Best position
       opts["time" + format_suffix] = 1.0;  // Time
-
+      if (publish_novatel_xyz_positions_)
+      {
+        opts["bestxyz" + format_suffix] = polling_period_;
+      }
       if (publish_novatel_utm_positions_)
       {
         opts["bestutm" + format_suffix] = polling_period_;
+      }
+      if (publish_novatel_heading2_)
+      {
+        opts["heading2" + format_suffix] = polling_period_;
       }
       if (publish_gpgsa_)
       {
@@ -390,6 +420,10 @@ namespace novatel_gps_driver
       if (publish_gpgsv_)
       {
         opts["gpgsv"] = 1.0;
+      }
+      if (publish_clock_steering_)
+      {
+        opts["clocksteering" + format_suffix] = 1.0;
       }
       if (publish_imu_messages_)
       {
@@ -509,10 +543,13 @@ namespace novatel_gps_driver
     /// How frequently the device samples the IMU, in Hz
     double imu_sample_rate_;
     bool span_frame_to_ros_frame_;
+    bool publish_clock_steering_;
     bool publish_imu_messages_;
     bool publish_novatel_positions_;
+    bool publish_novatel_xyz_positions_;
     bool publish_novatel_utm_positions_;
     bool publish_novatel_velocity_;
+    bool publish_novatel_heading2_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
@@ -522,6 +559,7 @@ namespace novatel_gps_driver
     double reconnect_delay_s_;
     bool use_binary_messages_;
 
+    ros::Publisher clocksteering_pub_;
     ros::Publisher fix_pub_;
     ros::Publisher gps_pub_;
     ros::Publisher imu_pub_;
@@ -530,8 +568,10 @@ namespace novatel_gps_driver
     ros::Publisher insstdev_pub_;
     ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
+    ros::Publisher novatel_xyz_position_pub_;
     ros::Publisher novatel_utm_pub_;
     ros::Publisher novatel_velocity_pub_;
+    ros::Publisher novatel_heading2_pub_;
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsv_pub_;
     ros::Publisher gpgsa_pub_;
@@ -617,7 +657,9 @@ namespace novatel_gps_driver
     void CheckDeviceForData()
     {
       std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
+      std::vector<novatel_gps_msgs::NovatelXYZPtr> xyz_position_msgs;
       std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
+      std::vector<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
@@ -659,8 +701,10 @@ namespace novatel_gps_driver
       gps_.GetGpggaMessages(gpgga_msgs);
       gps_.GetGprmcMessages(gprmc_msgs);
       gps_.GetNovatelPositions(position_msgs);
+      gps_.GetNovatelXYZPositions(xyz_position_msgs);
       gps_.GetNovatelUtmPositions(utm_msgs);
       gps_.GetFixMessages(fix_msgs);
+      gps_.GetNovatelHeading2Messages(heading2_msgs);
 
       // Increment the measurement count by the number of messages we just
       // read
@@ -755,6 +799,16 @@ namespace novatel_gps_driver
         }
       }
 
+      if (publish_novatel_xyz_positions_)
+      {
+        for (const auto& msg : xyz_position_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = frame_id_;
+          novatel_xyz_position_pub_.publish(msg);
+        }
+      }
+
       if (publish_novatel_utm_positions_)
       {
         for (const auto& msg : utm_msgs)
@@ -762,6 +816,26 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
           novatel_utm_pub_.publish(msg);
+        }
+      }
+
+      if (publish_novatel_heading2_)
+      {
+        for (const auto& msg : heading2_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = frame_id_;
+          novatel_heading2_pub_.publish(msg);
+        }
+      }
+
+      if (publish_clock_steering_)
+      {
+        std::vector<novatel_gps_msgs::ClockSteeringPtr> msgs;
+        gps_.GetClockSteeringMessages(msgs);
+        for (const auto& msg : msgs)
+        {
+          clocksteering_pub_.publish(msg);
         }
       }
 
