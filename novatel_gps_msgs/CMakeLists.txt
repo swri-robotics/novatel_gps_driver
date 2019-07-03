@@ -26,6 +26,7 @@ add_message_files(DIRECTORY msg FILES
   Insstdev.msg
   NovatelCorrectedImuData.msg
   NovatelExtendedSolutionStatus.msg
+  NovatelHeading2.msg
   NovatelMessageHeader.msg
   NovatelPosition.msg
   NovatelUtmPosition.msg
