@@ -35,6 +35,7 @@
     <param name="polling_period" value="$(arg polling_period)" />
     <param name="frame_id" value="$(arg frame_id)" />
     <param name="imu_frame_id" value="$(arg imu_frame_id)" />
+    <remap from="dual_antenna_heading" to="gnss/dual_antenna_heading"/>
     <rosparam>
       connection_type: tcp
       imu_sample_rate: -1
