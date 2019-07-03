@@ -65,7 +65,6 @@ namespace novatel_gps_driver
       inspva_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
       heading2_msgs_(MAX_BUFFER_SIZE),
-      dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
       novatel_xyz_positions_(MAX_BUFFER_SIZE),
       novatel_utm_positions_(MAX_BUFFER_SIZE),
@@ -463,12 +462,6 @@ namespace novatel_gps_driver
     headings.clear();
     headings.insert(headings.end(), heading2_msgs_.begin(), heading2_msgs_.end());
     heading2_msgs_.clear();
-  }
-
-  void  NovatelGps::GetNovatelDualAntennaHeadingMessages(std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr>& headings) {
-    headings.clear();
-    headings.insert(headings.end(), dual_antenna_heading_msgs_.begin(), dual_antenna_heading_msgs_.end());
-    dual_antenna_heading_msgs_.clear();
   }
 
   void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages)
@@ -1066,13 +1059,6 @@ namespace novatel_gps_driver
         heading2_msgs_.push_back(heading);
         break;
       }
-      case DualAntennaHeadingParser::MESSAGE_ID:
-      {
-        novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseBinary(msg);
-        heading->header.stamp = stamp;
-        dual_antenna_heading_msgs_.push_back(heading);
-        break;
-      }
       case CorrImuDataParser::MESSAGE_ID:
       {
         novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseBinary(msg);
@@ -1251,12 +1237,6 @@ namespace novatel_gps_driver
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
-    }
-    else if (sentence.id == "DUALANTENNAHEADING")
-    {
-      novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
-      heading->header.stamp = stamp;
-      dual_antenna_heading_msgs_.push_back(heading);
     }
     else if (sentence.id == "CORRIMUDATAA")
     {

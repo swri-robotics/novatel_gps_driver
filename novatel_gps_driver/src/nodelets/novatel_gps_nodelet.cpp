@@ -150,7 +150,6 @@
 #include <novatel_gps_msgs/NovatelUtmPosition.h>
 #include <novatel_gps_msgs/NovatelVelocity.h>
 #include <novatel_gps_msgs/NovatelHeading2.h>
-#include <novatel_gps_msgs/NovatelDualAntennaHeading.h>
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Range.h>
@@ -196,7 +195,6 @@ namespace novatel_gps_driver
       publish_novatel_utm_positions_(false),
       publish_novatel_velocity_(false),
       publish_novatel_heading2_(false),
-      publish_novatel_dual_antenna_heading_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
@@ -249,7 +247,6 @@ namespace novatel_gps_driver
       swri::param(priv, "publish_novatel_utm_positions", publish_novatel_utm_positions_, publish_novatel_utm_positions_);
       swri::param(priv, "publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
       swri::param(priv, "publish_novatel_heading2", publish_novatel_heading2_, publish_novatel_heading2_);
-      swri::param(priv, "publish_novatel_dual_antenna_heading", publish_novatel_dual_antenna_heading_, publish_novatel_dual_antenna_heading_);
       swri::param(priv, "publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
       swri::param(priv, "publish_range_messages", publish_range_messages_, publish_range_messages_);
       swri::param(priv, "publish_time_messages", publish_time_messages_, publish_time_messages_);
@@ -340,11 +337,6 @@ namespace novatel_gps_driver
       if (publish_novatel_heading2_)
       {
         novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
-      }
-
-      if (publish_novatel_dual_antenna_heading_)
-      {
-        novatel_dual_antenna_heading_pub_ = swri::advertise<novatel_gps_msgs::NovatelDualAntennaHeading>(node, "dual_antenna_heading", 100);
       }
 
       if (publish_range_messages_)
@@ -493,10 +485,6 @@ namespace novatel_gps_driver
       {
         opts["heading2" + format_suffix] = polling_period_;
       }
-      if (publish_novatel_dual_antenna_heading_)
-      {
-        opts["dual_antenna_heading" + format_suffix] = polling_period_;
-      }
       if (publish_gpgsa_)
       {
         opts["gpgsa"] = polling_period_;
@@ -638,7 +626,6 @@ namespace novatel_gps_driver
     bool publish_novatel_utm_positions_;
     bool publish_novatel_velocity_;
     bool publish_novatel_heading2_;
-    bool publish_novatel_dual_antenna_heading_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
@@ -661,7 +648,6 @@ namespace novatel_gps_driver
     ros::Publisher novatel_utm_pub_;
     ros::Publisher novatel_velocity_pub_;
     ros::Publisher novatel_heading2_pub_;
-    ros::Publisher novatel_dual_antenna_heading_pub_;
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsv_pub_;
     ros::Publisher gpgsa_pub_;
@@ -752,7 +738,6 @@ namespace novatel_gps_driver
       std::vector<novatel_gps_msgs::NovatelXYZPtr> xyz_position_msgs;
       std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
       std::vector<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs;
-      std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
@@ -801,7 +786,6 @@ namespace novatel_gps_driver
       gps_.GetNovatelUtmPositions(utm_msgs);
       gps_.GetFixMessages(fix_msgs);
       gps_.GetNovatelHeading2Messages(heading2_msgs);
-      gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
 
       // Increment the measurement count by the number of messages we just
       // read
@@ -924,16 +908,6 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
           novatel_heading2_pub_.publish(msg);
-        }
-      }
-
-      if (publish_novatel_dual_antenna_heading_)
-      {
-        for (const auto& msg : dual_antenna_heading_msgs)
-        {
-          msg->header.stamp += sync_offset;
-          msg->header.frame_id = frame_id_;
-          novatel_dual_antenna_heading_pub_.publish(msg);
         }
       }
 
