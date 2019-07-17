@@ -32,6 +32,7 @@
 #include <novatel_gps_driver/novatel_message_extractor.h>
 #include <novatel_gps_driver/parsers/bestxyz.h>
 #include <novatel_gps_driver/parsers/heading2.h>
+#include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 
 #include <gtest/gtest.h>
 #include <novatel_gps_driver/parsers/inspva.h>
@@ -397,6 +398,53 @@ TEST(ParserTestSuite, testHeading2AsciiParsing)
   ASSERT_EQ(17, msg->num_satellites_above_elevation_mask_angle);
   ASSERT_EQ(16, msg->num_satellites_above_elevation_mask_angle_l2);
   ASSERT_EQ(0, msg->solution_source);
+  ASSERT_EQ(1, msg->extended_solution_status.original_mask);
+}
+
+TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
+{
+  novatel_gps_driver::DualAntennaHeadingParser parser;
+  std::string heading_str = "#DUALANTENNAHEADINGA,UNKNOWN,0,66.5,FINESTEERING,1949,575614.000,02000000,d426,32768;"
+  "SOL_COMPUTED,NARROW_INT,-1.000000000,255.538528442,0.006041416,0.0,0.043859947,0.052394450,"
+  "\"J56X\",24,18,18,17,04,01,00,33*1f082ec5\r\n";
+
+  std::string extracted_str;
+
+  novatel_gps_driver::NovatelMessageExtractor extractor;
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(heading_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(0, nmea_sentences.size());
+  ASSERT_EQ(0, binary_messages.size());
+  ASSERT_EQ(1, novatel_sentences.size());
+
+  novatel_gps_driver::NovatelSentence sentence = novatel_sentences.front();
+
+  ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
+
+  novatel_gps_msgs::NovatelDualAntennaHeadingPtr msg = parser.ParseAscii(sentence);
+
+  ASSERT_NE(msg.get(), nullptr);
+
+  ASSERT_EQ("SOL_COMPUTED", msg->solution_status);
+  ASSERT_EQ("NARROW_INT", msg->position_type);
+  ASSERT_FLOAT_EQ(-1.000000000, msg->baseline_length);
+  ASSERT_FLOAT_EQ(255.538528442, msg->heading);
+  ASSERT_FLOAT_EQ(0.006041416, msg->pitch);
+  ASSERT_FLOAT_EQ(0.043859947, msg->heading_sigma);
+  ASSERT_FLOAT_EQ(0.052394450, msg->pitch_sigma);
+  ASSERT_EQ("\"J56X\"", msg->station_id);
+  ASSERT_EQ(24, msg->num_satellites_tracked);
+  ASSERT_EQ(18, msg->num_satellites_used_in_solution);
+  ASSERT_EQ(18, msg->num_satellites_above_elevation_mask_angle);
+  ASSERT_EQ(17, msg->num_satellites_above_elevation_mask_angle_l2);
+  ASSERT_EQ(1, msg->solution_source);
   ASSERT_EQ(1, msg->extended_solution_status.original_mask);
 }
 
