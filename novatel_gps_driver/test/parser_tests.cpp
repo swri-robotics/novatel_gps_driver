@@ -74,7 +74,12 @@ TEST(ParserTestSuite, testBestposAsciiParsing)
 
   novatel_gps_msgs::NovatelPositionPtr msg = parser.ParseAscii(sentence);
 
+
   ASSERT_NE(msg.get(), nullptr);
+
+  ASSERT_EQ(0x800, msg->novatel_msg_header.receiver_status.original_status_code);
+
+  ASSERT_EQ(true, msg->novatel_msg_header.receiver_status.usb_buffer_overrun);
 
   ASSERT_EQ("SOL_COMPUTED", msg->solution_status);
   ASSERT_DOUBLE_EQ(29.44391220792, msg->lat);
