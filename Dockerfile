@@ -14,7 +14,8 @@
 
 FROM usdotfhwastol/carma-base:2.8.3 as setup
 
-RUN sudo apt-get update && sudo apt-get install -y ros-kinetic-gps-common
+RUN sudo apt-get update \
+    && sudo apt-get install -y libpcap-dev ros-kinetic-gps-common ros-kinetic-swri-math-util ros-kinetic-swri-roscpp ros-kinetic-swri-serial-util ros-kinetic-swri-string-util ros-kinetic-swri-nodelet
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
