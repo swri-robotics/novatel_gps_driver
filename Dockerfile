@@ -19,8 +19,6 @@ RUN sudo apt-get update \
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
-RUN chmod +x ~/src/docker/checkout.sh 
-RUN chmod +x ~/src/docker/install.sh
 RUN ~/src/docker/checkout.sh
 RUN ~/src/docker/install.sh
 
