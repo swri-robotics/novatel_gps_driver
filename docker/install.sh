@@ -14,6 +14,7 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
+sudo chmod -R +x /opt/carma/app/bin
 source /opt/ros/kinetic/setup.bash
 cd ~/
 catkin_make install
