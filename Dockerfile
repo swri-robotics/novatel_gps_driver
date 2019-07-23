@@ -41,6 +41,5 @@ LABEL org.label-schema.vcs-ref=${VCS_REF}
 LABEL org.label-schema.build-date=${BUILD_DATE}
 
 COPY --from=setup /home/carma/install /opt/carma/app/bin
-RUN sudo chmod -R +x /opt/carma/app/bin
 
 CMD [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "novatel_gps_driver", "novatel_gps_driver_eth.launch", "remap_ns:=/saxton_cav/drivers" ]
