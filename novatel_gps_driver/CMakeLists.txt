@@ -137,6 +137,6 @@ install(FILES nodelet_plugins.xml
 )
 
 ### Install Launch Files ###
-install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY launch config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 
