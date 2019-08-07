@@ -19,33 +19,25 @@
   <arg name="verbose" default="false" doc="Enable verbose output" />
   <arg name="ip" default="192.168.74.10" doc="The IP of the gps" />
   <arg name="port" default="2000" doc="The port to use" />
-  <arg name="imu_rate" default="100" doc="The rate at which to publish imu data in Hz" />
-  <arg name="polling_period" default="0.05" doc="The period between gps data publishes in seconds" />
   <arg name="frame_id" default="gps" doc="The frame of the gps data" />
   <arg name="imu_frame_id" default="imu" doc="The frame of the imu data" />
+  <arg name="use_binary_messages" default="true" doc="True if recieving binary data from hardware" />
 
   <node name="novatel_gnss_imu"
         pkg="nodelet" type="nodelet"
         args="standalone novatel_gps_driver/novatel_gps_nodelet" >
 
+    <remap from="dual_antenna_heading" to="gnss/dual_antenna_heading"/>
+
+
     <param name="verbose" value="$(arg verbose)" />
     <param name="device" value="$(arg ip):$(arg port)" />
     <param name="port" value="$(arg port)" />
-    <param name="imu_rate" value="$(arg imu_rate)" />
-    <param name="polling_period" value="$(arg polling_period)" />
     <param name="frame_id" value="$(arg frame_id)" />
     <param name="imu_frame_id" value="$(arg imu_frame_id)" />
-    <remap from="dual_antenna_heading" to="gnss/dual_antenna_heading"/>
-    <rosparam>
-      connection_type: tcp
-      imu_sample_rate: -1
-      use_binary_messages: true
-      publish_novatel_positions: true
-      publish_imu_messages: true
-      publish_imu: true
-      publish_novatel_velocity: true
-      publish_nmea_messages: true
-      publish_novatel_dual_antenna_heading: true
-    </rosparam>
+    <param name="use_binary_messages" value="$(arg use_binary_messages)"/>
+    <param name="connection_type" value="tcp"/>
+
+    <rosparam command="load" file="$(find novatel_gps_driver)/config/parameters.yaml" />
   </node>
 </launch>

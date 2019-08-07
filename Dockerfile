@@ -12,7 +12,7 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:2.8.3 as setup
+FROM usdotfhwastol/carma-base:3.0.0 as setup
 
 RUN sudo apt-get update \
     && sudo apt-get install -y libpcap-dev ros-kinetic-gps-common ros-kinetic-swri-math-util ros-kinetic-swri-roscpp ros-kinetic-swri-serial-util ros-kinetic-swri-string-util ros-kinetic-swri-nodelet
@@ -22,7 +22,7 @@ COPY --chown=carma . /home/carma/src/
 RUN ~/src/docker/checkout.sh
 RUN ~/src/docker/install.sh
 
-FROM usdotfhwastol/carma-base:2.8.3
+FROM usdotfhwastol/carma-base:3.0.0
 
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
@@ -38,6 +38,6 @@ LABEL org.label-schema.vcs-url="https://github.com/usdot-fhwa-stol/CARMANovatelG
 LABEL org.label-schema.vcs-ref=${VCS_REF}
 LABEL org.label-schema.build-date=${BUILD_DATE}
 
-COPY --from=setup /home/carma/install /opt/carma/app/bin
+COPY --from=setup /home/carma/install /opt/carma/install
 
-CMD [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "novatel_gps_driver", "novatel_gps_driver_eth.launch", "remap_ns:=/saxton_cav/drivers" ]
+CMD [ "wait-for-it.sh", "localhost:11311", "--", "roslaunch", "novatel_gps_driver", "novatel_gps_driver_eth.launch"]
