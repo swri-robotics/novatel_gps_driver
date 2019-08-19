@@ -12,17 +12,19 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:3.0.0 as setup
+FROM usdotfhwastol/carma-base:latest as deps
 
 RUN sudo apt-get update \
     && sudo apt-get install -y libpcap-dev ros-kinetic-gps-common ros-kinetic-swri-math-util ros-kinetic-swri-roscpp ros-kinetic-swri-serial-util ros-kinetic-swri-string-util ros-kinetic-swri-nodelet
+
+FROM deps as setup
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
 RUN ~/src/docker/checkout.sh
 RUN ~/src/docker/install.sh
 
-FROM usdotfhwastol/carma-base:3.0.0
+FROM deps
 
 ARG BUILD_DATE="NULL"
 ARG VERSION="NULL"
