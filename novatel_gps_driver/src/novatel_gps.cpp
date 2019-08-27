@@ -461,6 +461,7 @@ namespace novatel_gps_driver
 
   void  NovatelGps::GetNovatelHeading2Messages(std::vector<novatel_gps_msgs::NovatelHeading2Ptr>& headings) {
     headings.clear();
+    std::cout << "Got the heading2 message 24" << "\n";
     headings.insert(headings.end(), heading2_msgs_.begin(), heading2_msgs_.end());
     heading2_msgs_.clear();
   }
@@ -1061,7 +1062,8 @@ namespace novatel_gps_driver
       }
       case Heading2Parser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+	std::cout << "In the heading2 switch case" << "\n";
+	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
         heading2_msgs_.push_back(heading);
         break;
@@ -1248,6 +1250,7 @@ namespace novatel_gps_driver
     }
     else if (sentence.id == "HEADING2")
     {
+      std::cout << "When the sentence id is HEADING2 56" << "\n";
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
