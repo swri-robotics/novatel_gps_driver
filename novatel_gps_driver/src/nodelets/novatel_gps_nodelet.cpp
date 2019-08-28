@@ -324,7 +324,6 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-	std::cout << "In if statement 78" << "\n";
 	novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
       }
 
@@ -838,12 +837,12 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-	std::cout << "In if statement 73" << "\n";
 	for (const auto& msg : heading2_msgs)
         {
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
           novatel_heading2_pub_.publish(msg);
+	  std::cout << "Published the message heading2 67" << "\n";
         }
       }
 
