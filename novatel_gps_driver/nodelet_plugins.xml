@@ -4,4 +4,9 @@
       Nodelet for reading data from Novatel GPS devices.
     </description>
   </class>
+  <class name="novatel_gps_driver/novatel_gps_nodelet_wrapper" type="novatel_gps_driver::NovatelGpsNodeletWrapper" base_class_type="nodelet::Nodelet">
+    <description>
+      Nodelet for converting the default driver api into one that supports the CARMAPlatform
+    </description>
+  </class>
 </library>

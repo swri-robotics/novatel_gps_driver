@@ -29,6 +29,9 @@
   <depend>swri_serial_util</depend>
   <depend>swri_string_util</depend>
   <depend>tf</depend>
+  <depend>cav_msgs</depend>
+  <depend>carma_utils</depend>
+  <depend>uncertainty_tools</depend>
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>
