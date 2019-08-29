@@ -42,29 +42,29 @@ namespace novatel_gps_driver
       novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg)
   {
     receiver_status_msg.original_status_code = status;
-    receiver_status_msg.error_flag = status & 0x00000001;
-    receiver_status_msg.temperature_flag = status & 0x00000002;
-    receiver_status_msg.voltage_supply_flag = status & 0x00000004;
-    receiver_status_msg.antenna_powered = !(status & 0x00000008);
-    receiver_status_msg.antenna_is_open = status & 0x00000020;
-    receiver_status_msg.antenna_is_shorted = status & 0x00000040;
-    receiver_status_msg.cpu_overload_flag = status & 0x00000080;
-    receiver_status_msg.com1_buffer_overrun = status & 0x00000100;
-    receiver_status_msg.com2_buffer_overrun = status & 0x00000200;
-    receiver_status_msg.com3_buffer_overrun = status & 0x00000400;
-    receiver_status_msg.usb_buffer_overrun = status & 0x00000800;
-    receiver_status_msg.rf1_agc_flag = status & 0x00008000;
-    receiver_status_msg.rf2_agc_flag = status & 0x00020000;
-    receiver_status_msg.almanac_flag = status & 0x00040000;
-    receiver_status_msg.position_solution_flag = status & 0x00080000;
-    receiver_status_msg.position_fixed_flag = status & 0x00100000;
-    receiver_status_msg.clock_steering_status_enabled = !(status & 0x00200000);
-    receiver_status_msg.clock_model_flag = status & 0x00400000;
-    receiver_status_msg.oemv_external_oscillator_flag = status & 0x00800000;
-    receiver_status_msg.software_resource_flag = status & 0x01000000;
-    receiver_status_msg.aux3_status_event_flag = status & 0x20000000;
-    receiver_status_msg.aux2_status_event_flag = status & 0x40000000;
-    receiver_status_msg.aux1_status_event_flag = status & 0x80000000;
+    receiver_status_msg.error_flag = (status & 0x00000001) != 0;
+    receiver_status_msg.temperature_flag = (status & 0x00000002) != 0;
+    receiver_status_msg.voltage_supply_flag = (status & 0x00000004) != 0;
+    receiver_status_msg.antenna_powered = (status & 0x00000008) == 0;
+    receiver_status_msg.antenna_is_open = (status & 0x00000020) != 0;
+    receiver_status_msg.antenna_is_shorted = (status & 0x00000040) != 0;
+    receiver_status_msg.cpu_overload_flag = (status & 0x00000080) != 0;
+    receiver_status_msg.com1_buffer_overrun = (status & 0x00000100) != 0;
+    receiver_status_msg.com2_buffer_overrun = (status & 0x00000200) != 0;
+    receiver_status_msg.com3_buffer_overrun = (status & 0x00000400) != 0;
+    receiver_status_msg.usb_buffer_overrun = (status & 0x00000800) != 0;
+    receiver_status_msg.rf1_agc_flag = (status & 0x00008000) != 0;
+    receiver_status_msg.rf2_agc_flag = (status & 0x00020000) != 0;
+    receiver_status_msg.almanac_flag = (status & 0x00040000) != 0;
+    receiver_status_msg.position_solution_flag = (status & 0x00080000) != 0;
+    receiver_status_msg.position_fixed_flag = (status & 0x00100000) != 0;
+    receiver_status_msg.clock_steering_status_enabled = (status & 0x00200000) == 0;
+    receiver_status_msg.clock_model_flag = (status & 0x00400000) != 0;
+    receiver_status_msg.oemv_external_oscillator_flag = (status & 0x00800000) != 0;
+    receiver_status_msg.software_resource_flag = (status & 0x01000000) != 0;
+    receiver_status_msg.aux3_status_event_flag = (status & 0x20000000) != 0;
+    receiver_status_msg.aux2_status_event_flag = (status & 0x40000000) != 0;
+    receiver_status_msg.aux1_status_event_flag = (status & 0x80000000) != 0;
   }
 
   void GetExtendedSolutionStatusMessage(
