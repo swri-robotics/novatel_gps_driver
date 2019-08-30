@@ -57,7 +57,7 @@ namespace novatel_gps_driver
     fix_msg.pitch = msg->pitch;
     fix_msg.roll = msg->roll;
 
-    // GPSFix messages request uncertainty reported with 95% confidence intervale. That is 2 times the standard deviation
+    // GPSFix messages request uncertainty reported with 95% confidence interval. That is 2 times the standard deviation
     fix_msg.err_track = 2.0 * msg->azimuth_std;
     fix_msg.err_pitch = 2.0 * msg->pitch_std;
     fix_msg.err_roll = 2.0 * msg->roll_std;
