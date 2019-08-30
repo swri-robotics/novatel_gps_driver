@@ -122,7 +122,7 @@ enabled.
         - `publish_gpgsv`: `true` to publish novatel_gps_msgs/Gpgsv messages.
             - Default: `false`
         - `publish_imu_messages`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
-         novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
+        novatel_gps_msgs/Inspvax, novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
             - Default: `false`
         - `publish_nmea_messages`: `true` to publish novatel_gps_msgs/Gpgga and novatel_gps_msgs/Gprmc messages.
             - Default: `false`
@@ -177,6 +177,9 @@ enabled.
         - `/gps` *([gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining GPGGA, GPRMC, and BESTPOS messages together
             - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
+        - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
+        - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
+        - `/insstdev` *(novatel_gps_msgs/Insstdev)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
         - `/time` *(novatel_gps_msgs/Time)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
