@@ -1,5 +1,7 @@
 # Algorithm parameters see README.md for parameter documentation
-imu_rate: 100
+imu_rate: 50.0
+
+imu_sample_rate: 100.0
 
 polling_period: 0.05
 
