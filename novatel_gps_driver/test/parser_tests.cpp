@@ -29,6 +29,7 @@
 
 #include <novatel_gps_driver/parsers/bestpos.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
+#include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/novatel_message_extractor.h>
 #include <novatel_gps_driver/parsers/bestxyz.h>
 #include <novatel_gps_driver/parsers/heading2.h>
@@ -170,6 +171,39 @@ TEST(ParserTestSuite, testGpgsvParsing)
   ASSERT_EQ(0, msg->satellites[2].elevation);
   ASSERT_EQ(41, msg->satellites[2].azimuth);
   ASSERT_EQ(-1, msg->satellites[2].snr);
+}
+
+TEST(ParserTestSuite, testGphdtParsing)
+{
+  novatel_gps_driver::GphdtParser parser;
+  std::string sentence_str = "$GPHDT,275.432,T*30\r\n";
+  std::string extracted_str;
+
+  novatel_gps_driver::NovatelMessageExtractor extractor;
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(1, nmea_sentences.size());
+  ASSERT_EQ(0, binary_messages.size());
+  ASSERT_EQ(0, novatel_sentences.size());
+
+  novatel_gps_driver::NmeaSentence sentence = nmea_sentences.front();
+
+  ASSERT_EQ(parser.GetMessageName(), sentence.id);
+  ASSERT_FALSE(sentence.body.empty());
+
+  novatel_gps_msgs::GphdtPtr msg = parser.ParseAscii(sentence);
+
+  ASSERT_NE(msg.get(), nullptr);
+
+  ASSERT_DOUBLE_EQ(275.432, msg->heading);
+  ASSERT_EQ("T", msg->t);
 }
 
 TEST(ParserTestSuite, testInscovAsciiParsing)
