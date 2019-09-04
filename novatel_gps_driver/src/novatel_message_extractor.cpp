@@ -583,7 +583,19 @@ namespace novatel_gps_driver
     gps_fix->track = gprmc.track;
     // gps_fix.vdop = ERR_INIT_HIGH;
 
-    gps_fix->status.status = gps_common::GPSStatus::STATUS_FIX;
+    switch (gpgga.gps_qual)
+    {
+      case novatel_gps_msgs::Gpgga::GPS_QUAL_INVALID:
+        gps_fix->status.status = gps_common::GPSStatus::STATUS_NO_FIX;
+        break;
+      case novatel_gps_msgs::Gpgga::GPS_QUAL_WASS:
+        gps_fix->status.status = gps_common::GPSStatus::STATUS_WAAS_FIX;
+        break;
+      default:
+        // Other statuses don't seem to have an exact equivalent, so map them all to STATUS_FIX
+        gps_fix->status.status = gps_common::GPSStatus::STATUS_FIX;
+        break;
+    }
     gps_fix->status.satellites_used = static_cast<uint16_t>(gpgga.num_sats);
 
   }
