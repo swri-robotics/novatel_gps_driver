@@ -97,7 +97,7 @@
  * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
  *    Novatel ClockSteering messages [false]
  * \e publish_imu_messages <tt>boot</tt> - If set true, the driver publishes
- *    Novatel CorrImuData, InsPva, InsStdev, and sensor_msgs/Imu messages [false]
+ *    Novatel CorrImuData, InsPva, InsPvax, InsStdev, and sensor_msgs/Imu messages [false]
  * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
  *    messages from the device at 20 Hz and publishes them on `gpgsa`
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
@@ -155,6 +155,8 @@
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Range.h>
 #include <novatel_gps_msgs/Time.h>
+#include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Inspvax.h>
 #include <novatel_gps_driver/novatel_gps.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
@@ -296,6 +298,7 @@ namespace novatel_gps_driver
         novatel_imu_pub_= swri::advertise<novatel_gps_msgs::NovatelCorrectedImuData>(node, "corrimudata", 100);
         insstdev_pub_ = swri::advertise<novatel_gps_msgs::Insstdev>(node, "insstdev", 100);
         inspva_pub_ = swri::advertise<novatel_gps_msgs::Inspva>(node, "inspva", 100);
+        inspvax_pub_ = swri::advertise<novatel_gps_msgs::Inspvax>(node, "inspvax", 100);
         inscov_pub_ = swri::advertise<novatel_gps_msgs::Inscov>(node, "inscov", 100);
       }
 
@@ -454,6 +457,7 @@ namespace novatel_gps_driver
         opts["corrimudata" + format_suffix] = period;
         opts["inscov" + format_suffix] = 1.0;
         opts["inspva" + format_suffix] = period;
+        opts["inspvax" + format_suffix] = period;
         opts["insstdev" + format_suffix] = 1.0;
         if (!use_binary_messages_)
         {
@@ -590,6 +594,7 @@ namespace novatel_gps_driver
     ros::Publisher imu_pub_;
     ros::Publisher inscov_pub_;
     ros::Publisher inspva_pub_;
+    ros::Publisher inspvax_pub_;
     ros::Publisher insstdev_pub_;
     ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
@@ -970,6 +975,15 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = imu_frame_id_;
           inspva_pub_.publish(msg);
+        }
+
+        std::vector<novatel_gps_msgs::InspvaxPtr> inspvax_msgs;
+        gps_.GetInspvaxMessages(inspvax_msgs);
+        for (const auto& msg : inspvax_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = imu_frame_id_;
+          inspvax_pub_.publish(msg);
         }
 
         std::vector<novatel_gps_msgs::InsstdevPtr> insstdev_msgs;
