@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.9.0 (2019-09-04)
+------------------
 * Use GPGGA quality to set GPSFix status (`#55 <https://github.com/swri-robotics/novatel_gps_driver/issues/55>`_)
 * Publish INSPVAX logs (`#54 <https://github.com/swri-robotics/novatel_gps_driver/issues/54>`_)
 * Add GPHDT message (`#51 <https://github.com/swri-robotics/novatel_gps_driver/issues/51>`_)

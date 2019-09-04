@@ -2,8 +2,8 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+3.9.0 (2019-09-04)
+------------------
 * Use GPGGA quality to set GPSFix status (`#55 <https://github.com/swri-robotics/novatel_gps_driver/issues/55>`_)
 * Add GPHDT message (`#51 <https://github.com/swri-robotics/novatel_gps_driver/issues/51>`_)
 * Add DUALANTENNAHEADING msg (`#46 <https://github.com/swri-robotics/novatel_gps_driver/issues/46>`_)
