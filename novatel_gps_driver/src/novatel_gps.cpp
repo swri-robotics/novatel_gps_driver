@@ -58,6 +58,7 @@ namespace novatel_gps_driver
       gpgga_sync_buffer_(SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
+      gphdt_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       gprmc_sync_buffer_(SYNC_BUFFER_SIZE),
       imu_msgs_(MAX_BUFFER_SIZE),
@@ -497,6 +498,13 @@ namespace novatel_gps_driver
     gpgsv_messages.resize(gpgsv_msgs_.size());
     std::copy(gpgsv_msgs_.begin(), gpgsv_msgs_.end(), gpgsv_messages.begin());
     gpgsv_msgs_.clear();
+  }
+
+  void NovatelGps::GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages)
+  {
+    gphdt_messages.resize(gphdt_msgs_.size());
+    std::copy(gphdt_msgs_.begin(), gphdt_msgs_.end(), gphdt_messages.begin());
+    gphdt_msgs_.clear();
   }
 
   void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages)
@@ -1210,6 +1218,11 @@ namespace novatel_gps_driver
       novatel_gps_msgs::GpgsvPtr gpgsv = gpgsv_parser_.ParseAscii(sentence);
       gpgsv_msgs_.push_back(gpgsv);
     }
+    else if (sentence.id == GphdtParser::MESSAGE_NAME)
+    {
+      novatel_gps_msgs::GphdtPtr gphdt = gphdt_parser_.ParseAscii(sentence);
+      gphdt_msgs_.push_back(gphdt);
+    }
     else
     {
       ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << sentence.id);
@@ -1228,7 +1241,7 @@ namespace novatel_gps_driver
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
     }
-    else if (sentence.id == "BESTXYZ")
+    else if (sentence.id == "BESTXYZA")
     {
       novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
@@ -1246,13 +1259,13 @@ namespace novatel_gps_driver
       velocity->header.stamp = stamp;
       novatel_velocities_.push_back(velocity);
     }
-    else if (sentence.id == "HEADING2")
+    else if (sentence.id == "HEADING2A")
     {
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
     }
-    else if (sentence.id == "DUALANTENNAHEADING")
+    else if (sentence.id == "DUALANTENNAHEADINGA")
     {
       novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
