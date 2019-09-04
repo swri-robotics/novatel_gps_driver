@@ -46,6 +46,7 @@
 
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
+#include <novatel_gps_msgs/Gphdt.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Inspva.h>
 #include <novatel_gps_msgs/Inspvax.h>
@@ -70,6 +71,7 @@
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
+#include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
@@ -161,6 +163,12 @@ namespace novatel_gps_driver
        * @param[out] gpgsv_messages New GPGSV messages.
        */
       void GetGpgsvMessages(std::vector<novatel_gps_msgs::GpgsvPtr>& gpgsv_messages);
+      /**
+       * @brief Provides any GPHDT messages that have been received since the
+       * last time this was called.
+       * @param[out] gpgsv_messages New GPHDT messages.
+       */
+      void GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages);
       /**
        * @brief Provides any GPRMC messages that have been received since the
        * last time this was called.
@@ -472,6 +480,7 @@ namespace novatel_gps_driver
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;
+      GphdtParser gphdt_parser_;
       GprmcParser gprmc_parser_;
       InscovParser inscov_parser_;
       InspvaParser inspva_parser_;
@@ -488,6 +497,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::GphdtPtr> gphdt_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
       boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
