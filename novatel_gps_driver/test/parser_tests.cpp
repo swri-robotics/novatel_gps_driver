@@ -28,6 +28,7 @@
 // *****************************************************************************
 
 #include <novatel_gps_driver/parsers/bestpos.h>
+#include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/novatel_message_extractor.h>
@@ -85,6 +86,56 @@ TEST(ParserTestSuite, testBestposAsciiParsing)
   ASSERT_EQ("SOL_COMPUTED", msg->solution_status);
   ASSERT_DOUBLE_EQ(29.44391220792, msg->lat);
   ASSERT_DOUBLE_EQ(-98.61476921244, msg->lon);
+}
+
+TEST(ParserTestSuite, testGpggaParsing)
+{
+  novatel_gps_driver::GpggaParser parser;
+  std::string sentence_str = "$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,"
+                             "1048.47,M,-16.27,M,08,AAAA*60\r\n"
+                             "$GPGGA,134658.00,5106.9792,N,11402.3003,W,0,09,1.0,"
+                             "1048.47,M,-16.27,M,08,AAAA*62\r\n";
+  std::string extracted_str;
+
+  novatel_gps_driver::NovatelMessageExtractor extractor;
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(2, nmea_sentences.size());
+  ASSERT_EQ(0, binary_messages.size());
+  ASSERT_EQ(0, novatel_sentences.size());
+
+  novatel_gps_driver::NmeaSentence sentence = nmea_sentences.front();
+
+  ASSERT_EQ(parser.GetMessageName(), sentence.id);
+
+  novatel_gps_msgs::GpggaPtr msg = parser.ParseAscii(sentence);
+
+  ASSERT_NE(msg.get(), nullptr);
+  ASSERT_EQ(novatel_gps_msgs::Gpgga::GPS_QUAL_PSEUDORANGE_DIFFERENTIAL, msg->gps_qual);
+  ASSERT_DOUBLE_EQ(51.116319999999995, msg->lat);
+  ASSERT_STREQ("N", msg->lat_dir.c_str());
+  ASSERT_DOUBLE_EQ(114.03833833333334, msg->lon);
+  ASSERT_STREQ("W", msg->lon_dir.c_str());
+  ASSERT_EQ(9, msg->num_sats);
+  ASSERT_DOUBLE_EQ(1.0, msg->hdop);
+  ASSERT_DOUBLE_EQ(1048.469970703125, msg->alt);
+  ASSERT_STREQ("M", msg->altitude_units.c_str());
+  ASSERT_DOUBLE_EQ(-16.270000457763672, msg->undulation);
+  ASSERT_STREQ("M", msg->undulation_units.c_str());
+  ASSERT_EQ(8, msg->diff_age);
+  ASSERT_STREQ("AAAA", msg->station_id.c_str());
+
+  sentence = nmea_sentences.at(1);
+  msg = parser.ParseAscii(sentence);
+
+  ASSERT_EQ(novatel_gps_msgs::Gpgga::GPS_QUAL_INVALID, msg->gps_qual);
 }
 
 TEST(ParserTestSuite, testCorrimudataAsciiParsing)
