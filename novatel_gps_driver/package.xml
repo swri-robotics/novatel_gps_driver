@@ -29,6 +29,8 @@
   <depend>swri_serial_util</depend>
   <depend>swri_string_util</depend>
   <depend>tf</depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>
