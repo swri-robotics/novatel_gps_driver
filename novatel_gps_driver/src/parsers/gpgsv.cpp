@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::GpgsvParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GpgsvPtr novatel_gps_driver::GpgsvParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) throw(ParseException)
+novatel_gps_msgs::GpgsvPtr novatel_gps_driver::GpgsvParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   const size_t MIN_LENGTH = 4;
   // Check that the message is at least as long as a a GPGSV with no satellites

@@ -42,7 +42,7 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::GpgsvPtr ParseAscii(const NmeaSentence& sentence) throw(ParseException) override;
+    novatel_gps_msgs::GpgsvPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     static const std::string MESSAGE_NAME;
   };

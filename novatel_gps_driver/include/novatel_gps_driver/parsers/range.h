@@ -42,9 +42,9 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::RangePtr ParseBinary(const BinaryMessage& bin_msg) throw(ParseException) override;
+    novatel_gps_msgs::RangePtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::RangePtr ParseAscii(const NovatelSentence& sentence) throw(ParseException) override;
+    novatel_gps_msgs::RangePtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr size_t BINARY_OBSERVATION_SIZE = 44;
     static constexpr uint16_t MESSAGE_ID = 43;

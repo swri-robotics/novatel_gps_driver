@@ -393,7 +393,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
-                                                const ros::Time& stamp) throw(ParseException);
+                                                const ros::Time& stamp) noexcept(false);
       /**
        * @brief Converts an NMEA sentence into a ROS message of the appropriate type and
        * places it in the appropriate buffer.
@@ -405,7 +405,7 @@ namespace novatel_gps_driver
        */
       NovatelGps::ReadResult ParseNmeaSentence(const NmeaSentence& sentence,
                                                const ros::Time& stamp,
-                                               double most_recent_utc_time) throw(ParseException);
+                                               double most_recent_utc_time) noexcept(false);
       /**
        * @brief Converts a NovatelSentence object into a ROS message of the appropriate type
        * and places it in the appropriate buffer.
@@ -414,7 +414,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseNovatelSentence(const NovatelSentence& sentence,
-                                                  const ros::Time& stamp) throw(ParseException);
+                                                  const ros::Time& stamp) noexcept(false);
 
       /**
        * @brief Reads data from a connected NovAtel device.  Any read data will be appended to

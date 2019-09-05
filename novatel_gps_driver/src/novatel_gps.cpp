@@ -1042,7 +1042,7 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
-                                                        const ros::Time& stamp) throw(ParseException)
+                                                        const ros::Time& stamp) noexcept(false)
   {
     switch (msg.header_.message_id_)
     {
@@ -1173,7 +1173,7 @@ namespace novatel_gps_driver
 
   NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
                                                        const ros::Time& stamp,
-                                                       double most_recent_utc_time) throw(ParseException)
+                                                       double most_recent_utc_time) noexcept(false)
   {
     if (sentence.id == GpggaParser::MESSAGE_NAME)
     {
@@ -1247,7 +1247,7 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
-                                                          const ros::Time& stamp) throw(ParseException)
+                                                          const ros::Time& stamp) noexcept(false)
   {
     if (sentence.id == "BESTPOSA")
     {
