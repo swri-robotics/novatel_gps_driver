@@ -163,4 +163,4 @@ namespace novatel_gps_driver
 
     return msg;
   }
-};
+}

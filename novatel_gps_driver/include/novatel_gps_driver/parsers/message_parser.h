@@ -37,7 +37,7 @@
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 #include <novatel_gps_driver/parsers/parse_exception.h>
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace novatel_gps_driver
 {
@@ -59,7 +59,7 @@ namespace novatel_gps_driver
   class MessageParser
   {
   public:
-    virtual ~MessageParser() {}
+    virtual ~MessageParser() = default;
 
     /**
      * @return The binary message ID. Should be 0 for messages that have no

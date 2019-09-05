@@ -447,8 +447,11 @@ TEST(ParserTestSuite, testHeading2AsciiParsing)
 {
   novatel_gps_driver::Heading2Parser parser;
   std::string heading2_str = "#HEADING2A,COM1,0,39.5,FINESTEERING,1622,422892.200,02040000,f9bf,6521;"
-  "SOL_COMPUTED,NARROW_INT,0.927607417,178.347869873,-1.3037414550,0,0.261901051,0.391376048,"
-  "\"R222\",\"AAAA\",18,17,17,16,0,01,0,33*8c48d77c\r\n";
+      "SOL_COMPUTED,NARROW_INT,0.927607417,178.347869873,-1.3037414550,0,0.261901051,0.391376048,"
+      "\"R222\",\"AAAA\",18,17,17,16,0,01,0,33*8c48d77c\r\n"
+      "#HEADING2A,COM1,0,39.5,FINESTEERING,1622,422892.200,02040000,f9bf,6521;"
+      "SOL_COMPUTED,NARROW_INT,0.927607417,178.347869873,-1.3037414550,0,0.261901051,0.391376048,"
+      "\"R222\",\"AAAA\",18,17,17,16,4,01,0,33*d1a48670\r\n";
 
   std::string extracted_str;
 
@@ -464,7 +467,7 @@ TEST(ParserTestSuite, testHeading2AsciiParsing)
 
   ASSERT_EQ(0, nmea_sentences.size());
   ASSERT_EQ(0, binary_messages.size());
-  ASSERT_EQ(1, novatel_sentences.size());
+  ASSERT_EQ(2, novatel_sentences.size());
 
   novatel_gps_driver::NovatelSentence sentence = novatel_sentences.front();
 
@@ -487,16 +490,24 @@ TEST(ParserTestSuite, testHeading2AsciiParsing)
   ASSERT_EQ(17, msg->num_satellites_used_in_solution);
   ASSERT_EQ(17, msg->num_satellites_above_elevation_mask_angle);
   ASSERT_EQ(16, msg->num_satellites_above_elevation_mask_angle_l2);
-  ASSERT_EQ(0, msg->solution_source);
+  ASSERT_EQ(novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA, msg->solution_source);
   ASSERT_EQ(1, msg->extended_solution_status.original_mask);
+
+  msg = parser.ParseAscii(novatel_sentences.at(1));
+
+  ASSERT_NE(msg.get(), nullptr);
+  ASSERT_EQ(novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA, msg->solution_source);
 }
 
 TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
 {
   novatel_gps_driver::DualAntennaHeadingParser parser;
   std::string heading_str = "#DUALANTENNAHEADINGA,UNKNOWN,0,66.5,FINESTEERING,1949,575614.000,02000000,d426,32768;"
-  "SOL_COMPUTED,NARROW_INT,-1.000000000,255.538528442,0.006041416,0.0,0.043859947,0.052394450,"
-  "\"J56X\",24,18,18,17,04,01,00,33*1f082ec5\r\n";
+      "SOL_COMPUTED,NARROW_INT,-1.000000000,255.538528442,0.006041416,0.0,0.043859947,0.052394450,"
+      "\"J56X\",24,18,18,17,04,01,00,33*1f082ec5\r\n"
+      "#DUALANTENNAHEADINGA,UNKNOWN,0,66.5,FINESTEERING,1949,575614.000,02000000,d426,32768;"
+      "SOL_COMPUTED,NARROW_INT,-1.000000000,255.538528442,0.006041416,0.0,0.043859947,0.052394450,"
+      "\"J56X\",24,18,18,17,0,01,00,33*8ae85b15\r\n";
 
   std::string extracted_str;
 
@@ -512,7 +523,7 @@ TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
 
   ASSERT_EQ(0, nmea_sentences.size());
   ASSERT_EQ(0, binary_messages.size());
-  ASSERT_EQ(1, novatel_sentences.size());
+  ASSERT_EQ(2, novatel_sentences.size());
 
   novatel_gps_driver::NovatelSentence sentence = novatel_sentences.front();
 
@@ -534,8 +545,13 @@ TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
   ASSERT_EQ(18, msg->num_satellites_used_in_solution);
   ASSERT_EQ(18, msg->num_satellites_above_elevation_mask_angle);
   ASSERT_EQ(17, msg->num_satellites_above_elevation_mask_angle_l2);
-  ASSERT_EQ(1, msg->solution_source);
+  ASSERT_EQ(novatel_gps_msgs::NovatelDualAntennaHeading::SOURCE_SECONDARY_ANTENNA, msg->solution_source);
   ASSERT_EQ(1, msg->extended_solution_status.original_mask);
+
+  msg = parser.ParseAscii(novatel_sentences.at(1));
+
+  ASSERT_NE(msg.get(), nullptr);
+  ASSERT_EQ(novatel_gps_msgs::NovatelDualAntennaHeading::SOURCE_PRIMARY_ANTENNA, msg->solution_source);
 }
 
 int main(int argc, char **argv)

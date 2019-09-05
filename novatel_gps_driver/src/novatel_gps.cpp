@@ -48,10 +48,11 @@ namespace novatel_gps_driver
       wait_for_position_(false),
       connection_(SERIAL),
       is_connected_(false),
+      imu_rate_forced_(false),
       utc_offset_(0),
       serial_baud_(115200),
       tcp_socket_(io_service_),
-      pcap_(NULL),
+      pcap_(nullptr),
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
@@ -66,18 +67,17 @@ namespace novatel_gps_driver
       inspva_msgs_(MAX_BUFFER_SIZE),
       inspvax_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
-      heading2_msgs_(MAX_BUFFER_SIZE),
-      dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
       novatel_xyz_positions_(MAX_BUFFER_SIZE),
       novatel_utm_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
       position_sync_buffer_(SYNC_BUFFER_SIZE),
+      heading2_msgs_(MAX_BUFFER_SIZE),
+      dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
       range_msgs_(MAX_BUFFER_SIZE),
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0),
-      imu_rate_forced_(false),
       apply_vehicle_body_rotation_(false)
   {
   }
@@ -174,10 +174,10 @@ namespace novatel_gps_driver
     }
     else if (connection_ == PCAP)
     {
-      if (pcap_ != NULL)
+      if (pcap_ != nullptr)
       {
         pcap_close(pcap_);
-        pcap_ = NULL;
+        pcap_ = nullptr;
       }
     }
     is_connected_ = false;
@@ -374,7 +374,7 @@ namespace novatel_gps_driver
               // Handle times around week boundaries
               gps_seconds = gps_seconds + 604800;  // 604800 = 7 * 24 * 60 * 60 (seconds in a week)
           }
-          int32_t days = static_cast<int32_t>(gps_seconds / 86400.0);
+          auto days = static_cast<int32_t>(gps_seconds / 86400.0);
           double position_time = gps_seconds - days * 86400.0;
 
           // Find the time difference between gpgga and position time
@@ -575,7 +575,7 @@ namespace novatel_gps_driver
   {
     ROS_INFO("Opening pcap file: %s", device.c_str());
 
-    if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == NULL)
+    if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == nullptr)
     {
       ROS_FATAL("Unable to open pcap file.");
       return false;
@@ -677,7 +677,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        uint16_t port_num = static_cast<uint16_t>(strtoll(port.c_str(), NULL, 10));
+        auto port_num = static_cast<uint16_t>(strtoll(port.c_str(), nullptr, 10));
         if (connection_ == TCP)
         {
           boost::asio::ip::tcp::acceptor acceptor(io_service_,
@@ -800,8 +800,8 @@ namespace novatel_gps_driver
       result = pcap_next_ex(pcap_, &header, &pkt_data);
       if (result >= 0)
       {
-        struct iphdr* iph = (struct iphdr*)(pkt_data + sizeof(struct ethhdr));
-        uint32_t iphdrlen = iph->ihl * 4;
+        auto iph = reinterpret_cast<const iphdr*>(pkt_data + sizeof(struct ethhdr));
+        uint32_t iphdrlen = iph->ihl * 4u;
 
         switch (iph->protocol)
         {
@@ -826,10 +826,10 @@ namespace novatel_gps_driver
             bool store_packet = true;
             if (!last_tcp_packet_.empty())
             {
-              struct tcphdr* tcph = (struct tcphdr*) (pkt_data + iphdrlen + sizeof(struct ethhdr));
-              struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
-              uint32_t last_iphdrlen = last_iph->ihl * 4;
-              struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + last_iphdrlen);
+              auto tcph = reinterpret_cast<const tcphdr*>(pkt_data + iphdrlen + sizeof(struct ethhdr));
+              auto last_iph = reinterpret_cast<const iphdr*>(&(last_tcp_packet_[0]));
+              uint32_t last_iphdrlen = last_iph->ihl * 4u;
+              auto last_tcph = reinterpret_cast<const tcphdr*>(&(last_tcp_packet_[0]) + last_iphdrlen);
               uint16_t last_len = ntohs(static_cast<uint16_t>(last_iph->tot_len));
               uint16_t new_len = ntohs(static_cast<uint16_t>(iph->tot_len));
               uint32_t last_seq = ntohl(last_tcph->seq);
@@ -902,10 +902,10 @@ namespace novatel_gps_driver
         if (!last_tcp_packet_.empty())
         {
           // Don't forget to submit the last packet if we still have one!
-          struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
-          uint32_t iphdrlen = last_iph->ihl * 4;
-          struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + iphdrlen);
-          uint32_t data_offset = last_tcph->doff * 4;
+          auto last_iph = reinterpret_cast<const iphdr*>(&(last_tcp_packet_[0]));
+          uint32_t iphdrlen = last_iph->ihl * 4u;
+          auto last_tcph = reinterpret_cast<const tcphdr*>(&(last_tcp_packet_[0]) + iphdrlen);
+          uint32_t data_offset = last_tcph->doff * 4u;
           data_buffer_.insert(data_buffer_.end(),
                               last_tcp_packet_.begin() + iphdrlen + data_offset,
                               last_tcp_packet_.end());
@@ -1391,8 +1391,8 @@ namespace novatel_gps_driver
  
         ROS_INFO("IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
         
-        // Set the rate only if it hasnt been forced already
-        if (imu_rate_forced_ == false)
+        // Set the rate only if it hasn't been forced already
+        if (!imu_rate_forced_)
         {        
           SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
         }
@@ -1473,11 +1473,11 @@ namespace novatel_gps_driver
       configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
 
-    for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
+    for(const auto& option : opts)
     {
       std::stringstream command;
       command << std::setprecision(3);
-      command << "log " << option->first << " ontime " << option->second << "\r\n";
+      command << "log " << option.first << " ontime " << option.second << "\r\n";
       configured = configured && Write(command.str());
     }
 

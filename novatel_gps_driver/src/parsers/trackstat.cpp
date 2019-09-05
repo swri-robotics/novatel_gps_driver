@@ -74,7 +74,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
   ros_msg->position_type = POSITION_TYPES[pos_type];
   ros_msg->cutoff = ParseFloat(&bin_msg.data_[8]);
 
-  for (int i = 0; i < num_chans; i++)
+  for (uint32_t i = 0; i < num_chans; i++)
   {
     size_t chan_offset = BINARY_BODY_LENGTH +
                          i * BINARY_CHANNEL_LENGTH;

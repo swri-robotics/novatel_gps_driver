@@ -27,7 +27,6 @@ novatel_gps_msgs::GphdtPtr novatel_gps_driver::GphdtParser::ParseAscii(const nov
     throw ParseException(error.str());
   }
 
-  bool success = true;
   novatel_gps_msgs::GphdtPtr msg = boost::make_shared<novatel_gps_msgs::Gphdt>();
   msg->message_id = sentence.body[0];
 
