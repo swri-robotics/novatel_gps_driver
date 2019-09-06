@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(novatel_gps_driver)
 
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+
 set(DEPS
   diagnostic_msgs 
   diagnostic_updater 
