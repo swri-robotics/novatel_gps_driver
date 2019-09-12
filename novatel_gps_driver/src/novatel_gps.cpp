@@ -58,11 +58,13 @@ namespace novatel_gps_driver
       gpgga_sync_buffer_(SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
+      gphdt_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       gprmc_sync_buffer_(SYNC_BUFFER_SIZE),
       imu_msgs_(MAX_BUFFER_SIZE),
       inscov_msgs_(MAX_BUFFER_SIZE),
       inspva_msgs_(MAX_BUFFER_SIZE),
+      inspvax_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
       heading2_msgs_(MAX_BUFFER_SIZE),
       dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
@@ -499,6 +501,13 @@ namespace novatel_gps_driver
     gpgsv_msgs_.clear();
   }
 
+  void NovatelGps::GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages)
+  {
+    gphdt_messages.resize(gphdt_msgs_.size());
+    std::copy(gphdt_msgs_.begin(), gphdt_msgs_.end(), gphdt_messages.begin());
+    gphdt_msgs_.clear();
+  }
+
   void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages)
   {
     gprmc_messages.clear();
@@ -518,6 +527,13 @@ namespace novatel_gps_driver
     inspva_messages.clear();
     inspva_messages.insert(inspva_messages.end(), inspva_msgs_.begin(), inspva_msgs_.end());
     inspva_msgs_.clear();
+  }
+
+  void NovatelGps::GetInspvaxMessages(std::vector<novatel_gps_msgs::InspvaxPtr>& inspvax_messages)
+  {
+    inspvax_messages.clear();
+    inspvax_messages.insert(inspvax_messages.end(), inspvax_msgs_.begin(), inspvax_msgs_.end());
+    inspvax_msgs_.clear();
   }
 
   void NovatelGps::GetInsstdevMessages(std::vector<novatel_gps_msgs::InsstdevPtr>& insstdev_messages)
@@ -1109,6 +1125,13 @@ namespace novatel_gps_driver
         GenerateImuMessages();
         break;
       }
+      case InspvaxParser::MESSAGE_ID:
+      {
+        novatel_gps_msgs::InspvaxPtr inspvax = inspvax_parser_.ParseBinary(msg);
+        inspvax->header.stamp = stamp;
+        inspvax_msgs_.push_back(inspvax);
+        break;
+      }
       case InsstdevParser::MESSAGE_ID:
       {
         novatel_gps_msgs::InsstdevPtr insstdev = insstdev_parser_.ParseBinary(msg);
@@ -1210,6 +1233,11 @@ namespace novatel_gps_driver
       novatel_gps_msgs::GpgsvPtr gpgsv = gpgsv_parser_.ParseAscii(sentence);
       gpgsv_msgs_.push_back(gpgsv);
     }
+    else if (sentence.id == GphdtParser::MESSAGE_NAME)
+    {
+      novatel_gps_msgs::GphdtPtr gphdt = gphdt_parser_.ParseAscii(sentence);
+      gphdt_msgs_.push_back(gphdt);
+    }
     else
     {
       ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << sentence.id);
@@ -1290,6 +1318,12 @@ namespace novatel_gps_driver
         inspva_queue_.pop();
       }
       GenerateImuMessages();
+    }
+    else if (sentence.id == "INSPVAXA")
+    {
+      novatel_gps_msgs::InspvaxPtr inspvax = inspvax_parser_.ParseAscii(sentence);
+      inspvax->header.stamp = stamp;
+      inspvax_msgs_.push_back(inspvax);
     }
     else if (sentence.id == "INSSTDEVA")
     {

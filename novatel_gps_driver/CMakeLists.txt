@@ -58,6 +58,7 @@ add_library(${PROJECT_NAME}
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
   src/parsers/gpgsv.cpp
+  src/parsers/gphdt.cpp
   src/parsers/gprmc.cpp
   src/parsers/header.cpp
   src/parsers/heading2.cpp

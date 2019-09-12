@@ -46,8 +46,10 @@
 
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
+#include <novatel_gps_msgs/Gphdt.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Inspvax.h>
 #include <novatel_gps_msgs/Insstdev.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
@@ -69,10 +71,12 @@
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
+#include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 #include <novatel_gps_driver/parsers/inspva.h>
+#include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
 #include <novatel_gps_driver/parsers/time.h>
@@ -160,6 +164,12 @@ namespace novatel_gps_driver
        */
       void GetGpgsvMessages(std::vector<novatel_gps_msgs::GpgsvPtr>& gpgsv_messages);
       /**
+       * @brief Provides any GPHDT messages that have been received since the
+       * last time this was called.
+       * @param[out] gpgsv_messages New GPHDT messages.
+       */
+      void GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages);
+      /**
        * @brief Provides any GPRMC messages that have been received since the
        * last time this was called.
        * @param[out] gprmc_messages New GPRMC messages.
@@ -195,6 +205,12 @@ namespace novatel_gps_driver
        * @param[out] inspva_messages New INSPVA messages.
        */
       void GetInspvaMessages(std::vector<novatel_gps_msgs::InspvaPtr>& inspva_messages);
+      /**
+       * @brief Provides any INSPVAX messages that have been received since the last
+       * time this was called.
+       * @param[out] inspvax_messages New INSPVAX messages.
+       */
+      void GetInspvaxMessages(std::vector<novatel_gps_msgs::InspvaxPtr>& inspvax_messages);
       /**
        * @brief Provides any INSSTDEV messages that have been received since the last
        * time this was called.
@@ -464,9 +480,11 @@ namespace novatel_gps_driver
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;
+      GphdtParser gphdt_parser_;
       GprmcParser gprmc_parser_;
       InscovParser inscov_parser_;
       InspvaParser inspva_parser_;
+      InspvaxParser inspvax_parser_;
       InsstdevParser insstdev_parser_;
       RangeParser range_parser_;
       TimeParser time_parser_;
@@ -479,11 +497,13 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::GphdtPtr> gphdt_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
       boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InscovPtr> inscov_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InspvaPtr> inspva_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::InspvaxPtr> inspvax_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InsstdevPtr> insstdev_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> novatel_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelXYZPtr> novatel_xyz_positions_;

@@ -110,16 +110,12 @@ novatel_gps_msgs::GpggaPtr novatel_gps_driver::GpggaParser::ParseAscii(const nov
 
   if (!valid)
   {
+    was_last_gps_valid_ = false;
     throw ParseException("GPGGA log was invalid.");
   }
 
-  // Check for actual lat and lon data
-  if (sentence.body[2].empty() || sentence.body[4].empty())
-  {
-    // No Lat or Lon data, return false;
-    was_last_gps_valid_ = false;
-  }
-
+  // If we got this far, we successfully parsed the message and will consider
+  // it valid
   was_last_gps_valid_ = true;
 
   return msg;

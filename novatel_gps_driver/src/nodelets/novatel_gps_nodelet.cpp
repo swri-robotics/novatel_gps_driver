@@ -97,7 +97,7 @@
  * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
  *    Novatel ClockSteering messages [false]
  * \e publish_imu_messages <tt>boot</tt> - If set true, the driver publishes
- *    Novatel CorrImuData, InsPva, InsStdev, and sensor_msgs/Imu messages [false]
+ *    Novatel CorrImuData, InsPva, InsPvax, InsStdev, and sensor_msgs/Imu messages [false]
  * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
  *    messages from the device at 20 Hz and publishes them on `gpgsa`
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
@@ -155,6 +155,8 @@
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Range.h>
 #include <novatel_gps_msgs/Time.h>
+#include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Inspvax.h>
 #include <novatel_gps_driver/novatel_gps.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
@@ -178,6 +180,7 @@ namespace novatel_gps_driver
       polling_period_(0.05),
       publish_gpgsa_(false),
       publish_gpgsv_(false),
+      publish_gphdt_(false),
       imu_rate_(100.0),
       imu_sample_rate_(-1),
       publish_imu_messages_(false),
@@ -233,6 +236,7 @@ namespace novatel_gps_driver
       swri::param(priv, "publish_clocksteering", publish_clock_steering_, false);
       swri::param(priv, "publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
       swri::param(priv, "publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
+      swri::param(priv, "publish_gphdt", publish_gphdt_, publish_gphdt_);
       swri::param(priv, "publish_imu_messages", publish_imu_messages_, publish_imu_messages_);
       swri::param(priv, "publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
       swri::param(priv, "publish_novatel_xyz_positions", publish_novatel_xyz_positions_, publish_novatel_xyz_positions_);
@@ -294,12 +298,18 @@ namespace novatel_gps_driver
         novatel_imu_pub_= swri::advertise<novatel_gps_msgs::NovatelCorrectedImuData>(node, "corrimudata", 100);
         insstdev_pub_ = swri::advertise<novatel_gps_msgs::Insstdev>(node, "insstdev", 100);
         inspva_pub_ = swri::advertise<novatel_gps_msgs::Inspva>(node, "inspva", 100);
+        inspvax_pub_ = swri::advertise<novatel_gps_msgs::Inspvax>(node, "inspvax", 100);
         inscov_pub_ = swri::advertise<novatel_gps_msgs::Inscov>(node, "inscov", 100);
       }
 
       if (publish_gpgsv_)
       {
         gpgsv_pub_ = swri::advertise<novatel_gps_msgs::Gpgsv>(node, "gpgsv", 100);
+      }
+
+      if (publish_gphdt_)
+      {
+        gphdt_pub_ = swri::advertise<novatel_gps_msgs::Gphdt>(node,"gphdt", 100);
       }
 
       if (publish_novatel_positions_)
@@ -433,6 +443,10 @@ namespace novatel_gps_driver
       {
         opts["gpgsv"] = 1.0;
       }
+      if (publish_gphdt_)
+      {
+        opts["gphdt"] = polling_period_;
+      }
       if (publish_clock_steering_)
       {
         opts["clocksteering" + format_suffix] = 1.0;
@@ -443,6 +457,7 @@ namespace novatel_gps_driver
         opts["corrimudata" + format_suffix] = period;
         opts["inscov" + format_suffix] = 1.0;
         opts["inspva" + format_suffix] = period;
+        opts["inspvax" + format_suffix] = period;
         opts["insstdev" + format_suffix] = 1.0;
         if (!use_binary_messages_)
         {
@@ -550,6 +565,7 @@ namespace novatel_gps_driver
     double polling_period_;
     bool publish_gpgsa_;
     bool publish_gpgsv_;
+    bool publish_gphdt_;
     /// The rate at which IMU measurements will be published, in Hz
     double imu_rate_;
     /// How frequently the device samples the IMU, in Hz
@@ -578,6 +594,7 @@ namespace novatel_gps_driver
     ros::Publisher imu_pub_;
     ros::Publisher inscov_pub_;
     ros::Publisher inspva_pub_;
+    ros::Publisher inspvax_pub_;
     ros::Publisher insstdev_pub_;
     ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
@@ -589,6 +606,7 @@ namespace novatel_gps_driver
     ros::Publisher gpgga_pub_;
     ros::Publisher gpgsv_pub_;
     ros::Publisher gpgsa_pub_;
+    ros::Publisher gphdt_pub_;
     ros::Publisher gprmc_pub_;
     ros::Publisher range_pub_;
     ros::Publisher time_pub_;
@@ -805,6 +823,18 @@ namespace novatel_gps_driver
         }
       }
 
+      if (publish_gphdt_)
+      {
+        std::vector<novatel_gps_msgs::GphdtPtr> gphdt_msgs;
+        gps_.GetGphdtMessages(gphdt_msgs);
+        for (const auto& msg : gphdt_msgs)
+        {
+          msg->header.stamp = ros::Time::now();
+          msg->header.frame_id = frame_id_;
+          gphdt_pub_.publish(msg);
+        }
+      }
+
       if (publish_novatel_positions_)
       {
         for (const auto& msg : position_msgs)
@@ -945,6 +975,15 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = imu_frame_id_;
           inspva_pub_.publish(msg);
+        }
+
+        std::vector<novatel_gps_msgs::InspvaxPtr> inspvax_msgs;
+        gps_.GetInspvaxMessages(inspvax_msgs);
+        for (const auto& msg : inspvax_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = imu_frame_id_;
+          inspvax_pub_.publish(msg);
         }
 
         std::vector<novatel_gps_msgs::InsstdevPtr> insstdev_msgs;
