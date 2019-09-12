@@ -842,7 +842,6 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
           novatel_heading2_pub_.publish(msg);
-	  std::cout << "Published the message heading2 67" << "\n";
         }
       }
 

@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(novatel_gps_driver)
 
-# set(CMAKE_EXPORT_COMPILE_COMMMANDS ON)
-
 set(DEPS
   diagnostic_msgs 
   diagnostic_updater 

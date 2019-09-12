@@ -461,7 +461,6 @@ namespace novatel_gps_driver
 
   void  NovatelGps::GetNovatelHeading2Messages(std::vector<novatel_gps_msgs::NovatelHeading2Ptr>& headings) {
     headings.clear();
-    std::cout << "Got the heading2 message 24" << "\n";
     headings.insert(headings.end(), heading2_msgs_.begin(), heading2_msgs_.end());
     heading2_msgs_.clear();
   }
@@ -1062,7 +1061,6 @@ namespace novatel_gps_driver
       }
       case Heading2Parser::MESSAGE_ID:
       {
-	std::cout << "In the heading2 switch case" << "\n";
 	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
         heading2_msgs_.push_back(heading);
@@ -1230,7 +1228,7 @@ namespace novatel_gps_driver
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
     }
-    else if (sentence.id == "BESTXYZ")
+    else if (sentence.id == "BESTXYZA")
     {
       novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
@@ -1248,14 +1246,13 @@ namespace novatel_gps_driver
       velocity->header.stamp = stamp;
       novatel_velocities_.push_back(velocity);
     }
-    else if (sentence.id == "HEADING2")
+    else if (sentence.id == "HEADING2A")
     {
-      std::cout << "When the sentence id is HEADING2 56" << "\n";
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
     }
-    else if (sentence.id == "DUALANTENNAHEADING")
+    else if (sentence.id == "DUALANTENNAHEADINGA")
     {
       novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
@@ -1448,7 +1445,7 @@ namespace novatel_gps_driver
       command << std::setprecision(3);
       if (option->first=="heading2a")
       {
-      command << "log " << option->first << " onnew " << option->second << "\r\n";
+      command << "log " << option->first << " onnew " << "\r\n";
       }
       else
       {
