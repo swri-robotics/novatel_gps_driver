@@ -324,7 +324,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-	novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
+	 novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
       }
 
       if (publish_novatel_dual_antenna_heading_)
@@ -837,7 +837,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-	for (const auto& msg : heading2_msgs)
+	 for (const auto& msg : heading2_msgs)
         {
           msg->header.stamp += sync_offset;
           msg->header.frame_id = frame_id_;
