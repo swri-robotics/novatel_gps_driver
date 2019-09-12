@@ -1061,7 +1061,7 @@ namespace novatel_gps_driver
       }
       case Heading2Parser::MESSAGE_ID:
       {
-	 novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
         heading2_msgs_.push_back(heading);
         break;
