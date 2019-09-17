@@ -7,9 +7,10 @@
   </description>
 
   <maintainer email="preed@swri.org">P. J. Reed</maintainer>
-  <maintainer email="kkozak@swri.org">Kris Kozak</maintainer>
 
   <license>BSD</license>
+
+  <url type="repository">https://github.com/swri-robotics/novatel_gps_driver</url>
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>boost</depend>
@@ -29,6 +30,8 @@
   <depend>swri_serial_util</depend>
   <depend>swri_string_util</depend>
   <depend>tf</depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>

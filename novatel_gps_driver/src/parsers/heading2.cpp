@@ -47,7 +47,7 @@ namespace novatel_gps_driver
     return MESSAGE_NAME;
   }
 
-  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) throw(ParseException) 
+  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false) 
   {
     if (bin_msg.data_.size() != BINARY_LENGTH)
     {
@@ -112,7 +112,7 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseAscii(const NovatelSentence& sentence) throw(ParseException)
+  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
     novatel_gps_msgs::NovatelHeading2Ptr ros_msg =
         boost::make_shared<novatel_gps_msgs::NovatelHeading2>();
@@ -173,14 +173,17 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  uint8_t Heading2Parser::SolutionSourceToMsgEnum(uint8_t source_mask) throw(ParseException) {
-    uint8_t source_bits = source_mask & 0b00001100;
-    if (source_mask == 0b0000) {
-      return novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
-    } else if (source_mask == 0b0100) {
-      return novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
-    } else {
-      throw ParseException("HEADING2 Solution Source could not be parsed due to unknown source");
+  uint8_t Heading2Parser::SolutionSourceToMsgEnum(uint8_t source_mask) noexcept(false)
+  {
+    uint8_t source_bits = (source_mask & 0x0Cu) >> 2u;
+    switch (source_bits)
+    {
+      case 0:
+        return novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
+      case 1:
+        return novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
+      default:
+        throw ParseException("HEADING2 Solution Source could not be parsed due to unknown source");
     }
   }
-};
+}

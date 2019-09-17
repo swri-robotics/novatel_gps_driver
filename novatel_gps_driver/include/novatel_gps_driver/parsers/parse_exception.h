@@ -40,7 +40,7 @@ namespace novatel_gps_driver
   class ParseException : public std::runtime_error
   {
   public:
-    ParseException(const std::string& error) : std::runtime_error(error)
+    explicit ParseException(const std::string& error) : std::runtime_error(error)
     {}
   };
 }
