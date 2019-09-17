@@ -433,7 +433,7 @@ namespace novatel_gps_driver
       }
       if (publish_novatel_dual_antenna_heading_)
       {
-        opts["dual_antenna_heading" + format_suffix] = polling_period_;
+        opts["dualantennaheading" + format_suffix] = polling_period_;
       }
       if (publish_gpgsa_)
       {
