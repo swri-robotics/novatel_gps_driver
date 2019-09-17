@@ -134,7 +134,6 @@
 #include <boost/accumulators/statistics/min.hpp>
 #include <boost/accumulators/statistics/rolling_mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
-#include <boost/accumulators/statistics/tail.hpp>
 #include <boost/accumulators/statistics/variance.hpp>
 #include <boost/circular_buffer.hpp>
 
@@ -177,12 +176,15 @@ namespace novatel_gps_driver
     NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
+      serial_baud_(115200),
       polling_period_(0.05),
       publish_gpgsa_(false),
       publish_gpgsv_(false),
       publish_gphdt_(false),
       imu_rate_(100.0),
       imu_sample_rate_(-1),
+      span_frame_to_ros_frame_(false),
+      publish_clock_steering_(false),
       publish_imu_messages_(false),
       publish_novatel_positions_(false),
       publish_novatel_xyz_positions_(false),
@@ -198,7 +200,6 @@ namespace novatel_gps_driver
       publish_sync_diagnostic_(true),
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
-      span_frame_to_ros_frame_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -216,7 +217,7 @@ namespace novatel_gps_driver
     {
     }
 
-    ~NovatelGpsNodelet()
+    ~NovatelGpsNodelet() override
     {
       gps_.Disconnect();
     }
@@ -225,7 +226,7 @@ namespace novatel_gps_driver
      * Init method reads parameters and sets up publishers and subscribers.
      * It does not connect to the device.
      */
-    void onInit()
+    void onInit() override
     {
       ros::NodeHandle &node = getNodeHandle();
       ros::NodeHandle &priv = getPrivateNodeHandle();
@@ -233,7 +234,7 @@ namespace novatel_gps_driver
       swri::param(priv, "device", device_, device_);
       swri::param(priv, "imu_rate", imu_rate_, imu_rate_);
       swri::param(priv, "imu_sample_rate", imu_sample_rate_, imu_sample_rate_);
-      swri::param(priv, "publish_clocksteering", publish_clock_steering_, false);
+      swri::param(priv, "publish_clocksteering", publish_clock_steering_, publish_clock_steering_);
       swri::param(priv, "publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
       swri::param(priv, "publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
       swri::param(priv, "publish_gphdt", publish_gphdt_, publish_gphdt_);
@@ -257,7 +258,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "connection_type", connection_type_, connection_type_);
       connection_ = NovatelGps::ParseConnection(connection_type_);
-      swri::param(priv, "serial_baud", serial_baud_, 115200);
+      swri::param(priv, "serial_baud", serial_baud_, serial_baud_);
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
@@ -660,7 +661,7 @@ namespace novatel_gps_driver
     bool resetService(novatel_gps_msgs::NovatelFRESET::Request& req,
                       novatel_gps_msgs::NovatelFRESET::Response& res)
     {
-      if (gps_.IsConnected() == false)
+      if (!gps_.IsConnected())
       {
         res.success = false;
       }
@@ -757,7 +758,7 @@ namespace novatel_gps_driver
       {
         if (msg->utc_seconds != 0)
         {
-          int64_t second = static_cast<int64_t>(swri_math_util::Round(msg->utc_seconds));
+          auto second = static_cast<int64_t>(swri_math_util::Round(msg->utc_seconds));
           double difference = std::fabs(msg->utc_seconds - second);
 
           if (difference < 0.02)
@@ -1086,10 +1087,10 @@ namespace novatel_gps_driver
       int32_t synced_i = -1;  /// Index of last synced timesync msg
       int32_t synced_j = -1;  /// Index of last synced gps msg
       // Loop over sync times buffer
-      for (int32_t i = 0; i < sync_times_.size(); i++)
+      for (size_t i = 0; i < sync_times_.size(); i++)
       {
         // Loop over message times buffer
-        for (int32_t j = synced_j + 1; j < msg_times_.size(); j++)
+        for (size_t j = synced_j + 1; j < msg_times_.size(); j++)
         {
           // Offset is the difference between the sync time and message time
           double offset = (sync_times_[i] - msg_times_[j]).toSec();

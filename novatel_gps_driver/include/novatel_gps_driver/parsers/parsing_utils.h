@@ -36,7 +36,7 @@
 
 #include <novatel_gps_msgs/NovatelSignalMask.h>
 
-#include <stdint.h>
+#include <cstdint>
 
 /**
  * Utility functions, structures, and constants used when parsing messages.

@@ -47,7 +47,7 @@ namespace novatel_gps_driver
     return MESSAGE_NAME;
   }
 
-  novatel_gps_msgs::NovatelPositionPtr BestposParser::ParseBinary(const BinaryMessage& bin_msg) throw(ParseException)
+  novatel_gps_msgs::NovatelPositionPtr BestposParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
   {
     if (bin_msg.data_.size() != BINARY_LENGTH)
     {
@@ -107,7 +107,7 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  novatel_gps_msgs::NovatelPositionPtr BestposParser::ParseAscii(const NovatelSentence& sentence) throw(ParseException)
+  novatel_gps_msgs::NovatelPositionPtr BestposParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
     novatel_gps_msgs::NovatelPositionPtr msg =
         boost::make_shared<novatel_gps_msgs::NovatelPosition>();
@@ -159,4 +159,4 @@ namespace novatel_gps_driver
 
     return msg;
   }
-};
+}

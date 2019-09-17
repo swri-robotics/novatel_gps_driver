@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::TimeParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::TimePtr novatel_gps_driver::TimeParser::ParseBinary(const novatel_gps_driver::BinaryMessage& msg) throw(ParseException)
+novatel_gps_msgs::TimePtr novatel_gps_driver::TimeParser::ParseBinary(const novatel_gps_driver::BinaryMessage& msg) noexcept(false)
 {
   if (msg.data_.size() != BINARY_LENGTH)
   {
@@ -108,7 +108,7 @@ novatel_gps_msgs::TimePtr novatel_gps_driver::TimeParser::ParseBinary(const nova
 }
 
 novatel_gps_msgs::TimePtr
-novatel_gps_driver::TimeParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) throw(ParseException)
+novatel_gps_driver::TimeParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   novatel_gps_msgs::TimePtr msg = boost::make_shared<novatel_gps_msgs::Time>();
   if (sentence.body.size() != ASCII_FIELD)
