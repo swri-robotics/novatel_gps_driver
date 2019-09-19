@@ -53,15 +53,16 @@ add_library(${PROJECT_NAME}
   src/parsers/bestutm.cpp
   src/parsers/bestvel.cpp
   src/parsers/bestxyz.cpp
-  src/parsers/corrimudata.cpp
   src/parsers/clocksteering.cpp
+  src/parsers/corrimudata.cpp
+  src/parsers/dual_antenna_heading.cpp
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
   src/parsers/gpgsv.cpp
+  src/parsers/gphdt.cpp
   src/parsers/gprmc.cpp
   src/parsers/header.cpp
   src/parsers/heading2.cpp
-  src/parsers/dual_antenna_heading.cpp
   src/parsers/inscov.cpp
   src/parsers/inspva.cpp
   src/parsers/inspvax.cpp

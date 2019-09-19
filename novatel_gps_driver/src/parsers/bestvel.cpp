@@ -44,7 +44,7 @@ const std::string novatel_gps_driver::BestvelParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBinary(const BinaryMessage& bin_msg) throw(ParseException)
+novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
 {
   if (bin_msg.data_.size() != BINARY_LENGTH)
   {
@@ -82,7 +82,7 @@ novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBin
   return ros_msg;
 }
 
-novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) throw(ParseException)
+novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
 {
   novatel_gps_msgs::NovatelVelocityPtr msg = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
   HeaderParser h_parser;

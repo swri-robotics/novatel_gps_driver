@@ -33,8 +33,6 @@
 #include <novatel_gps_msgs/NovatelExtendedSolutionStatus.h>
 #include <novatel_gps_msgs/NovatelSignalMask.h>
 
-#include <ros/ros.h>
-
 namespace novatel_gps_driver
 {
   void GetNovatelReceiverStatusMessage(
@@ -42,29 +40,29 @@ namespace novatel_gps_driver
       novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg)
   {
     receiver_status_msg.original_status_code = status;
-    receiver_status_msg.error_flag = (status & 0x00000001) != 0;
-    receiver_status_msg.temperature_flag = (status & 0x00000002) != 0;
-    receiver_status_msg.voltage_supply_flag = (status & 0x00000004) != 0;
-    receiver_status_msg.antenna_powered = (status & 0x00000008) == 0;
-    receiver_status_msg.antenna_is_open = (status & 0x00000020) != 0;
-    receiver_status_msg.antenna_is_shorted = (status & 0x00000040) != 0;
-    receiver_status_msg.cpu_overload_flag = (status & 0x00000080) != 0;
-    receiver_status_msg.com1_buffer_overrun = (status & 0x00000100) != 0;
-    receiver_status_msg.com2_buffer_overrun = (status & 0x00000200) != 0;
-    receiver_status_msg.com3_buffer_overrun = (status & 0x00000400) != 0;
-    receiver_status_msg.usb_buffer_overrun = (status & 0x00000800) != 0;
-    receiver_status_msg.rf1_agc_flag = (status & 0x00008000) != 0;
-    receiver_status_msg.rf2_agc_flag = (status & 0x00020000) != 0;
-    receiver_status_msg.almanac_flag = (status & 0x00040000) != 0;
-    receiver_status_msg.position_solution_flag = (status & 0x00080000) != 0;
-    receiver_status_msg.position_fixed_flag = (status & 0x00100000) != 0;
-    receiver_status_msg.clock_steering_status_enabled = (status & 0x00200000) == 0;
-    receiver_status_msg.clock_model_flag = (status & 0x00400000) != 0;
-    receiver_status_msg.oemv_external_oscillator_flag = (status & 0x00800000) != 0;
-    receiver_status_msg.software_resource_flag = (status & 0x01000000) != 0;
-    receiver_status_msg.aux3_status_event_flag = (status & 0x20000000) != 0;
-    receiver_status_msg.aux2_status_event_flag = (status & 0x40000000) != 0;
-    receiver_status_msg.aux1_status_event_flag = (status & 0x80000000) != 0;
+    receiver_status_msg.error_flag = (status & 0x00000001u) != 0;
+    receiver_status_msg.temperature_flag = (status & 0x00000002u) != 0;
+    receiver_status_msg.voltage_supply_flag = (status & 0x00000004u) != 0;
+    receiver_status_msg.antenna_powered = (status & 0x00000008u) == 0;
+    receiver_status_msg.antenna_is_open = (status & 0x00000020u) != 0;
+    receiver_status_msg.antenna_is_shorted = (status & 0x00000040u) != 0;
+    receiver_status_msg.cpu_overload_flag = (status & 0x00000080u) != 0;
+    receiver_status_msg.com1_buffer_overrun = (status & 0x00000100u) != 0;
+    receiver_status_msg.com2_buffer_overrun = (status & 0x00000200u) != 0;
+    receiver_status_msg.com3_buffer_overrun = (status & 0x00000400u) != 0;
+    receiver_status_msg.usb_buffer_overrun = (status & 0x00000800u) != 0;
+    receiver_status_msg.rf1_agc_flag = (status & 0x00008000u) != 0;
+    receiver_status_msg.rf2_agc_flag = (status & 0x00020000u) != 0;
+    receiver_status_msg.almanac_flag = (status & 0x00040000u) != 0;
+    receiver_status_msg.position_solution_flag = (status & 0x00080000u) != 0;
+    receiver_status_msg.position_fixed_flag = (status & 0x00100000u) != 0;
+    receiver_status_msg.clock_steering_status_enabled = (status & 0x00200000u) == 0;
+    receiver_status_msg.clock_model_flag = (status & 0x00400000u) != 0;
+    receiver_status_msg.oemv_external_oscillator_flag = (status & 0x00800000u) != 0;
+    receiver_status_msg.software_resource_flag = (status & 0x01000000u) != 0;
+    receiver_status_msg.aux3_status_event_flag = (status & 0x20000000u) != 0;
+    receiver_status_msg.aux2_status_event_flag = (status & 0x40000000u) != 0;
+    receiver_status_msg.aux1_status_event_flag = (status & 0x80000000u) != 0;
   }
 
   void GetExtendedSolutionStatusMessage(
@@ -72,8 +70,8 @@ namespace novatel_gps_driver
       novatel_gps_msgs::NovatelExtendedSolutionStatus& msg)
   {
     msg.original_mask = status;
-    msg.advance_rtk_verified = 0x01 & status;
-    uint32_t pseudo_iono_correction_mask = (0x0E & status) >> 1;
+    msg.advance_rtk_verified = 0x01u & status;
+    uint32_t pseudo_iono_correction_mask = (0x0Eu & status) >> 1u;
     switch(pseudo_iono_correction_mask)
     {
       case 0:
@@ -103,11 +101,11 @@ namespace novatel_gps_driver
   void GetSignalsUsed(uint32_t mask, novatel_gps_msgs::NovatelSignalMask& msg)
   {
     msg.original_mask = mask;
-    msg.gps_L1_used_in_solution = mask & 0x01;
-    msg.gps_L2_used_in_solution = mask & 0x02;
-    msg.gps_L3_used_in_solution = mask & 0x04;
-    msg.glonass_L1_used_in_solution = mask & 0x10;
-    msg.glonass_L2_used_in_solution = mask & 0x20;
+    msg.gps_L1_used_in_solution = mask & 0x01u;
+    msg.gps_L2_used_in_solution = mask & 0x02u;
+    msg.gps_L3_used_in_solution = mask & 0x04u;
+    msg.glonass_L1_used_in_solution = mask & 0x10u;
+    msg.glonass_L2_used_in_solution = mask & 0x20u;
   }
 
   double ParseDouble(const uint8_t* buffer)
@@ -246,6 +244,4 @@ namespace novatel_gps_driver
     double degrees = static_cast<double>(whole_degrees) + minutes / 60.0;
     return degrees;
   }
-
-
 }
