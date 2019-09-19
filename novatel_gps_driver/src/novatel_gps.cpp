@@ -1477,13 +1477,13 @@ namespace novatel_gps_driver
     {
       std::stringstream command;
       command << std::setprecision(3);
-      if (option->first.find("heading2") != std::string::npos)
+      if (option.first.find("heading2") != std::string::npos)
       {
-      	command << "log " << option->first << " onnew " << "\r\n";
+      	command << "log " << option.first << " onnew " << "\r\n";
       }
       else
       {
-      	command << "log " << option->first << " ontime " << option.second << "\r\n";
+      	command << "log " << option.first << " ontime " << option.second << "\r\n";
       }
       configured = configured && Write(command.str());
     }
