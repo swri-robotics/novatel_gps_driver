@@ -60,10 +60,10 @@ namespace novatel_gps_driver
     ulCRC = static_cast<uint32_t>(i);
     for ( j = 8 ; j > 0; j-- )
     {
-      if ( ulCRC & 1 )
-        ulCRC = static_cast<uint32_t>(( ulCRC >> 1 ) ^ NOVATEL_CRC32_POLYNOMIAL);
+      if ( ulCRC & 1u )
+        ulCRC = static_cast<uint32_t>(( ulCRC >> 1u ) ^ NOVATEL_CRC32_POLYNOMIAL);
       else
-        ulCRC >>= 1;
+        ulCRC >>= 1u;
     }
     return ulCRC;
   }
@@ -77,8 +77,8 @@ namespace novatel_gps_driver
     uint32_t ulCRC = 0;
     while ( ulCount-- != 0 )
     {
-      ulTemp1 = static_cast<uint32_t>(( ulCRC >> 8 ) & 0x00FFFFFFL);
-      ulTemp2 = CRC32Value( ((int32_t) ulCRC ^ *ucBuffer++ ) & 0xff );
+      ulTemp1 = static_cast<uint32_t>(( ulCRC >> 8u ) & 0x00FFFFFFL);
+      ulTemp2 = CRC32Value( ((int32_t) ulCRC ^ *ucBuffer++ ) & 0xffu );
       ulCRC = ulTemp1 ^ ulTemp2;
     }
     return( ulCRC );
@@ -155,7 +155,7 @@ namespace novatel_gps_driver
 
     ROS_DEBUG("Reading binary header.");
     msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
-    uint16_t data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
+    auto data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
     uint16_t data_length = msg.header_.message_length_;
 
     if (msg.header_.sync0_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[0]) ||
@@ -230,7 +230,7 @@ namespace novatel_gps_driver
       // Compare the checksums
       sentence = str.substr(start_idx + 1, checksum_start - start_idx - 1);
       std::string checksum_str = str.substr(checksum_start + 1, 8);
-      uint64_t checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t checksum = std::strtoul(checksum_str.c_str(), nullptr, 16);
       uint64_t calculated_checksum = CalculateBlockCRC32(
           static_cast<uint32_t>(sentence.size()),
           reinterpret_cast<const uint8_t*>(sentence.c_str()));
@@ -277,7 +277,7 @@ namespace novatel_gps_driver
       // Compare the checksums
       sentence = str.substr(start_idx + 1, checksum_start - start_idx - 1);
       std::string checksum_str = str.substr(checksum_start + 1, 2);
-      uint64_t checksum = std::strtoul(checksum_str.c_str(), 0, 16);
+      uint64_t checksum = std::strtoul(checksum_str.c_str(), nullptr, 16);
       uint64_t calculated_checksum = NmeaChecksum(sentence);
       if (checksum == ULONG_MAX)
       {
@@ -357,7 +357,7 @@ namespace novatel_gps_driver
   }
 
   bool NovatelMessageExtractor::ExtractCompleteMessages(
-      const std::string input,
+      const std::string& input,
       std::vector<NmeaSentence>& nmea_sentences,
       std::vector<NovatelSentence>& novatel_sentences,
       std::vector<BinaryMessage>& binary_messages,
@@ -441,7 +441,7 @@ namespace novatel_gps_driver
                 keep_nmea_container);
             if (result == 0)
             {
-              nmea_sentences.push_back(NmeaSentence());
+              nmea_sentences.emplace_back(NmeaSentence());
               VectorizeNmeaSentence(cur_sentence, nmea_sentences.back());
               sentence_start = ascii_end_idx;
             }
@@ -471,7 +471,7 @@ namespace novatel_gps_driver
             if (result == 0)
             {
               // Send to parser for testing:
-              novatel_sentences.push_back(NovatelSentence());
+              novatel_sentences.emplace_back(NovatelSentence());
               if (!VectorizeNovatelSentence(cur_sentence, novatel_sentences.back()))
               {
                 novatel_sentences.pop_back();
@@ -545,7 +545,7 @@ namespace novatel_gps_driver
   void NovatelMessageExtractor::GetGpsFixMessage(
       const novatel_gps_msgs::Gprmc& gprmc,
       const novatel_gps_msgs::Gpgga& gpgga,
-      gps_common::GPSFixPtr gps_fix)
+      const gps_common::GPSFixPtr& gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
     gps_fix->altitude = gpgga.alt;

@@ -26,22 +26,22 @@ add_message_files(DIRECTORY msg FILES
   Inspvax.msg
   Insstdev.msg
   NovatelCorrectedImuData.msg
+  NovatelDualAntennaHeading.msg
   NovatelExtendedSolutionStatus.msg
   NovatelHeading2.msg
-  NovatelDualAntennaHeading.msg
   NovatelMessageHeader.msg
   NovatelPosition.msg
-  NovatelUtmPosition.msg
   NovatelReceiverStatus.msg
   NovatelSignalMask.msg
+  NovatelUtmPosition.msg
   NovatelVelocity.msg
   NovatelXYZ.msg
-  RangeInformation.msg
   Range.msg
+  RangeInformation.msg
   Satellite.msg
   Time.msg
-  TrackstatChannel.msg
   Trackstat.msg
+  TrackstatChannel.msg
 )
 generate_messages(DEPENDENCIES ${MSG_DEPS})
 catkin_package(

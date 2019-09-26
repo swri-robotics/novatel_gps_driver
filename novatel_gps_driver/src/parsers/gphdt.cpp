@@ -14,7 +14,7 @@ const std::string novatel_gps_driver::GphdtParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GphdtPtr novatel_gps_driver::GphdtParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) throw(ParseException)
+novatel_gps_msgs::GphdtPtr novatel_gps_driver::GphdtParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   const size_t EXPECTED_LEN = 3;
 
@@ -27,7 +27,6 @@ novatel_gps_msgs::GphdtPtr novatel_gps_driver::GphdtParser::ParseAscii(const nov
     throw ParseException(error.str());
   }
 
-  bool success = true;
   novatel_gps_msgs::GphdtPtr msg = boost::make_shared<novatel_gps_msgs::Gphdt>();
   msg->message_id = sentence.body[0];
 

@@ -44,9 +44,9 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseBinary(const BinaryMessage& bin_msg) throw(ParseException) override;
+    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseAscii(const NovatelSentence& sentence) throw(ParseException) override;
+    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 2042;
     static constexpr size_t BINARY_LENGTH = 44;
@@ -61,7 +61,7 @@ namespace novatel_gps_driver
      * @param[in] source_mask The byte to parse
      * @return NovatelDualAntennaHeading.solution_source enum value
      */
-    uint8_t SolutionSourceToMsgEnum(uint8_t source_mask) throw(ParseException);
+    uint8_t SolutionSourceToMsgEnum(uint8_t source_mask) noexcept(false);
   };
 }
 
