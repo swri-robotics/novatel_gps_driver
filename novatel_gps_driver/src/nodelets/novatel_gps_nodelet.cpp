@@ -183,6 +183,8 @@ namespace novatel_gps_driver
       publish_gphdt_(false),
       imu_rate_(100.0),
       imu_sample_rate_(-1),
+      span_frame_to_ros_frame_(false),
+      publish_clock_steering_(false),
       publish_imu_messages_(false),
       publish_novatel_positions_(false),
       publish_novatel_xyz_positions_(false),
@@ -198,7 +200,6 @@ namespace novatel_gps_driver
       publish_sync_diagnostic_(true),
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
-      span_frame_to_ros_frame_(false),
       connection_(NovatelGps::SERIAL),
       last_sync_(ros::TIME_MIN),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -688,14 +689,9 @@ namespace novatel_gps_driver
      */
     void CheckDeviceForData()
     {
-      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
-      std::vector<novatel_gps_msgs::NovatelXYZPtr> xyz_position_msgs;
-      std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
-      std::vector<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs;
-      std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs;
       std::vector<gps_common::GPSFixPtr> fix_msgs;
+      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
-      std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
 
       // This call appears to block if the serial device is disconnected
       NovatelGps::ReadResult result = gps_.ProcessData();
@@ -730,15 +726,12 @@ namespace novatel_gps_driver
         gps_insufficient_data_warnings_++;
       }
 
-      // Read messages from the driver into the local message lists
-      gps_.GetGpggaMessages(gpgga_msgs);
-      gps_.GetGprmcMessages(gprmc_msgs);
-      gps_.GetNovatelPositions(position_msgs);
-      gps_.GetNovatelXYZPositions(xyz_position_msgs);
-      gps_.GetNovatelUtmPositions(utm_msgs);
+      // GPSFix messages are always published, and Gpgga and Position messages
+      // are used for generating some diagnostics.  Other message types will
+      // only be retrieved if we're configured to publish them.
       gps_.GetFixMessages(fix_msgs);
-      gps_.GetNovatelHeading2Messages(heading2_msgs);
-      gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
+      gps_.GetGpggaMessages(gpgga_msgs);
+      gps_.GetNovatelPositions(position_msgs);
 
       // Increment the measurement count by the number of messages we just
       // read
@@ -791,6 +784,8 @@ namespace novatel_gps_driver
           gpgga_pub_.publish(msg);
         }
 
+        std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
+        gps_.GetGprmcMessages(gprmc_msgs);
         for (const auto& msg : gprmc_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -847,6 +842,8 @@ namespace novatel_gps_driver
 
       if (publish_novatel_xyz_positions_)
       {
+        std::vector<novatel_gps_msgs::NovatelXYZPtr> xyz_position_msgs;
+        gps_.GetNovatelXYZPositions(xyz_position_msgs);
         for (const auto& msg : xyz_position_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -857,6 +854,8 @@ namespace novatel_gps_driver
 
       if (publish_novatel_utm_positions_)
       {
+        std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
+        gps_.GetNovatelUtmPositions(utm_msgs);
         for (const auto& msg : utm_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -867,6 +866,8 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
+        std::vector<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs;
+        gps_.GetNovatelHeading2Messages(heading2_msgs);
         for (const auto& msg : heading2_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -877,6 +878,8 @@ namespace novatel_gps_driver
 
       if (publish_novatel_dual_antenna_heading_)
       {
+        std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs;
+        gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
         for (const auto& msg : dual_antenna_heading_msgs)
         {
           msg->header.stamp += sync_offset;
