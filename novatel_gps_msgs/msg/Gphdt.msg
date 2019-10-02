@@ -1,5 +1,5 @@
 # Message from GPHDT NMEA String
-Header header
+std_msgs/Header header
 
 string message_id
 

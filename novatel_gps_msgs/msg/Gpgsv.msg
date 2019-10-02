@@ -3,7 +3,7 @@
 # of these messages may need to be synthesized to get data about all visible
 # satellites.
 
-Header header
+std_msgs/Header header
 
 string message_id
 

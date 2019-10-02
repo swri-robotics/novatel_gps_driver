@@ -1,5 +1,5 @@
 # Parsed Best Position or Omnistar XP or HP pos data from Novatel OEM6 receiver
-Header header
+std_msgs/Header header
 
 NovatelMessageHeader novatel_msg_header
 
