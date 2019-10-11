@@ -335,7 +335,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-        novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
+	novatel_heading2_pub_ = swri::advertise<novatel_gps_msgs::NovatelHeading2>(node, "heading2", 100);
       }
 
       if (publish_novatel_dual_antenna_heading_)
@@ -434,7 +434,7 @@ namespace novatel_gps_driver
       }
       if (publish_novatel_dual_antenna_heading_)
       {
-        opts["dual_antenna_heading" + format_suffix] = polling_period_;
+        opts["dualantennaheading" + format_suffix] = polling_period_;
       }
       if (publish_gpgsa_)
       {

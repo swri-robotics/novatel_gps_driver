@@ -1077,7 +1077,7 @@ namespace novatel_gps_driver
       }
       case Heading2Parser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
         heading2_msgs_.push_back(heading);
         break;
@@ -1477,7 +1477,14 @@ namespace novatel_gps_driver
     {
       std::stringstream command;
       command << std::setprecision(3);
-      command << "log " << option.first << " ontime " << option.second << "\r\n";
+      if (option.first.find("heading2") != std::string::npos)
+      {
+      	command << "log " << option.first << " onnew " << "\r\n";
+      }
+      else
+      {
+      	command << "log " << option.first << " ontime " << option.second << "\r\n";
+      }
       configured = configured && Write(command.str());
     }
 
