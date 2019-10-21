@@ -1,0 +1,9 @@
+# Algorithm parameters for novatel_gps_nodelet_wrapper
+
+# Double: Length of time in which an IMU message cannot be received before it will be considered a fault
+# Units: seconds
+imu_timout: 0.25
+
+# Double: Length of time in which a GPS message cannot be received before it will be considered a fault
+# Units: seconds
+gnss_timout: 0.25

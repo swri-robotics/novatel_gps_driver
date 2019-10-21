@@ -97,7 +97,7 @@
  * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
  *    Novatel ClockSteering messages [false]
  * \e publish_imu_messages <tt>boot</tt> - If set true, the driver publishes
- *    Novatel CorrImuData, InsPva, InsStdev, and sensor_msgs/Imu messages [false]
+ *    Novatel CorrImuData, InsPva, InsPvax, InsStdev, and sensor_msgs/Imu messages [false]
  * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
  *    messages from the device at 20 Hz and publishes them on `gpgsa`
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
@@ -155,6 +155,8 @@
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Range.h>
 #include <novatel_gps_msgs/Time.h>
+#include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Inspvax.h>
 #include <novatel_gps_driver/novatel_gps.h>
 #include <ros/ros.h>
 #include <sensor_msgs/Imu.h>
@@ -164,9 +166,6 @@
 #include <swri_roscpp/parameters.h>
 #include <swri_roscpp/publisher.h>
 #include <swri_roscpp/subscriber.h>
-#include <cav_msgs/SystemAlert.h>
-#include <cav_msgs/DriverStatus.h>
-
 
 namespace stats = boost::accumulators;
 
@@ -174,15 +173,8 @@ namespace novatel_gps_driver
 {
   class NovatelGpsNodelet : public nodelet::Nodelet
   {
-      private:
-      volatile uint8_t status_gps_;
-      volatile uint8_t previous_status_;
-      ros::Time last_update_time_;
-      cav_msgs::DriverStatus status_;
-      ros::Duration time_difference_;
-      ros::Timer timer_;
-      public:
-      NovatelGpsNodelet() :
+  public:
+    NovatelGpsNodelet() :
       device_(""),
       connection_type_("serial"),
       polling_period_(0.05),
@@ -267,7 +259,7 @@ namespace novatel_gps_driver
 
       swri::param(priv, "imu_frame_id", imu_frame_id_, std::string(""));
       swri::param(priv, "frame_id", frame_id_, std::string(""));
-
+      
       //set NovatelGps parameters
       swri::param(priv, "gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol_, 0.01);
       swri::param(priv, "gpgga_position_sync_tol", gps_.gpgga_position_sync_tol_, 0.01);
@@ -277,15 +269,10 @@ namespace novatel_gps_driver
       reset_service_ = priv.advertiseService("freset", &NovatelGpsNodelet::resetService, this);
 
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
-      //System alert subcriber object decleration
-      alert_sub_ = swri::Subscriber(node,"system_alert",10,&NovatelGpsNodelet::alertCallback,this);
+
       std::string gps_topic = node.resolveName("gps");
       gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
-      //Driver discovery publisher object
-      status_pub_=swri::advertise<cav_msgs::DriverStatus>(node,"driver_discovery", 1);
-      //ros timer for publishing every 1 sec
-      timer_ = node.createTimer(ros::Duration(1.0), &NovatelGpsNodelet::publish_status,this);
 
       if (publish_clock_steering_)
       {
@@ -309,6 +296,7 @@ namespace novatel_gps_driver
         novatel_imu_pub_= swri::advertise<novatel_gps_msgs::NovatelCorrectedImuData>(node, "corrimudata", 100);
         insstdev_pub_ = swri::advertise<novatel_gps_msgs::Insstdev>(node, "insstdev", 100);
         inspva_pub_ = swri::advertise<novatel_gps_msgs::Inspva>(node, "inspva", 100);
+        inspvax_pub_ = swri::advertise<novatel_gps_msgs::Inspvax>(node, "inspvax", 100);
         inscov_pub_ = swri::advertise<novatel_gps_msgs::Inscov>(node, "inscov", 100);
       }
 
@@ -318,7 +306,7 @@ namespace novatel_gps_driver
       }
 
       if (publish_novatel_positions_)
-      {
+      { 
         novatel_position_pub_ = swri::advertise<novatel_gps_msgs::NovatelPosition>(node, "bestpos", 100);
       }
 
@@ -328,7 +316,7 @@ namespace novatel_gps_driver
       }
 
       if (publish_novatel_utm_positions_)
-      {
+      { 
         novatel_utm_pub_ = swri::advertise<novatel_gps_msgs::NovatelUtmPosition>(node, "bestutm", 100);
       }
 
@@ -402,63 +390,6 @@ namespace novatel_gps_driver
     }
 
     /**
-        * SystemAlert to shutdown the sensor node
-        */
-      void alertCallback(const cav_msgs::SystemAlertConstPtr &msg)
-       {
-         if(msg->type==cav_msgs::SystemAlert::SHUTDOWN)
-           {
-            ROS_INFO("systemAlert->shutdown");
-            ros::shutdown();
-           }
-       }
-
-      /**
-          * DriverStatus function definition various novatel driver status
-          */
-      void publish_status(const ros::TimerEvent&)
-      {  // Set driver type
-          status_.gnss=true;
-          status_.imu=true;
-          status_.name = ros::this_node::getName();
-
-          time_difference_=ros::Time::now()-last_update_time_;
-
-          if (last_update_time_.isZero() || ((time_difference_>ros::Duration(1.0)) && (status_gps_==cav_msgs::DriverStatus::OPERATIONAL)))
-          {
-            status_gps_=cav_msgs::DriverStatus::OFF;
-          }
-
-          if(previous_status_!=status_gps_)
-          {
-             ROS_INFO("DriverStatus->%d",status_gps_);
-          }
-
-          if (status_gps_==cav_msgs::DriverStatus::OFF)
-          {
-           status_.status=status_gps_;
-           previous_status_=status_gps_;
-
-          }
-          else if (status_gps_==cav_msgs::DriverStatus::OPERATIONAL)
-          {
-          status_.status=status_gps_;
-          previous_status_=status_gps_;
-          }
-          else if (status_gps_==cav_msgs::DriverStatus::FAULT)
-          {
-          status_.status=status_gps_;
-          previous_status_=status_gps_;
-          }
-          else if(status_gps_==cav_msgs::DriverStatus::DEGRADED)
-          {
-           status_.status=status_gps_;
-           previous_status_=status_gps_;
-          }
-          status_pub_.publish(status_);
-      }
-
-       /**
      * Main spin loop connects to device, then reads data from it and publishes
      * messages.
      */
@@ -515,6 +446,7 @@ namespace novatel_gps_driver
         opts["corrimudata" + format_suffix] = period;
         opts["inscov" + format_suffix] = 1.0;
         opts["inspva" + format_suffix] = period;
+        opts["inspvax" + format_suffix] = period;
         opts["insstdev" + format_suffix] = 1.0;
         if (!use_binary_messages_)
         {
@@ -553,11 +485,7 @@ namespace novatel_gps_driver
           NODELET_INFO("%s connected to device", hw_id_.c_str());
           while (gps_.IsConnected() && ros::ok())
           {
-
-              last_update_time_ = ros::Time::now();
-              status_gps_=cav_msgs::DriverStatus::OPERATIONAL;
-
-              // Read data from the device and publish any received messages
+            // Read data from the device and publish any received messages
             CheckDeviceForData();
 
             // Poke the diagnostic updater. It will only fire diagnostics if
@@ -654,6 +582,7 @@ namespace novatel_gps_driver
     ros::Publisher imu_pub_;
     ros::Publisher inscov_pub_;
     ros::Publisher inspva_pub_;
+    ros::Publisher inspvax_pub_;
     ros::Publisher insstdev_pub_;
     ros::Publisher novatel_imu_pub_;
     ros::Publisher novatel_position_pub_;
@@ -669,7 +598,6 @@ namespace novatel_gps_driver
     ros::Publisher range_pub_;
     ros::Publisher time_pub_;
     ros::Publisher trackstat_pub_;
-    ros::Publisher status_pub_;
 
     ros::ServiceServer reset_service_;
 
@@ -681,7 +609,6 @@ namespace novatel_gps_driver
 
     /// Subscriber to listen for sync times from a DIO
     swri::Subscriber sync_sub_;
-    swri::Subscriber alert_sub_;
     ros::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<ros::Time> sync_times_;
@@ -724,7 +651,7 @@ namespace novatel_gps_driver
       {
         res.success = false;
       }
-
+      
       // Formulate the reset command and send it to the device
       std::string command = "FRESET ";
       command += req.target.length() ? "STANDARD" : req.target;
@@ -757,7 +684,6 @@ namespace novatel_gps_driver
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
       std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
 
-
       // This call appears to block if the serial device is disconnected
       NovatelGps::ReadResult result = gps_.ProcessData();
       if (result == NovatelGps::READ_ERROR)
@@ -767,7 +693,6 @@ namespace novatel_gps_driver
                                device_.c_str(),
                                gps_.ErrorMsg().c_str());
         device_errors_++;
-        status_gps_=cav_msgs::DriverStatus::FAULT;
       }
       else if (result == NovatelGps::READ_TIMEOUT)
       {
@@ -790,7 +715,6 @@ namespace novatel_gps_driver
       else if (result == NovatelGps::READ_INSUFFICIENT_DATA)
       {
         gps_insufficient_data_warnings_++;
-        status_gps_=cav_msgs::DriverStatus::DEGRADED;
       }
 
       // Read messages from the driver into the local message lists
@@ -888,7 +812,6 @@ namespace novatel_gps_driver
 
       if (publish_novatel_positions_)
       {
-
         for (const auto& msg : position_msgs)
         {
           msg->header.stamp += sync_offset;
@@ -993,7 +916,6 @@ namespace novatel_gps_driver
       }
       if (publish_imu_messages_)
       {
-
         std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> novatel_imu_msgs;
         gps_.GetNovatelCorrectedImuData(novatel_imu_msgs);
         for (const auto& msg : novatel_imu_msgs)
@@ -1028,6 +950,15 @@ namespace novatel_gps_driver
           msg->header.stamp += sync_offset;
           msg->header.frame_id = imu_frame_id_;
           inspva_pub_.publish(msg);
+        }
+
+        std::vector<novatel_gps_msgs::InspvaxPtr> inspvax_msgs;
+        gps_.GetInspvaxMessages(inspvax_msgs);
+        for (const auto& msg : inspvax_msgs)
+        {
+          msg->header.stamp += sync_offset;
+          msg->header.frame_id = imu_frame_id_;
+          inspvax_pub_.publish(msg);
         }
 
         std::vector<novatel_gps_msgs::InsstdevPtr> insstdev_msgs;

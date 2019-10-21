@@ -1,0 +1,18 @@
+# Algorithm parameters see README.md for parameter documentation
+imu_rate: 50.0
+
+imu_sample_rate: 100.0
+
+polling_period: 0.05
+
+publish_novatel_positions: true
+
+publish_imu_messages: true
+
+publish_imu: true
+
+publish_novatel_velocity: true
+
+publish_nmea_messages: true
+
+publish_novatel_dual_antenna_heading: true

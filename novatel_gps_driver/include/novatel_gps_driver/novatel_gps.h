@@ -48,6 +48,7 @@
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Inspva.h>
+#include <novatel_gps_msgs/Inspvax.h>
 #include <novatel_gps_msgs/Insstdev.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelPosition.h>
@@ -73,6 +74,7 @@
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 #include <novatel_gps_driver/parsers/inspva.h>
+#include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
 #include <novatel_gps_driver/parsers/time.h>
@@ -195,6 +197,12 @@ namespace novatel_gps_driver
        * @param[out] inspva_messages New INSPVA messages.
        */
       void GetInspvaMessages(std::vector<novatel_gps_msgs::InspvaPtr>& inspva_messages);
+      /**
+       * @brief Provides any INSPVAX messages that have been received since the last
+       * time this was called.
+       * @param[out] inspvax_messages New INSPVAX messages.
+       */
+      void GetInspvaxMessages(std::vector<novatel_gps_msgs::InspvaxPtr>& inspvax_messages);
       /**
        * @brief Provides any INSSTDEV messages that have been received since the last
        * time this was called.
@@ -467,6 +475,7 @@ namespace novatel_gps_driver
       GprmcParser gprmc_parser_;
       InscovParser inscov_parser_;
       InspvaParser inspva_parser_;
+      InspvaxParser inspvax_parser_;
       InsstdevParser insstdev_parser_;
       RangeParser range_parser_;
       TimeParser time_parser_;
@@ -484,6 +493,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InscovPtr> inscov_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InspvaPtr> inspva_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::InspvaxPtr> inspvax_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InsstdevPtr> insstdev_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> novatel_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelXYZPtr> novatel_xyz_positions_;

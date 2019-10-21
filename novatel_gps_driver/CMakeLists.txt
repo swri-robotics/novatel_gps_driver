@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8.3)
 
 project(novatel_gps_driver)
 
+set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
+
 set(DEPS
   diagnostic_msgs 
   diagnostic_updater 
@@ -17,6 +20,9 @@ set(DEPS
   swri_serial_util
   swri_string_util 
   tf
+  cav_msgs
+  carma_utils
+  uncertainty_tools
 )
 
 set(BUILD_DEPENDS
@@ -86,6 +92,9 @@ add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 ### Nodelets ###
 add_library(${PROJECT_NAME}_nodelets 
   src/nodelets/novatel_gps_nodelet.cpp
+  src/nodelets/wrapper/novatel_gps_nodelet_wrapper.cpp
+  src/nodelets/wrapper/novatel_gps_nodelet_wrapper_worker.cpp
+  
 )
 target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
@@ -108,6 +117,10 @@ if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(parser_tests test/parser_tests.cpp)
   target_link_libraries(parser_tests ${PROJECT_NAME})
   set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+
+  catkin_add_gmock(wrapper_tests test/wrapper/gps_nodelet_wrapper_worker_test.cpp)
+  target_link_libraries(wrapper_tests ${PROJECT_NAME}_nodelets )
+  set_target_properties(wrapper_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
 
   #  target_link_libraries(novatel_DriverDiscovery_gtest ${PROJECT_NAME} ${catkin_LIBRARIES})
   # add_dependencies( novatel_DriverDiscovery_gtest ${catkin_EXPORTED_TARGETS})
@@ -137,6 +150,6 @@ install(FILES nodelet_plugins.xml
 )
 
 ### Install Launch Files ###
-install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+install(DIRECTORY launch config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 
