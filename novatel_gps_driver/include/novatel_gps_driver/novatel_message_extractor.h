@@ -35,16 +35,16 @@
 #include <string>
 #include <vector>
 
-#include <gps_msgs/msg/gpsfix.hpp>
+#include <gps_msgs/msg/gps_fix.hpp>
 #include <novatel_gps_msgs/msg/gpgga.hpp>
 #include <novatel_gps_msgs/msg/gpgsa.hpp>
 #include <novatel_gps_msgs/msg/gpgsv.hpp>
 #include <novatel_gps_msgs/msg/gprmc.hpp>
-#include <novatel_gps_msgs/msg/novatelcorrectedimudata.hpp>
-#include <novatel_gps_msgs/msg/novatelposition.hpp>
-#include <novatel_gps_msgs/msg/novatelmessageheader.hpp>
-#include <novatel_gps_msgs/msg/novatelreceiverstatus.hpp>
-#include <novatel_gps_msgs/msg/novatelvelocity.hpp>
+#include <novatel_gps_msgs/msg/novatel_corrected_imu_data.hpp>
+#include <novatel_gps_msgs/msg/novatel_position.hpp>
+#include <novatel_gps_msgs/msg/novatel_message_header.hpp>
+#include <novatel_gps_msgs/msg/novatel_receiver_status.hpp>
+#include <novatel_gps_msgs/msg/novatel_velocity.hpp>
 #include <novatel_gps_msgs/msg/range.hpp>
 #include <novatel_gps_msgs/msg/time.hpp>
 #include <novatel_gps_msgs/msg/trackstat.hpp>
@@ -53,11 +53,14 @@
 #include <novatel_gps_driver/nmea_sentence.h>
 #include <novatel_gps_driver/novatel_sentence.h>
 
+#include <rclcpp/logger.hpp>
+
 namespace novatel_gps_driver
 {
   class NovatelMessageExtractor
   {
   public:
+    explicit NovatelMessageExtractor(rclcpp::Logger logger);
     /**
       * @brief Extracts messages from a buffer of NovAtel data.
       *
@@ -101,8 +104,8 @@ namespace novatel_gps_driver
      * it will be filled in based on the provided GPRMC/GPGGA messages.
      */
     void GetGpsFixMessage(
-        const novatel_gps_msgs::Gprmc& gprmc,
-        const novatel_gps_msgs::Gpgga& gpgga,
+        const novatel_gps_msgs::msg::Gprmc& gprmc,
+        const novatel_gps_msgs::msg::Gpgga& gpgga,
         const gps_msgs::msg::GPSFix::SharedPtr& gps_fix);
 
   private:
@@ -125,6 +128,8 @@ namespace novatel_gps_driver
     static const std::string NOVATEL_ENDLINE;
 
     static constexpr uint32_t NOVATEL_CRC32_POLYNOMIAL = 0xEDB88320L;
+
+    rclcpp::Logger logger_;
 
     // From Novatel OEMV® Family Firmware Reference Manual
     /**

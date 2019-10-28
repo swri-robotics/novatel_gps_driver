@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/trackstat.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::TrackstatParser::MESSAGE_NAME = "TRACKSTAT";
 
@@ -62,7 +63,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Trackstat::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::Trackstat>();
+  novatel_gps_msgs::msg::Trackstat::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::Trackstat>();
   ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
   uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
   if (pos_type > MAX_DATUM)
@@ -79,7 +80,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
     size_t chan_offset = BINARY_BODY_LENGTH +
                          i * BINARY_CHANNEL_LENGTH;
 
-    novatel_gps_msgs::TrackstatChannel chan;
+    novatel_gps_msgs::msg::TrackstatChannel chan;
     chan.prn = ParseInt16(&bin_msg.data_[chan_offset]);
     chan.glofreq = ParseInt16(&bin_msg.data_[chan_offset+2]);
     chan.ch_tr_status = ParseUInt32(&bin_msg.data_[chan_offset+4]);
@@ -208,7 +209,7 @@ novatel_gps_driver::TrackstatParser::ParseAscii(const novatel_gps_driver::Novate
   }
 
   bool valid = true;
-  novatel_gps_msgs::msg::Trackstat::SharedPtr msg = std::make_shared<novatel_gps_msgs::Trackstat>();
+  novatel_gps_msgs::msg::Trackstat::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Trackstat>();
   msg->solution_status = sentence.body[0];
   msg->position_type = sentence.body[1];
   valid &= ParseFloat(sentence.body[2], msg->cutoff);
@@ -217,7 +218,7 @@ novatel_gps_driver::TrackstatParser::ParseAscii(const novatel_gps_driver::Novate
   for (size_t i = 0; i < static_cast<size_t>(n_channels); ++i)
   {
     size_t offset = 4 + i * ASCII_CHANNEL_FIELDS;
-    novatel_gps_msgs::TrackstatChannel& channel = msg->channels[i];
+    novatel_gps_msgs::msg::TrackstatChannel& channel = msg->channels[i];
     valid &= ParseInt16(sentence.body[offset], channel.prn);
     valid &= ParseInt16(sentence.body[offset+1], channel.glofreq);
     valid &= ParseUInt32(sentence.body[offset+2], channel.ch_tr_status, 16);

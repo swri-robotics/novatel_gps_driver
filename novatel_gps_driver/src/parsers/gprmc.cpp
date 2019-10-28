@@ -27,9 +27,11 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/gprmc.h>
-#include <boost/make_shared.hpp>
-#include <swri_string_util/string_util.h>
+
+#include <boost/lexical_cast.hpp>
 
 const std::string novatel_gps_driver::GprmcParser::MESSAGE_NAME = "GPRMC";
 
@@ -62,7 +64,7 @@ novatel_gps_msgs::msg::Gprmc::SharedPtr novatel_gps_driver::GprmcParser::ParseAs
   }
 
   bool success = true;
-  novatel_gps_msgs::msg::Gprmc::SharedPtr msg = std::make_shared<novatel_gps_msgs::Gprmc>();
+  novatel_gps_msgs::msg::Gprmc::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Gprmc>();
   msg->message_id = sentence.body[0];
 
   if (sentence.body[1].empty() || sentence.body[1] == "0")
@@ -71,12 +73,11 @@ novatel_gps_msgs::msg::Gprmc::SharedPtr novatel_gps_driver::GprmcParser::ParseAs
   }
   else
   {
-    double utc_float;
-    if (swri_string_util::ToDouble(sentence.body[1], utc_float))
+    try
     {
-      msg->utc_seconds = UtcFloatToSeconds(utc_float);
+      msg->utc_seconds = boost::lexical_cast<double>(sentence.body[1]);
     }
-    else
+    catch (boost::bad_lexical_cast& e)
     {
       throw ParseException("Error parsing UTC seconds in GPRMC log.");
     }

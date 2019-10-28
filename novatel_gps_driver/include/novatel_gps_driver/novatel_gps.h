@@ -41,7 +41,7 @@
 
 #include <pcap.h>
 
-#include <rclcpp/logger.hpp>
+#include <rclcpp/rclcpp.hpp>
 
 #include <swri_serial_util/serial_port.h>
 
@@ -92,6 +92,7 @@
 
 #include <sensor_msgs/msg/imu.hpp>
 #include <novatel_gps_driver/parsers/inscov.h>
+#include <rclcpp/time.hpp>
 
 namespace novatel_gps_driver
 {
@@ -113,7 +114,7 @@ namespace novatel_gps_driver
         READ_PARSE_FAILED = -2
       };
 
-      NovatelGps(rclcpp::Logger logger);
+      explicit NovatelGps(rclcpp::Node& Node);
       ~NovatelGps();
 
       /**
@@ -401,7 +402,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
-                                                const std::chrono::system_clock::time_point& stamp) noexcept(false);
+                                                const rclcpp::Time& stamp) noexcept(false);
       /**
        * @brief Converts an NMEA sentence into a ROS message of the appropriate type and
        * places it in the appropriate buffer.
@@ -412,7 +413,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseNmeaSentence(const NmeaSentence& sentence,
-                                               const std::chrono::system_clock::time_point& stamp,
+                                               const rclcpp::Time& stamp,
                                                double most_recent_utc_time) noexcept(false);
       /**
        * @brief Converts a NovatelSentence object into a ROS message of the appropriate type
@@ -422,7 +423,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseNovatelSentence(const NovatelSentence& sentence,
-                                                  const std::chrono::system_clock::time_point& stamp) noexcept(false);
+                                                  const rclcpp::Time& stamp) noexcept(false);
 
       /**
        * @brief Reads data from a connected NovAtel device.  Any read data will be appended to
@@ -438,6 +439,9 @@ namespace novatel_gps_driver
       static constexpr uint32_t SECONDS_PER_WEEK = 604800;
       static constexpr double IMU_TOLERANCE_S = 0.0002;
       static constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
+
+
+      rclcpp::Node& node_;
 
       ConnectionType connection_;
 
@@ -533,8 +537,6 @@ namespace novatel_gps_driver
 
       // Additional Options
       bool apply_vehicle_body_rotation_;
-      
-      rclcpp::Logger logger_;
   };
 }
 

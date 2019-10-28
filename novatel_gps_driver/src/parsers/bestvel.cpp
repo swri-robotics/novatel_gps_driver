@@ -28,9 +28,10 @@
 // *****************************************************************************
 
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/bestvel.h>
 #include <novatel_gps_driver/parsers/header.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::BestvelParser::MESSAGE_NAME = "BESTVEL";
 
@@ -52,7 +53,7 @@ novatel_gps_msgs::msg::NovatelVelocity::SharedPtr novatel_gps_driver::BestvelPar
     error << "Unexpected velocity message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::msg::NovatelVelocity::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::NovatelVelocity>();
+  novatel_gps_msgs::msg::NovatelVelocity::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -84,7 +85,7 @@ novatel_gps_msgs::msg::NovatelVelocity::SharedPtr novatel_gps_driver::BestvelPar
 
 novatel_gps_msgs::msg::NovatelVelocity::SharedPtr novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
 {
-  novatel_gps_msgs::msg::NovatelVelocity::SharedPtr msg = std::make_shared<novatel_gps_msgs::NovatelVelocity>();
+  novatel_gps_msgs::msg::NovatelVelocity::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

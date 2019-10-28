@@ -27,6 +27,7 @@
 //
 // *****************************************************************************
 
+#include <iomanip>
 #include <sstream>
 #include <net/ethernet.h>
 #include <netinet/udp.h>
@@ -36,15 +37,18 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/make_shared.hpp>
+#include <rclcpp/node.hpp>
 
-#include <rclcpp/logging.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/utils.h>
 
 namespace novatel_gps_driver
 {
-  NovatelGps::NovatelGps(rclcpp::Logger logger) :
+  NovatelGps::NovatelGps(rclcpp::Node& node) :
       gpgga_gprmc_sync_tol_(0.01),
       gpgga_position_sync_tol_(0.01),
       wait_for_position_(false),
+      node_(node),
       connection_(SERIAL),
       is_connected_(false),
       imu_rate_forced_(false),
@@ -52,6 +56,7 @@ namespace novatel_gps_driver
       serial_baud_(115200),
       tcp_socket_(io_service_),
       pcap_(nullptr),
+      extractor_(node_.get_logger()),
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
@@ -77,8 +82,7 @@ namespace novatel_gps_driver
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0),
-      apply_vehicle_body_rotation_(false),
-      logger_(logger)
+      apply_vehicle_body_rotation_(false)
   {
   }
 
@@ -197,7 +201,7 @@ namespace novatel_gps_driver
       return read_result;
     }
 
-    std::chrono::system_clock::time_point stamp = std::chrono::system_clock::now();
+    rclcpp::Time stamp = node_.get_clock()->now();
     std::vector<NmeaSentence> nmea_sentences;
     std::vector<NovatelSentence> novatel_sentences;
     std::vector<BinaryMessage> binary_messages;
@@ -225,11 +229,11 @@ namespace novatel_gps_driver
 
       nmea_buffer_ = remaining_buffer;
 
-      RCLCPP_DEBUG(this->logger_, "Parsed: %lu NMEA / %lu NovAtel / %lu Binary messages",
+      RCLCPP_DEBUG(node_.get_logger(), "Parsed: %lu NMEA / %lu NovAtel / %lu Binary messages",
                nmea_sentences.size(), novatel_sentences.size(), binary_messages.size());
       if (!nmea_buffer_.empty())
       {
-        RCLCPP_DEBUG(this->logger_, "%lu unparsed bytes left over.", nmea_buffer_.size());
+        RCLCPP_DEBUG(node_.get_logger(), "%lu unparsed bytes left over.", nmea_buffer_.size());
       }
     }
 
@@ -248,8 +252,8 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        RCLCPP_WARN(this->logger_, "%s", p.what());
-        RCLCPP_WARN(this->logger_, "For sentence: [%s]", boost::algorithm::join(sentence.body, ",").c_str());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "For sentence: [%s]", boost::algorithm::join(sentence.body, ",").c_str());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -267,7 +271,7 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        RCLCPP_WARN(this->logger_, "%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -285,7 +289,7 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        RCLCPP_WARN(this->logger_, "%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -392,14 +396,14 @@ namespace novatel_gps_driver
           {
             // The position message is more than tol older than the gpgga message,
             // discard it and continue
-            RCLCPP_DEBUG(this->logger_, "Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
+            RCLCPP_DEBUG(node_.get_logger(), "Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
             position_sync_buffer_.pop_front();
           }
           else if (-pos_dt > gpgga_position_sync_tol_)
           {
             // The position message is more than tol ahead of the gpgga message,
             // use it but don't pop it
-            RCLCPP_DEBUG(this->logger_, "Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
+            RCLCPP_DEBUG(node_.get_logger(), "Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
             has_position = true;
             break;
           }
@@ -573,11 +577,11 @@ namespace novatel_gps_driver
 
   bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
-    RCLCPP_INFO(this->logger_, "Opening pcap file: %s", device.c_str());
+    RCLCPP_INFO(node_.get_logger(), "Opening pcap file: %s", device.c_str());
 
     if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == nullptr)
     {
-      RCLCPP_FATAL(this->logger_, "Unable to open pcap file.");
+      RCLCPP_FATAL(node_.get_logger(), "Unable to open pcap file.");
       return false;
     }
 
@@ -607,7 +611,7 @@ namespace novatel_gps_driver
       {
         // We will not kill the connection here, because the device may already
         // be setup to communicate correctly, but we will print a warning         
-        RCLCPP_ERROR(this->logger_, "Failed to configure GPS. This port may be read only, or the "
+        RCLCPP_ERROR(node_.get_logger(), "Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
                  "been pre-configured.");
@@ -629,7 +633,7 @@ namespace novatel_gps_driver
     size_t sep_pos = endpoint.find(':');
     if (sep_pos == std::string::npos || sep_pos == endpoint.size() - 1)
     {
-      RCLCPP_INFO(this->logger_, "Using default port.");
+      RCLCPP_INFO(node_.get_logger(), "Using default port.");
       std::stringstream ss;
       if (connection_ == TCP)
       {
@@ -663,7 +667,7 @@ namespace novatel_gps_driver
           boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
 
           boost::asio::connect(tcp_socket_, iter);
-          RCLCPP_INFO(this->logger_, "Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
         }
         else
         {
@@ -672,7 +676,7 @@ namespace novatel_gps_driver
           udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>(*resolver.resolve(query));
           udp_socket_.reset(new boost::asio::ip::udp::socket(io_service_));
           udp_socket_->open(boost::asio::ip::udp::v4());
-          RCLCPP_INFO(this->logger_, "Connecting via UDP to %s:%s", ip.c_str(), port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Connecting via UDP to %s:%s", ip.c_str(), port.c_str());
         }
       }
       else
@@ -683,9 +687,9 @@ namespace novatel_gps_driver
           boost::asio::ip::tcp::acceptor acceptor(io_service_,
                                                   boost::asio::ip::tcp::endpoint(
                                                       boost::asio::ip::tcp::v4(), port_num));
-          RCLCPP_INFO(this->logger_, "Listening on TCP port %s", port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Listening on TCP port %s", port.c_str());
           acceptor.accept(tcp_socket_);
-          RCLCPP_INFO(this->logger_, "Accepted TCP connection from client: %s",
+          RCLCPP_INFO(node_.get_logger(), "Accepted TCP connection from client: %s",
                    tcp_socket_.remote_endpoint().address().to_string().c_str());
         }
         else
@@ -698,14 +702,14 @@ namespace novatel_gps_driver
           udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>();
           boost::system::error_code error;
 
-          RCLCPP_INFO(this->logger_, "Listening on UDP port %s", port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Listening on UDP port %s", port.c_str());
           udp_socket_->receive_from(boost::asio::buffer(recv_buf), *udp_endpoint_, 0, error);
           if (error && error != boost::asio::error::message_size)
           {
             throw boost::system::system_error(error);
           }
 
-          RCLCPP_INFO(this->logger_, "Accepted UDP connection from client: %s",
+          RCLCPP_INFO(node_.get_logger(), "Accepted UDP connection from client: %s",
                    udp_endpoint_->address().to_string().c_str());
         }
       }
@@ -713,7 +717,7 @@ namespace novatel_gps_driver
     catch (std::exception& e)
     {
       error_msg_ = e.what();
-      RCLCPP_ERROR(this->logger_, "Unable to connect: %s", e.what());
+      RCLCPP_ERROR(node_.get_logger(), "Unable to connect: %s", e.what());
       return false;
     }
 
@@ -721,13 +725,13 @@ namespace novatel_gps_driver
 
     if (Configure(opts))
     {
-      RCLCPP_INFO(this->logger_, "Configured GPS.");
+      RCLCPP_INFO(node_.get_logger(), "Configured GPS.");
     }
     else
     {
       // We will not kill the connection here, because the device may already
       // be setup to communicate correctly, but we will print a warning
-      RCLCPP_ERROR(this->logger_, "Failed to configure GPS. This port may be read only, or the "
+      RCLCPP_ERROR(node_.get_logger(), "Failed to configure GPS. This port may be read only, or the "
                    "device may not be functioning as expected; however, the "
                    "driver may still function correctly if the port has already "
                    "been pre-configured.");
@@ -788,7 +792,7 @@ namespace novatel_gps_driver
       }
       catch (std::exception& e)
       {
-        RCLCPP_WARN(this->logger_, "TCP connection error: %s", e.what());
+        RCLCPP_WARN(node_.get_logger(), "TCP connection error: %s", e.what());
       }
     }
     else if (connection_ == PCAP)
@@ -886,19 +890,19 @@ namespace novatel_gps_driver
             break;
           }
           default:
-            RCLCPP_WARN(this->logger_, "Unexpected protocol: %u", iph->protocol);
+            RCLCPP_WARN(node_.get_logger(), "Unexpected protocol: %u", iph->protocol);
             return READ_ERROR;
         }
 
         // Add a slight delay after reading packets; if the node is being tested offline
         // and this loop is hammering the TCP, logs won't output properly.
-        ros::Duration(0.001).sleep();
+        rclcpp::sleep_for(std::chrono::milliseconds(1));
 
         return READ_SUCCESS;
       }
       else if (result == -2)
       {
-        RCLCPP_INFO(this->logger_, "Done reading pcap file.");
+        RCLCPP_INFO(node_.get_logger(), "Done reading pcap file.");
         if (!last_tcp_packet_.empty())
         {
           // Don't forget to submit the last packet if we still have one!
@@ -916,7 +920,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        RCLCPP_WARN(this->logger_, "Error reading pcap data: %s", pcap_geterr(pcap_));
+        RCLCPP_WARN(node_.get_logger(), "Error reading pcap data: %s", pcap_geterr(pcap_));
         return READ_ERROR;
       }
     }
@@ -937,14 +941,15 @@ namespace novatel_gps_driver
   {
     if (imu_rate_ <= 0.0)
     {
-      RCLCPP_WARN_ONCE(this->logger_, "IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
+      RCLCPP_WARN_ONCE(node_.get_logger(), "IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
       return;
     }
 
     if (!latest_insstdev_ && !latest_inscov_)
     {
+      // TODO pjr Make this a _THROTTLE log when it's available
       // If we haven't received an INSSTDEV or an INSCOV message, don't do anything, just return.
-      RCLCPP_WARN_THROTTLE(this->logger_, 1.0, "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
+      RCLCPP_WARN(node_.get_logger(), "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
     }
 
     size_t previous_size = imu_msgs_.size();
@@ -961,16 +966,16 @@ namespace novatel_gps_driver
       if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
       {
         // If the two messages are too far apart to sync, discard the oldest one.
-        RCLCPP_DEBUG(this->logger_, "INSPVA and CORRIMUDATA were unacceptably far apart.");
+        RCLCPP_DEBUG(node_.get_logger(), "INSPVA and CORRIMUDATA were unacceptably far apart.");
         if (corrimudata_time < inspva_time)
         {
-          RCLCPP_DEBUG(this->logger_, "Discarding oldest CORRIMUDATA.");
+          RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest CORRIMUDATA.");
           corrimudata_queue_.pop();
           continue;
         }
         else
         {
-          RCLCPP_DEBUG(this->logger_, "Discarding oldest INSPVA.");
+          RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest INSPVA.");
           inspva_queue_.pop();
           continue;
         }
@@ -980,12 +985,15 @@ namespace novatel_gps_driver
       corrimudata_queue_.pop();
 
       // Now we can combine them together to make an Imu message.
-      sensor_msgs::msg::Imu::SharedPtr imu = std::make_shared<sensor_msgs::Imu>();
+      sensor_msgs::msg::Imu::SharedPtr imu = std::make_shared<sensor_msgs::msg::Imu>();
 
       imu->header.stamp = corrimudata->header.stamp;
-      imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(inspva->roll * DEGREES_TO_RADIANS,
-                                              -(inspva->pitch) * DEGREES_TO_RADIANS,
-                                              -(inspva->azimuth) * DEGREES_TO_RADIANS);
+
+      tf2::Quaternion q;
+      q.setRPY(inspva->roll * DEGREES_TO_RADIANS,
+               -(inspva->pitch) * DEGREES_TO_RADIANS,
+               -(inspva->azimuth) * DEGREES_TO_RADIANS);
+      imu->orientation = tf2::toMsg(q);
 
       if (latest_inscov_)
       {
@@ -1022,12 +1030,12 @@ namespace novatel_gps_driver
     }
 
     size_t new_size = imu_msgs_.size() - previous_size;
-    RCLCPP_DEBUG(this->logger_, "Created %lu new sensor_msgs/Imu messages.", new_size);
+    RCLCPP_DEBUG(node_.get_logger(), "Created %lu new sensor_msgs/Imu messages.", new_size);
   }
 
   void NovatelGps::SetImuRate(double imu_rate, bool imu_rate_forced)
   {
-    RCLCPP_INFO(this->logger_, "IMU sample rate: %f", imu_rate);
+    RCLCPP_INFO(node_.get_logger(), "IMU sample rate: %f", imu_rate);
     imu_rate_ = imu_rate;
     if (imu_rate_forced)
     {
@@ -1037,12 +1045,12 @@ namespace novatel_gps_driver
 
   void NovatelGps::SetSerialBaud(int32_t serial_baud)
   {
-    RCLCPP_INFO(this->logger_, "Serial baud rate : %d", serial_baud);
+    RCLCPP_INFO(node_.get_logger(), "Serial baud rate : %d", serial_baud);
     serial_baud_ = serial_baud;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
-                                                        const std::chrono::system_clock::time_point& stamp) noexcept(false)
+                                                        const rclcpp::Time& stamp) noexcept(false)
   {
     switch (msg.header_.message_id_)
     {
@@ -1097,7 +1105,8 @@ namespace novatel_gps_driver
         corrimudata_queue_.push(imu);
         if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
         {
-          RCLCPP_WARN_THROTTLE(this->logger_, 1.0, "CORRIMUDATA queue overflow.");
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
           corrimudata_queue_.pop();
         }
         GenerateImuMessages();
@@ -1119,7 +1128,8 @@ namespace novatel_gps_driver
         inspva_queue_.push(inspva);
         if (inspva_queue_.size() > MAX_BUFFER_SIZE)
         {
-          RCLCPP_WARN_THROTTLE(this->logger_, 1.0, "INSPVA queue overflow.");
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "INSPVA queue overflow.");
           inspva_queue_.pop();
         }
         GenerateImuMessages();
@@ -1151,7 +1161,7 @@ namespace novatel_gps_driver
       {
         novatel_gps_msgs::msg::Time::SharedPtr time = time_parser_.ParseBinary(msg);
         utc_offset_ = time->utc_offset;
-        RCLCPP_DEBUG(this->logger_, "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+        RCLCPP_DEBUG(node_.get_logger(), "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
         time->header.stamp = stamp;
         time_msgs_.push_back(time);
         break;
@@ -1164,7 +1174,7 @@ namespace novatel_gps_driver
         break;
       }
       default:
-        RCLCPP_WARN(this->logger_, "Unexpected binary message id: %u", msg.header_.message_id_);
+        RCLCPP_WARN(node_.get_logger(), "Unexpected binary message id: %u", msg.header_.message_id_);
         break;
     }
 
@@ -1172,7 +1182,7 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
-                                                       const std::chrono::system_clock::time_point& stamp,
+                                                       const rclcpp::Time& stamp,
                                                        double most_recent_utc_time) noexcept(false)
   {
     if (sentence.id == GpggaParser::MESSAGE_NAME)
@@ -1184,7 +1194,7 @@ namespace novatel_gps_driver
         most_recent_utc_time = gpgga->utc_seconds;
       }
 
-      gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga->utc_seconds);
+      gpgga->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gpgga->utc_seconds);
 
       if (gpgga_parser_.WasLastGpsValid())
       {
@@ -1208,7 +1218,7 @@ namespace novatel_gps_driver
         most_recent_utc_time = gprmc->utc_seconds;
       }
 
-      gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc->utc_seconds);
+      gprmc->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gprmc->utc_seconds);
 
       if (gprmc_parser_.WasLastGpsValid())
       {
@@ -1240,14 +1250,14 @@ namespace novatel_gps_driver
     }
     else
     {
-      RCLCPP_DEBUG_STREAM(this->logger_, "Unrecognized NMEA sentence " << sentence.id);
+      RCLCPP_DEBUG(node_.get_logger(), "Unrecognized NMEA sentence %s", sentence.id.c_str());
     }
 
     return READ_SUCCESS;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
-                                                          const std::chrono::system_clock::time_point& stamp) noexcept(false)
+                                                          const rclcpp::Time& stamp) noexcept(false)
   {
     if (sentence.id == "BESTPOSA")
     {
@@ -1294,7 +1304,8 @@ namespace novatel_gps_driver
       corrimudata_queue_.push(imu);
       if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
       {
-        RCLCPP_WARN_THROTTLE(this->logger_, 1.0, "CORRIMUDATA queue overflow.");
+        // TODO pjr Make this a _THROTTLE log when it's available
+        RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
         corrimudata_queue_.pop();
       }
       GenerateImuMessages();
@@ -1314,7 +1325,8 @@ namespace novatel_gps_driver
       inspva_queue_.push(inspva);
       if (inspva_queue_.size() > MAX_BUFFER_SIZE)
       {
-        RCLCPP_WARN_THROTTLE(this->logger_, 1.0, "INSPVA queue overflow.");
+        // TODO pjr Make this a _THROTTLE log when it's available
+        RCLCPP_WARN(node_.get_logger(), "INSPVA queue overflow.");
         inspva_queue_.pop();
       }
       GenerateImuMessages();
@@ -1336,7 +1348,7 @@ namespace novatel_gps_driver
     {
       novatel_gps_msgs::msg::Time::SharedPtr time = time_parser_.ParseAscii(sentence);
       utc_offset_ = time->utc_offset;
-      RCLCPP_DEBUG(this->logger_, "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+      RCLCPP_DEBUG(node_.get_logger(), "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
       time->header.stamp = stamp;
       time_msgs_.push_back(time);
     }
@@ -1389,7 +1401,7 @@ namespace novatel_gps_driver
       {
         double rate = rates[id].first;
  
-        RCLCPP_INFO(this->logger_, "IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
+        RCLCPP_INFO(node_.get_logger(), "IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
         
         // Set the rate only if it hasn't been forced already
         if (!imu_rate_forced_)
@@ -1400,7 +1412,7 @@ namespace novatel_gps_driver
       else
       {
         // Error because the imu type was unknown
-        RCLCPP_ERROR(this->logger_, "Unknown IMU Type Received: %s", id.c_str());
+        RCLCPP_ERROR(node_.get_logger(), "Unknown IMU Type Received: %s", id.c_str());
       }
     }
     else if (sentence.id == "CLOCKSTEERINGA")
@@ -1421,7 +1433,7 @@ namespace novatel_gps_driver
       int32_t written = serial_.Write(bytes);
       if (written != (int32_t)command.length())
       {
-        RCLCPP_ERROR(this->logger_, "Failed to send command: %s", command.c_str());
+        RCLCPP_ERROR(node_.get_logger(), "Failed to send command: %s", command.c_str());
       }
       return written == (int32_t)command.length();
     }
@@ -1441,21 +1453,21 @@ namespace novatel_gps_driver
         }
         if (error)
         {
-          RCLCPP_ERROR(this->logger_, "Error writing TCP data: %s", error.message().c_str());
+          RCLCPP_ERROR(node_.get_logger(), "Error writing TCP data: %s", error.message().c_str());
           Disconnect();
         }
-        RCLCPP_DEBUG(this->logger_, "Wrote %lu bytes.", written);
+        RCLCPP_DEBUG(node_.get_logger(), "Wrote %lu bytes.", written);
         return written == (int32_t) command.length();
       }
       catch (std::exception& e)
       {
         Disconnect();
-        RCLCPP_ERROR(this->logger_, "Exception writing TCP data: %s", e.what());
+        RCLCPP_ERROR(node_.get_logger(), "Exception writing TCP data: %s", e.what());
       }
     }
     else if (connection_ == PCAP)
     {
-      RCLCPP_WARN_ONCE(this->logger_, "Writing data is unsupported in pcap mode.");
+      RCLCPP_WARN_ONCE(node_.get_logger(), "Writing data is unsupported in pcap mode.");
       return true;
     }
 

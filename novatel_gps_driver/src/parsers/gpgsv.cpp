@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/gpgsv.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::GpgsvParser::MESSAGE_NAME = "GPGSV";
 
@@ -53,7 +54,7 @@ novatel_gps_msgs::msg::Gpgsv::SharedPtr novatel_gps_driver::GpgsvParser::ParseAs
           << ", actual length = " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::msg::Gpgsv::SharedPtr msg = std::make_shared<novatel_gps_msgs::Gpgsv>();
+  novatel_gps_msgs::msg::Gpgsv::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Gpgsv>();
   msg->message_id = sentence.body[0];
   if (!ParseUInt8(sentence.body[1], msg->n_msgs))
   {

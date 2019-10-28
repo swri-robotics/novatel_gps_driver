@@ -27,17 +27,16 @@
 //
 // *****************************************************************************
 
-#include <swri_string_util/string_util.h>
-
 #include <novatel_gps_driver/parsers/parsing_utils.h>
-#include <novatel_gps_msgs/msg/novatelextendedsolutionstatus.hpp>
-#include <novatel_gps_msgs/msg/novatelsignalmask.hpp>
+#include <novatel_gps_msgs/msg/novatel_extended_solution_status.hpp>
+#include <novatel_gps_msgs/msg/novatel_signal_mask.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace novatel_gps_driver
 {
   void GetNovatelReceiverStatusMessage(
       uint32_t status,
-      novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg)
+      novatel_gps_msgs::msg::NovatelReceiverStatus& receiver_status_msg)
   {
     receiver_status_msg.original_status_code = status;
     receiver_status_msg.error_flag = (status & 0x00000001u) != 0;
@@ -67,7 +66,7 @@ namespace novatel_gps_driver
 
   void GetExtendedSolutionStatusMessage(
       uint32_t status,
-      novatel_gps_msgs::NovatelExtendedSolutionStatus& msg)
+      novatel_gps_msgs::msg::NovatelExtendedSolutionStatus& msg)
   {
     msg.original_mask = status;
     msg.advance_rtk_verified = 0x01u & status;
@@ -98,14 +97,14 @@ namespace novatel_gps_driver
     }
   }
 
-  void GetSignalsUsed(uint32_t mask, novatel_gps_msgs::NovatelSignalMask& msg)
+  void GetSignalsUsed(uint32_t mask, novatel_gps_msgs::msg::NovatelSignalMask& msg)
   {
     msg.original_mask = mask;
-    msg.gps_L1_used_in_solution = mask & 0x01u;
-    msg.gps_L2_used_in_solution = mask & 0x02u;
-    msg.gps_L3_used_in_solution = mask & 0x04u;
-    msg.glonass_L1_used_in_solution = mask & 0x10u;
-    msg.glonass_L2_used_in_solution = mask & 0x20u;
+    msg.gps_l1_used_in_solution = mask & 0x01u;
+    msg.gps_l2_used_in_solution = mask & 0x02u;
+    msg.gps_l3_used_in_solution = mask & 0x04u;
+    msg.glonass_l1_used_in_solution = mask & 0x10u;
+    msg.glonass_l2_used_in_solution = mask & 0x20u;
   }
 
   double ParseDouble(const uint8_t* buffer)
@@ -117,7 +116,15 @@ namespace novatel_gps_driver
 
   bool ParseDouble(const std::string& string, double& value)
   {
-    return swri_string_util::ToDouble(string, value) || string.empty();
+    try
+    {
+      value = boost::lexical_cast<double>(string);
+      return true;
+    }
+    catch (boost::bad_lexical_cast& e)
+    {
+      return false;
+    }
   }
 
   float ParseFloat(const uint8_t* buffer)
@@ -129,7 +136,15 @@ namespace novatel_gps_driver
 
   bool ParseFloat(const std::string& string, float& value)
   {
-    return swri_string_util::ToFloat(string, value) || string.empty();
+    try
+    {
+      value = boost::lexical_cast<float>(string);
+      return true;
+    }
+    catch (boost::bad_lexical_cast& e)
+    {
+      return false;
+    }
   }
 
   int16_t ParseInt16(const uint8_t* buffer)
@@ -148,7 +163,9 @@ namespace novatel_gps_driver
     }
 
     int32_t tmp;
-    if (swri_string_util::ToInt32(string, tmp, base) &&
+    char* end;
+    tmp = strtol(string.c_str(), &end, base);
+    if (end != nullptr &&
         tmp <= std::numeric_limits<int16_t>::max() &&
         tmp >= std::numeric_limits<int16_t>::min())
     {
@@ -168,7 +185,9 @@ namespace novatel_gps_driver
 
   bool ParseInt32(const std::string& string, int32_t& value, int32_t base)
   {
-    return swri_string_util::ToInt32(string, value, base) || string.empty();
+    char* end;
+    value = strtol(string.c_str(), &end, base);
+    return end != nullptr;
   }
 
   uint32_t ParseUInt32(const uint8_t* buffer)
@@ -180,7 +199,9 @@ namespace novatel_gps_driver
 
   bool ParseUInt32(const std::string& string, uint32_t& value, int32_t base)
   {
-    return swri_string_util::ToUInt32(string, value, base) || string.empty();
+    char* end;
+    value = strtoul(string.c_str(), &end, base);
+    return end != nullptr;
   }
 
   bool ParseUInt8(const std::string& string, uint8_t& value, int32_t base)
@@ -191,8 +212,10 @@ namespace novatel_gps_driver
       return true;
     }
 
-    uint32_t tmp;
-    if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint8_t>::max())
+    int32_t tmp;
+    char* end;
+    tmp = strtoul(string.c_str(), &end, base);
+    if (end != nullptr && tmp <= std::numeric_limits<uint8_t>::max())
     {
       value = static_cast<uint8_t>(tmp);
       return true;
@@ -216,8 +239,10 @@ namespace novatel_gps_driver
       return true;
     }
 
-    uint32_t tmp;
-    if (swri_string_util::ToUInt32(string, tmp, base) && tmp <= std::numeric_limits<uint16_t>::max())
+    int32_t tmp;
+    char* end;
+    tmp = strtoul(string.c_str(), &end, base);
+    if (end != nullptr && tmp <= std::numeric_limits<uint16_t>::max())
     {
       value = static_cast<uint16_t>(tmp);
       return true;

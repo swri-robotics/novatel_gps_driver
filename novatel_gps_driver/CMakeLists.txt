@@ -10,6 +10,7 @@ find_package(gps_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(novatel_gps_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(swri_math_util  REQUIRED)
@@ -17,11 +18,9 @@ find_package(swri_roscpp REQUIRED)
 find_package(swri_serial_util REQUIRED)
 find_package(tf2 REQUIRED)
 
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system thread)
 
-include_directories(include
-  ${Boost_INCLUDE_DIRS}
-)
+include_directories(include)
 
 # libpcap doesn't provide PkgConfig or CMake modules
 find_library(libpcap_LIBRARIES pcap)
@@ -57,12 +56,13 @@ add_library(${PROJECT_NAME}
   src/parsers/time.cpp
   src/parsers/trackstat.cpp
 )
-
+set_property(TARGET ${PROJECT_NAME}
+  PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(${PROJECT_NAME}
+  Boost::boost
   ${libpcap_LIBRARIES}
 )
 ament_target_dependencies(${PROJECT_NAME}
-  Boost::boost
   diagnostic_msgs
   diagnostic_updater
   gps_msgs
@@ -78,10 +78,15 @@ ament_target_dependencies(${PROJECT_NAME}
 )
 
 ### Nodelets ###
-add_library(${PROJECT_NAME}_nodelets 
-  src/nodelets/novatel_gps_nodelet.cpp
+add_library(${PROJECT_NAME}_nodes SHARED
+  src/nodelets/novatel_gps_node.cpp
 )
-target_link_libraries(${PROJECT_NAME}_nodelets
+target_compile_definitions(${PROJECT_NAME}_nodes
+  PRIVATE "COMPOSITION_BUILDING_DLL")
+rclcpp_components_register_nodes(${PROJECT_NAME}_nodes "novatel_gps_driver::NovatelGpsNode")
+target_link_libraries(${PROJECT_NAME}_nodes
+  Boost::boost
+  Boost::thread
   ${PROJECT_NAME}
 )
 
@@ -99,10 +104,9 @@ if(BUILD_TESTING)
 endif()
 
 ### Install Libraries and Headers ###
-install(TARGETS 
-    # novatel_gps_node
+install(TARGETS
     ${PROJECT_NAME} 
-    ${PROJECT_NAME}_nodelets
+    ${PROJECT_NAME}_nodes
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin

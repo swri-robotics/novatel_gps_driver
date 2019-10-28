@@ -1,6 +1,36 @@
+// *****************************************************************************
+//
+// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+//     * Redistributions in binary form must reproduce the above copyright
+//       notice, this list of conditions and the following disclaimer in the
+//       documentation and/or other materials provided with the distribution.
+//     * Neither the name of Southwest Research Institute® (SwRI®) nor the
+//       names of its contributors may be used to endorse or promote products
+//       derived from this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL SOUTHWEST RESEARCH INSTITUTE BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// *****************************************************************************
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/gphdt.h>
-#include <boost/make_shared.hpp>
-#include <swri_string_util/string_util.h>
+
+#include <boost/lexical_cast.hpp>
 
 const std::string novatel_gps_driver::GphdtParser::MESSAGE_NAME = "GPHDT";
 
@@ -27,15 +57,14 @@ novatel_gps_msgs::msg::Gphdt::SharedPtr novatel_gps_driver::GphdtParser::ParseAs
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Gphdt::SharedPtr msg = std::make_shared<novatel_gps_msgs::Gphdt>();
+  novatel_gps_msgs::msg::Gphdt::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Gphdt>();
   msg->message_id = sentence.body[0];
 
-  double heading;
-  if (swri_string_util::ToDouble(sentence.body[1], heading))
+  try
   {
-      msg->heading = heading;
+    msg->heading = boost::lexical_cast<double>(sentence.body[1]);
   }
-  else
+  catch (boost::bad_lexical_cast& e)
   {
     throw ParseException("Error parsing heading as double in GPHDT");
   }

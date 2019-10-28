@@ -27,9 +27,10 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/inscov.h>
 #include <novatel_gps_driver/parsers/header.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::InscovParser::MESSAGE_NAME = "INSCOV";
 
@@ -52,7 +53,7 @@ novatel_gps_driver::InscovParser::ParseBinary(const BinaryMessage& bin_msg) noex
     error << "Unexpected inscov message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::msg::Inscov::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::Inscov>();
+  novatel_gps_msgs::msg::Inscov::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::Inscov>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
@@ -84,7 +85,7 @@ novatel_gps_driver::InscovParser::ParseAscii(const NovatelSentence& sentence) no
     error << "Unexpected number of fields in INSCOV log: " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::msg::Inscov::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::Inscov>();
+  novatel_gps_msgs::msg::Inscov::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::Inscov>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

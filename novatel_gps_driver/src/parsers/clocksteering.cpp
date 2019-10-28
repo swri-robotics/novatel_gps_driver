@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/clocksteering.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::ClockSteeringParser::MESSAGE_NAME = "CLOCKSTEERING";
 
@@ -53,7 +54,7 @@ novatel_gps_msgs::msg::ClockSteering::SharedPtr novatel_gps_driver::ClockSteerin
           << ", actual length = " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::msg::ClockSteering::SharedPtr msg = std::make_shared<novatel_gps_msgs::ClockSteering>();
+  novatel_gps_msgs::msg::ClockSteering::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::ClockSteering>();
 
   msg->source = sentence.body[0];
   msg->steering_state = sentence.body[1];

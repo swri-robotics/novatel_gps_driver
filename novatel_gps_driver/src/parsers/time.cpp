@@ -27,6 +27,8 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/time.h>
 #include <boost/make_shared.hpp>
 
@@ -51,7 +53,7 @@ novatel_gps_msgs::msg::Time::SharedPtr novatel_gps_driver::TimeParser::ParseBina
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Time::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::Time>();
+  novatel_gps_msgs::msg::Time::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::Time>();
 
   uint32_t clock_status = ParseUInt32(&msg.data_[0]);
   switch (clock_status)
@@ -110,7 +112,7 @@ novatel_gps_msgs::msg::Time::SharedPtr novatel_gps_driver::TimeParser::ParseBina
 novatel_gps_msgs::msg::Time::SharedPtr
 novatel_gps_driver::TimeParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
-  novatel_gps_msgs::msg::Time::SharedPtr msg = std::make_shared<novatel_gps_msgs::Time>();
+  novatel_gps_msgs::msg::Time::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Time>();
   if (sentence.body.size() != ASCII_FIELD)
   {
     std::stringstream error;

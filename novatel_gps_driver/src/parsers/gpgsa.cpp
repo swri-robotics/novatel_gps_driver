@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/gpgsa.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::GpgsaParser::MESSAGE_NAME = "GPGSA";
 
@@ -54,7 +55,7 @@ novatel_gps_msgs::msg::Gpgsa::SharedPtr novatel_gps_driver::GpgsaParser::ParseAs
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Gpgsa::SharedPtr msg = std::make_shared<novatel_gps_msgs::Gpgsa>();
+  novatel_gps_msgs::msg::Gpgsa::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Gpgsa>();
   msg->message_id = sentence.body[0];
   msg->auto_manual_mode = sentence.body[1];
   ParseUInt8(sentence.body[2], msg->fix_mode);

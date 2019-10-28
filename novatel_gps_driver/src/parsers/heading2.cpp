@@ -27,11 +27,11 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/heading2.h>
 
 #include <novatel_gps_driver/parsers/header.h>
-
-#include <boost/make_shared.hpp>
 
 namespace novatel_gps_driver
 {
@@ -56,7 +56,7 @@ namespace novatel_gps_driver
       throw ParseException(error.str());
     }
     novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ros_msg =
-        std::make_shared<novatel_gps_msgs::NovatelHeading2>();
+        std::make_shared<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser header_parser;
     ros_msg->novatel_msg_header = header_parser.ParseBinary(bin_msg);
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -115,7 +115,7 @@ namespace novatel_gps_driver
   novatel_gps_msgs::msg::NovatelHeading2::SharedPtr Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
     novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ros_msg =
-        std::make_shared<novatel_gps_msgs::NovatelHeading2>();
+        std::make_shared<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser h_parser;
     ros_msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 
@@ -179,9 +179,9 @@ namespace novatel_gps_driver
     switch (source_bits)
     {
       case 0:
-        return novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
+        return novatel_gps_msgs::msg::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
       case 1:
-        return novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
+        return novatel_gps_msgs::msg::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
       default:
         throw ParseException("HEADING2 Solution Source could not be parsed due to unknown source");
     }

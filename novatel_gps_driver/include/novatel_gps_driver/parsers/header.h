@@ -37,16 +37,16 @@
 
 namespace novatel_gps_driver
 {
-  class HeaderParser : public MessageParser<novatel_gps_msgs::NovatelMessageHeader>
+  class HeaderParser : public MessageParser<novatel_gps_msgs::msg::NovatelMessageHeader>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::NovatelMessageHeader ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelMessageHeader ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::NovatelMessageHeader ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelMessageHeader ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint32_t BINARY_HEADER_LENGTH = 28;
   };

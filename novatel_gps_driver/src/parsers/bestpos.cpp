@@ -27,11 +27,11 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/bestpos.h>
 
 #include <novatel_gps_driver/parsers/header.h>
-
-#include <boost/make_shared.hpp>
 
 namespace novatel_gps_driver
 {
@@ -56,7 +56,7 @@ namespace novatel_gps_driver
       throw ParseException(error.str());
     }
     novatel_gps_msgs::msg::NovatelPosition::SharedPtr ros_msg =
-        std::make_shared<novatel_gps_msgs::NovatelPosition>();
+        std::make_shared<novatel_gps_msgs::msg::NovatelPosition>();
     HeaderParser header_parser;
     ros_msg->novatel_msg_header = header_parser.ParseBinary(bin_msg);
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -110,7 +110,7 @@ namespace novatel_gps_driver
   novatel_gps_msgs::msg::NovatelPosition::SharedPtr BestposParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
     novatel_gps_msgs::msg::NovatelPosition::SharedPtr msg =
-        std::make_shared<novatel_gps_msgs::NovatelPosition>();
+        std::make_shared<novatel_gps_msgs::msg::NovatelPosition>();
     HeaderParser h_parser;
     msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 
