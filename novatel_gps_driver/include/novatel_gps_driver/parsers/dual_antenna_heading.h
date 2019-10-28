@@ -30,23 +30,23 @@
 #ifndef NOVATEL_GPS_DRIVER_DUAL_ANTENNA_HEADING_H
 #define NOVATEL_GPS_DRIVER_DUAL_ANTENNA_HEADING_H
 
-#include <novatel_gps_msgs/NovatelDualAntennaHeading.h>
+#include <novatel_gps_msgs/msg/novatel_dual_antenna_heading.hpp>
 
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 #include <novatel_gps_driver/parsers/message_parser.h>
 
 namespace novatel_gps_driver
 {
-  class DualAntennaHeadingParser : public MessageParser<novatel_gps_msgs::NovatelDualAntennaHeadingPtr>
+  class DualAntennaHeadingParser : public MessageParser<novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::NovatelDualAntennaHeadingPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 2042;
     static constexpr size_t BINARY_LENGTH = 44;

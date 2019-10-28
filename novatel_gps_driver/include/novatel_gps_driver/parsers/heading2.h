@@ -30,23 +30,23 @@
 #ifndef NOVATEL_GPS_DRIVER_HEADING2_H
 #define NOVATEL_GPS_DRIVER_HEADING2_H
 
-#include <novatel_gps_msgs/NovatelHeading2.h>
+#include <novatel_gps_msgs/msg/novatel_heading2.hpp>
 
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 #include <novatel_gps_driver/parsers/message_parser.h>
 
 namespace novatel_gps_driver
 {
-  class Heading2Parser : public MessageParser<novatel_gps_msgs::NovatelHeading2Ptr>
+  class Heading2Parser : public MessageParser<novatel_gps_msgs::msg::NovatelHeading2::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::NovatelHeading2Ptr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::NovatelHeading2Ptr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 1335;
     static constexpr size_t BINARY_LENGTH = 48;

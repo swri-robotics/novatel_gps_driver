@@ -30,11 +30,11 @@
 #ifndef NOVATEL_GPS_DRIVER_BASE_PARSER_H
 #define NOVATEL_GPS_DRIVER_BASE_PARSER_H
 
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/msg/novatelmessageheader.hpp>
 
-#include <novatel_gps_msgs/NovatelExtendedSolutionStatus.h>
+#include <novatel_gps_msgs/msg/novatelextendedsolutionstatus.hpp>
 
-#include <novatel_gps_msgs/NovatelSignalMask.h>
+#include <novatel_gps_msgs/msg/novatelsignalmask.hpp>
 
 #include <cstdint>
 

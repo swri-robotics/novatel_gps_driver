@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::GpgsvParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GpgsvPtr novatel_gps_driver::GpgsvParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
+novatel_gps_msgs::msg::Gpgsv::SharedPtr novatel_gps_driver::GpgsvParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   const size_t MIN_LENGTH = 4;
   // Check that the message is at least as long as a a GPGSV with no satellites
@@ -53,7 +53,7 @@ novatel_gps_msgs::GpgsvPtr novatel_gps_driver::GpgsvParser::ParseAscii(const nov
           << ", actual length = " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::GpgsvPtr msg = boost::make_shared<novatel_gps_msgs::Gpgsv>();
+  novatel_gps_msgs::msg::Gpgsv::SharedPtr msg = std::make_shared<novatel_gps_msgs::Gpgsv>();
   msg->message_id = sentence.body[0];
   if (!ParseUInt8(sentence.body[1], msg->n_msgs))
   {

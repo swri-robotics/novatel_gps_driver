@@ -41,11 +41,11 @@ TEST(NovatelGpsTestSuite, testGpsFixParsing)
   std::string path = ros::package::getPath("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/gpgga-gprmc-bestpos.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<gps_msgs::GPSFixPtr> fix_messages;
+  std::vector<gps_msgs::msg::GPSFix::SharedPtr> fix_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<gps_msgs::GPSFixPtr> tmp_messages;
+    std::vector<gps_msgs::msg::GPSFix::SharedPtr> tmp_messages;
     gps.GetFixMessages(tmp_messages);
     fix_messages.insert(fix_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
@@ -60,18 +60,18 @@ TEST(NovatelGpsTestSuite, testCorrImuDataParsing)
   std::string path = ros::package::getPath("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/corrimudata.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_messages;
+  std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> imu_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> tmp_messages;
+    std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> tmp_messages;
     gps.GetNovatelCorrectedImuData(tmp_messages);
     imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
   ASSERT_EQ(26, imu_messages.size());
 
-  novatel_gps_msgs::NovatelCorrectedImuDataPtr msg = imu_messages.front();
+  novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr msg = imu_messages.front();
   EXPECT_EQ(1820, msg->gps_week_num);
   EXPECT_DOUBLE_EQ(160205.899999999994, msg->gps_seconds);
   EXPECT_DOUBLE_EQ(0.0000039572689929003956, msg->pitch_rate);

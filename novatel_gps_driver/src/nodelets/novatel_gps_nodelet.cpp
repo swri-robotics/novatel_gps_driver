@@ -137,43 +137,43 @@
 #include <boost/accumulators/statistics/variance.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <diagnostic_msgs/DiagnosticStatus.h>
-#include <diagnostic_updater/diagnostic_updater.h>
-#include <diagnostic_updater/publisher.h>
-#include <gps_msgs/GPSFix.h>
-#include <nodelet/nodelet.h>
-#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
-#include <novatel_gps_msgs/NovatelFRESET.h>
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
-#include <novatel_gps_msgs/NovatelPosition.h>
-#include <novatel_gps_msgs/NovatelUtmPosition.h>
-#include <novatel_gps_msgs/NovatelVelocity.h>
-#include <novatel_gps_msgs/NovatelHeading2.h>
-#include <novatel_gps_msgs/NovatelDualAntennaHeading.h>
-#include <novatel_gps_msgs/Gpgga.h>
-#include <novatel_gps_msgs/Gprmc.h>
-#include <novatel_gps_msgs/Range.h>
-#include <novatel_gps_msgs/Time.h>
-#include <novatel_gps_msgs/Inspva.h>
-#include <novatel_gps_msgs/Inspvax.h>
+#include <diagnostic_msgs/msg/diagnostic_status.hpp>
+#include <diagnostic_updater/diagnostic_updater.hpp>
+#include <diagnostic_updater/publisher.hpp>
+#include <gps_msgs/msg/gps_fix.hpp>
+#include <novatel_gps_msgs/msg/novatel_corrected_imu_data.hpp>
+#include <novatel_gps_msgs/srv/novatel_freset.hpp>
+#include <novatel_gps_msgs/msg/novatel_message_header.hpp>
+#include <novatel_gps_msgs/msg/novatel_position.hpp>
+#include <novatel_gps_msgs/msg/novatel_utm_position.hpp>
+#include <novatel_gps_msgs/msg/novatel_velocity.hpp>
+#include <novatel_gps_msgs/msg/novatel_heading2.hpp>
+#include <novatel_gps_msgs/msg/novatel_dual_antenna_heading.hpp>
+#include <novatel_gps_msgs/msg/gpgga.hpp>
+#include <novatel_gps_msgs/msg/gprmc.hpp>
+#include <novatel_gps_msgs/msg/range.hpp>
+#include <novatel_gps_msgs/msg/time.hpp>
+#include <novatel_gps_msgs/msg/inspva.hpp>
+#include <novatel_gps_msgs/msg/inspvax.hpp>
 #include <novatel_gps_driver/novatel_gps.h>
-#include <ros/ros.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/NavSatFix.h>
-#include <std_msgs/Time.h>
+#include <sensor_msgs/msg/imu.hpp>
+#include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <swri_math_util/math_util.h>
 #include <swri_roscpp/parameters.h>
 #include <swri_roscpp/publisher.h>
 #include <swri_roscpp/subscriber.h>
 
+#include <rclcpp/rclcpp.hpp>
+
 namespace stats = boost::accumulators;
 
 namespace novatel_gps_driver
 {
-  class NovatelGpsNodelet : public nodelet::Nodelet
+class NovatelGpsNodelet : public rclcpp::Node
   {
   public:
-    NovatelGpsNodelet() :
+    NovatelGpsNodelet(const rclcpp::NodeOptions& options) :
+      rclcpp::Node(options),
       device_(""),
       connection_type_("serial"),
       serial_baud_(115200),
@@ -215,22 +215,11 @@ namespace novatel_gps_driver
       imu_frame_id_(""),
       frame_id_("")
     {
-    }
-
-    ~NovatelGpsNodelet() override
-    {
-      gps_.Disconnect();
-    }
 
     /**
      * Init method reads parameters and sets up publishers and subscribers.
      * It does not connect to the device.
      */
-    void onInit() override
-    {
-      ros::NodeHandle &node = getNodeHandle();
-      ros::NodeHandle &priv = getPrivateNodeHandle();
-
       swri::param(priv, "device", device_, device_);
       swri::param(priv, "imu_rate", imu_rate_, imu_rate_);
       swri::param(priv, "imu_sample_rate", imu_sample_rate_, imu_sample_rate_);
@@ -391,7 +380,12 @@ namespace novatel_gps_driver
       NODELET_INFO("%s initialized", hw_id_.c_str());
     }
 
-    void SyncCallback(const std_msgs::TimeConstPtr& sync)
+  ~NovatelGpsNodelet() override
+  {
+    gps_.Disconnect();
+  }
+
+  void SyncCallback(const std_msgs::msg::TimeConst::SharedPtr& sync)
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       sync_times_.push_back(sync->data);
@@ -650,7 +644,7 @@ namespace novatel_gps_driver
     int32_t publish_rate_warnings_;
     int32_t measurement_count_;
     ros::Time last_published_;
-    novatel_gps_msgs::NovatelPositionPtr last_novatel_position_;
+    novatel_gps_msgs::msg::NovatelPosition::SharedPtr last_novatel_position_;
 
     std::string imu_frame_id_;
     std::string frame_id_;
@@ -689,9 +683,9 @@ namespace novatel_gps_driver
      */
     void CheckDeviceForData()
     {
-      std::vector<gps_msgs::GPSFixPtr> fix_msgs;
-      std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
-      std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
+      std::vector<gps_msgs::msg::GPSFix::SharedPtr> fix_msgs;
+      std::vector<novatel_gps_msgs::msg::NovatelPosition::SharedPtr> position_msgs;
+      std::vector<novatel_gps_msgs::msg::Gpgga::SharedPtr> gpgga_msgs;
 
       // This call appears to block if the serial device is disconnected
       NovatelGps::ReadResult result = gps_.ProcessData();
@@ -784,7 +778,7 @@ namespace novatel_gps_driver
           gpgga_pub_.publish(msg);
         }
 
-        std::vector<novatel_gps_msgs::GprmcPtr> gprmc_msgs;
+        std::vector<novatel_gps_msgs::msg::Gprmc::SharedPtr> gprmc_msgs;
         gps_.GetGprmcMessages(gprmc_msgs);
         for (const auto& msg : gprmc_msgs)
         {
@@ -796,7 +790,7 @@ namespace novatel_gps_driver
 
       if (publish_gpgsa_)
       {
-        std::vector<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs;
+        std::vector<novatel_gps_msgs::msg::Gpgsa::SharedPtr> gpgsa_msgs;
         gps_.GetGpgsaMessages(gpgsa_msgs);
         for (const auto& msg : gpgsa_msgs)
         {
@@ -808,7 +802,7 @@ namespace novatel_gps_driver
 
       if (publish_gpgsv_)
       {
-        std::vector<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs;
+        std::vector<novatel_gps_msgs::msg::Gpgsv::SharedPtr> gpgsv_msgs;
         gps_.GetGpgsvMessages(gpgsv_msgs);
         for (const auto& msg : gpgsv_msgs)
         {
@@ -820,7 +814,7 @@ namespace novatel_gps_driver
 
       if (publish_gphdt_)
       {
-        std::vector<novatel_gps_msgs::GphdtPtr> gphdt_msgs;
+        std::vector<novatel_gps_msgs::msg::Gphdt::SharedPtr> gphdt_msgs;
         gps_.GetGphdtMessages(gphdt_msgs);
         for (const auto& msg : gphdt_msgs)
         {
@@ -842,7 +836,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_xyz_positions_)
       {
-        std::vector<novatel_gps_msgs::NovatelXYZPtr> xyz_position_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelXYZ::SharedPtr> xyz_position_msgs;
         gps_.GetNovatelXYZPositions(xyz_position_msgs);
         for (const auto& msg : xyz_position_msgs)
         {
@@ -854,7 +848,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_utm_positions_)
       {
-        std::vector<novatel_gps_msgs::NovatelUtmPositionPtr> utm_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelUtmPosition::SharedPtr> utm_msgs;
         gps_.GetNovatelUtmPositions(utm_msgs);
         for (const auto& msg : utm_msgs)
         {
@@ -866,7 +860,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_heading2_)
       {
-        std::vector<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelHeading2::SharedPtr> heading2_msgs;
         gps_.GetNovatelHeading2Messages(heading2_msgs);
         for (const auto& msg : heading2_msgs)
         {
@@ -878,7 +872,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_dual_antenna_heading_)
       {
-        std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr> dual_antenna_heading_msgs;
         gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
         for (const auto& msg : dual_antenna_heading_msgs)
         {
@@ -890,7 +884,7 @@ namespace novatel_gps_driver
 
       if (publish_clock_steering_)
       {
-        std::vector<novatel_gps_msgs::ClockSteeringPtr> msgs;
+        std::vector<novatel_gps_msgs::msg::ClockSteering::SharedPtr> msgs;
         gps_.GetClockSteeringMessages(msgs);
         for (const auto& msg : msgs)
         {
@@ -900,7 +894,7 @@ namespace novatel_gps_driver
 
       if (publish_novatel_velocity_)
       {
-        std::vector<novatel_gps_msgs::NovatelVelocityPtr> velocity_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelVelocity::SharedPtr> velocity_msgs;
         gps_.GetNovatelVelocities(velocity_msgs);
         for (const auto& msg : velocity_msgs)
         {
@@ -911,7 +905,7 @@ namespace novatel_gps_driver
       }
       if (publish_time_messages_)
       {
-        std::vector<novatel_gps_msgs::TimePtr> time_msgs;
+        std::vector<novatel_gps_msgs::msg::Time::SharedPtr> time_msgs;
         gps_.GetTimeMessages(time_msgs);
         for (const auto& msg : time_msgs)
         {
@@ -922,7 +916,7 @@ namespace novatel_gps_driver
       }
       if (publish_range_messages_)
       {
-        std::vector<novatel_gps_msgs::RangePtr> range_msgs;
+        std::vector<novatel_gps_msgs::msg::Range::SharedPtr> range_msgs;
         gps_.GetRangeMessages(range_msgs);
         for (const auto& msg : range_msgs)
         {
@@ -933,7 +927,7 @@ namespace novatel_gps_driver
       }
       if (publish_trackstat_)
       {
-        std::vector<novatel_gps_msgs::TrackstatPtr> trackstat_msgs;
+        std::vector<novatel_gps_msgs::msg::Trackstat::SharedPtr> trackstat_msgs;
         gps_.GetTrackstatMessages(trackstat_msgs);
         for (const auto& msg : trackstat_msgs)
         {
@@ -944,7 +938,7 @@ namespace novatel_gps_driver
       }
       if (publish_imu_messages_)
       {
-        std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> novatel_imu_msgs;
+        std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> novatel_imu_msgs;
         gps_.GetNovatelCorrectedImuData(novatel_imu_msgs);
         for (const auto& msg : novatel_imu_msgs)
         {
@@ -953,7 +947,7 @@ namespace novatel_gps_driver
           novatel_imu_pub_.publish(msg);
         }
 
-        std::vector<sensor_msgs::ImuPtr> imu_msgs;
+        std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_msgs;
         gps_.GetImuMessages(imu_msgs);
         for (const auto& msg : imu_msgs)
         {
@@ -962,7 +956,7 @@ namespace novatel_gps_driver
           imu_pub_.publish(msg);
         }
 
-        std::vector<novatel_gps_msgs::InscovPtr> inscov_msgs;
+        std::vector<novatel_gps_msgs::msg::Inscov::SharedPtr> inscov_msgs;
         gps_.GetInscovMessages(inscov_msgs);
         for (const auto& msg : inscov_msgs)
         {
@@ -971,7 +965,7 @@ namespace novatel_gps_driver
           inscov_pub_.publish(msg);
         }
 
-        std::vector<novatel_gps_msgs::InspvaPtr> inspva_msgs;
+        std::vector<novatel_gps_msgs::msg::Inspva::SharedPtr> inspva_msgs;
         gps_.GetInspvaMessages(inspva_msgs);
         for (const auto& msg : inspva_msgs)
         {
@@ -980,7 +974,7 @@ namespace novatel_gps_driver
           inspva_pub_.publish(msg);
         }
 
-        std::vector<novatel_gps_msgs::InspvaxPtr> inspvax_msgs;
+        std::vector<novatel_gps_msgs::msg::Inspvax::SharedPtr> inspvax_msgs;
         gps_.GetInspvaxMessages(inspvax_msgs);
         for (const auto& msg : inspvax_msgs)
         {
@@ -989,7 +983,7 @@ namespace novatel_gps_driver
           inspvax_pub_.publish(msg);
         }
 
-        std::vector<novatel_gps_msgs::InsstdevPtr> insstdev_msgs;
+        std::vector<novatel_gps_msgs::msg::Insstdev::SharedPtr> insstdev_msgs;
         gps_.GetInsstdevMessages(insstdev_msgs);
         for (const auto& msg : insstdev_msgs)
         {
@@ -1007,7 +1001,7 @@ namespace novatel_gps_driver
 
         if (fix_pub_.getNumSubscribers() > 0)
         {
-          sensor_msgs::NavSatFixPtr fix_msg = ConvertGpsFixToNavSatFix(msg);
+          sensor_msgs::msg::NavSatFix::SharedPtr fix_msg = ConvertGpsFixToNavSatFix(msg);
 
           fix_pub_.publish(fix_msg);
         }
@@ -1025,9 +1019,9 @@ namespace novatel_gps_driver
       }
     }
 
-    sensor_msgs::NavSatFixPtr ConvertGpsFixToNavSatFix(const gps_msgs::GPSFixPtr& msg)
+    sensor_msgs::msg::NavSatFix::SharedPtr ConvertGpsFixToNavSatFix(const gps_msgs::GPSFixPtr& msg)
     {
-      sensor_msgs::NavSatFixPtr fix_msg = boost::make_shared<sensor_msgs::NavSatFix>();
+      sensor_msgs::msg::NavSatFix::SharedPtr fix_msg = std::make_shared<sensor_msgs::NavSatFix>();
       fix_msg->header = msg->header;
       fix_msg->latitude = msg->latitude;
       fix_msg->longitude = msg->longitude;

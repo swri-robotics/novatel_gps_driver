@@ -35,19 +35,19 @@
 #include <string>
 #include <vector>
 
-#include <gps_msgs/GPSFix.h>
-#include <novatel_gps_msgs/Gpgga.h>
-#include <novatel_gps_msgs/Gpgsa.h>
-#include <novatel_gps_msgs/Gpgsv.h>
-#include <novatel_gps_msgs/Gprmc.h>
-#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
-#include <novatel_gps_msgs/NovatelPosition.h>
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
-#include <novatel_gps_msgs/NovatelReceiverStatus.h>
-#include <novatel_gps_msgs/NovatelVelocity.h>
-#include <novatel_gps_msgs/Range.h>
-#include <novatel_gps_msgs/Time.h>
-#include <novatel_gps_msgs/Trackstat.h>
+#include <gps_msgs/msg/gpsfix.hpp>
+#include <novatel_gps_msgs/msg/gpgga.hpp>
+#include <novatel_gps_msgs/msg/gpgsa.hpp>
+#include <novatel_gps_msgs/msg/gpgsv.hpp>
+#include <novatel_gps_msgs/msg/gprmc.hpp>
+#include <novatel_gps_msgs/msg/novatelcorrectedimudata.hpp>
+#include <novatel_gps_msgs/msg/novatelposition.hpp>
+#include <novatel_gps_msgs/msg/novatelmessageheader.hpp>
+#include <novatel_gps_msgs/msg/novatelreceiverstatus.hpp>
+#include <novatel_gps_msgs/msg/novatelvelocity.hpp>
+#include <novatel_gps_msgs/msg/range.hpp>
+#include <novatel_gps_msgs/msg/time.hpp>
+#include <novatel_gps_msgs/msg/trackstat.hpp>
 
 #include <novatel_gps_driver/binary_message.h>
 #include <novatel_gps_driver/nmea_sentence.h>
@@ -103,7 +103,7 @@ namespace novatel_gps_driver
     void GetGpsFixMessage(
         const novatel_gps_msgs::Gprmc& gprmc,
         const novatel_gps_msgs::Gpgga& gpgga,
-        const gps_msgs::GPSFixPtr& gps_fix);
+        const gps_msgs::msg::GPSFix::SharedPtr& gps_fix);
 
   private:
     // Constants for parsing message structures

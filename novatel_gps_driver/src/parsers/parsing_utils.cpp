@@ -30,8 +30,8 @@
 #include <swri_string_util/string_util.h>
 
 #include <novatel_gps_driver/parsers/parsing_utils.h>
-#include <novatel_gps_msgs/NovatelExtendedSolutionStatus.h>
-#include <novatel_gps_msgs/NovatelSignalMask.h>
+#include <novatel_gps_msgs/msg/novatelextendedsolutionstatus.hpp>
+#include <novatel_gps_msgs/msg/novatelsignalmask.hpp>
 
 namespace novatel_gps_driver
 {

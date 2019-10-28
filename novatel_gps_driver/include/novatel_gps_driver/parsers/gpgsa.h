@@ -31,18 +31,18 @@
 #define NOVATEL_GPS_DRIVER_GPGSA_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/Gpgsa.h>
+#include <novatel_gps_msgs/msg/gpgsa.hpp>
 
 namespace novatel_gps_driver
 {
-  class GpgsaParser : public MessageParser<novatel_gps_msgs::GpgsaPtr>
+  class GpgsaParser : public MessageParser<novatel_gps_msgs::msg::Gpgsa::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::GpgsaPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::Gpgsa::SharedPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     static const std::string MESSAGE_NAME;
   };

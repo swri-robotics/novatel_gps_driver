@@ -37,7 +37,6 @@
 
 #include <ros/ros.h>
 
-#include <swri_string_util/string_util.h>
 #include <novatel_gps_driver/parsers/header.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
@@ -545,7 +544,7 @@ namespace novatel_gps_driver
   void NovatelMessageExtractor::GetGpsFixMessage(
       const novatel_gps_msgs::Gprmc& gprmc,
       const novatel_gps_msgs::Gpgga& gpgga,
-      const gps_msgs::GPSFixPtr& gps_fix)
+      const gps_msgs::msg::GPSFix::SharedPtr& gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
     gps_fix->altitude = gpgga.alt;

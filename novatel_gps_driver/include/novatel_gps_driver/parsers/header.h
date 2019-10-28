@@ -33,7 +33,7 @@
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 #include <novatel_gps_driver/parsers/message_parser.h>
 
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/msg/novatel_message_header.hpp>
 
 namespace novatel_gps_driver
 {

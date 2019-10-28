@@ -30,21 +30,21 @@
 #ifndef NOVATEL_GPS_DRIVER_INSCOV_H
 #define NOVATEL_GPS_DRIVER_INSCOV_H
 
-#include <novatel_gps_msgs/Inscov.h>
+#include <novatel_gps_msgs/msg/inscov.hpp>
 #include <novatel_gps_driver/parsers/message_parser.h>
 
 namespace novatel_gps_driver
 {
-  class InscovParser : public MessageParser<novatel_gps_msgs::InscovPtr>
+  class InscovParser : public MessageParser<novatel_gps_msgs::msg::Inscov::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::InscovPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    novatel_gps_msgs::msg::Inscov::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::InscovPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::Inscov::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint32_t MESSAGE_ID = 264;
     static const std::string MESSAGE_NAME;

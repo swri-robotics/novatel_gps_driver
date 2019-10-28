@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::ClockSteeringParser::GetMessageName() cons
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::ClockSteeringPtr novatel_gps_driver::ClockSteeringParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
+novatel_gps_msgs::msg::ClockSteering::SharedPtr novatel_gps_driver::ClockSteeringParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   const size_t MIN_LENGTH = 8;
   // Check that the message is at least as long as a a ClockSteering with no satellites
@@ -53,7 +53,7 @@ novatel_gps_msgs::ClockSteeringPtr novatel_gps_driver::ClockSteeringParser::Pars
           << ", actual length = " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::ClockSteeringPtr msg = boost::make_shared<novatel_gps_msgs::ClockSteering>();
+  novatel_gps_msgs::msg::ClockSteering::SharedPtr msg = std::make_shared<novatel_gps_msgs::ClockSteering>();
 
   msg->source = sentence.body[0];
   msg->steering_state = sentence.body[1];

@@ -74,7 +74,7 @@ TEST(ParserTestSuite, testBestposAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::NovatelPositionPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::NovatelPosition::SharedPtr msg = parser.ParseAscii(sentence);
 
 
   ASSERT_NE(msg.get(), nullptr);
@@ -115,7 +115,7 @@ TEST(ParserTestSuite, testGpggaParsing)
 
   ASSERT_EQ(parser.GetMessageName(), sentence.id);
 
-  novatel_gps_msgs::GpggaPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Gpgga::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
   ASSERT_EQ(novatel_gps_msgs::Gpgga::GPS_QUAL_PSEUDORANGE_DIFFERENTIAL, msg->gps_qual);
@@ -164,7 +164,7 @@ TEST(ParserTestSuite, testCorrimudataAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::NovatelCorrectedImuDataPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
   ASSERT_EQ(1769, msg->gps_week_num);
@@ -202,7 +202,7 @@ TEST(ParserTestSuite, testGpgsvParsing)
   ASSERT_EQ(parser.GetMessageName(), sentence.id);
   ASSERT_FALSE(sentence.body.empty());
 
-  novatel_gps_msgs::GpgsvPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Gpgsv::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -249,7 +249,7 @@ TEST(ParserTestSuite, testGphdtParsing)
   ASSERT_EQ(parser.GetMessageName(), sentence.id);
   ASSERT_FALSE(sentence.body.empty());
 
-  novatel_gps_msgs::GphdtPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Gphdt::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -288,7 +288,7 @@ TEST(ParserTestSuite, testInscovAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::InscovPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Inscov::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -324,7 +324,7 @@ TEST(ParserTestSuite, testInspvaAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::InspvaPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Inspva::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -368,7 +368,7 @@ TEST(ParserTestSuite, testInsstdevAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::InsstdevPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Insstdev::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -412,7 +412,7 @@ TEST(ParserTestSuite, testBestxyzAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::NovatelXYZPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::NovatelXYZ::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -473,7 +473,7 @@ TEST(ParserTestSuite, testHeading2AsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::NovatelHeading2Ptr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::NovatelHeading2::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -529,7 +529,7 @@ TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::NovatelDualAntennaHeadingPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 

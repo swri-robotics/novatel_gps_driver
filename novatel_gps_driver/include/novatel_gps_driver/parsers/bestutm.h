@@ -30,23 +30,23 @@
 #ifndef NOVATEL_GPS_DRIVER_BESTUTM_H
 #define NOVATEL_GPS_DRIVER_BESTUTM_H
 
-#include <novatel_gps_msgs/NovatelUtmPosition.h>
+#include <novatel_gps_msgs/msg/novatel_utm_position.hpp>
 
 #include <novatel_gps_driver/parsers/parsing_utils.h>
 #include <novatel_gps_driver/parsers/message_parser.h>
 
 namespace novatel_gps_driver
 {
-  class BestutmParser : public MessageParser<novatel_gps_msgs::NovatelUtmPositionPtr>
+  class BestutmParser : public MessageParser<novatel_gps_msgs::msg::NovatelUtmPosition::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::NovatelUtmPositionPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelUtmPosition::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::NovatelUtmPositionPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    novatel_gps_msgs::msg::NovatelUtmPosition::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 726;
     static constexpr size_t BINARY_LENGTH = 80;
