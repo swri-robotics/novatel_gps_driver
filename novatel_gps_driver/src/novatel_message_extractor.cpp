@@ -545,7 +545,7 @@ namespace novatel_gps_driver
   void NovatelMessageExtractor::GetGpsFixMessage(
       const novatel_gps_msgs::Gprmc& gprmc,
       const novatel_gps_msgs::Gpgga& gpgga,
-      const gps_common::GPSFixPtr& gps_fix)
+      const gps_msgs::GPSFixPtr& gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
     gps_fix->altitude = gpgga.alt;
@@ -586,14 +586,14 @@ namespace novatel_gps_driver
     switch (gpgga.gps_qual)
     {
       case novatel_gps_msgs::Gpgga::GPS_QUAL_INVALID:
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_NO_FIX;
+        gps_fix->status.status = gps_msgs::GPSStatus::STATUS_NO_FIX;
         break;
       case novatel_gps_msgs::Gpgga::GPS_QUAL_WASS:
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_WAAS_FIX;
+        gps_fix->status.status = gps_msgs::GPSStatus::STATUS_WAAS_FIX;
         break;
       default:
         // Other statuses don't seem to have an exact equivalent, so map them all to STATUS_FIX
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_FIX;
+        gps_fix->status.status = gps_msgs::GPSStatus::STATUS_FIX;
         break;
     }
     gps_fix->status.satellites_used = static_cast<uint16_t>(gpgga.num_sats);

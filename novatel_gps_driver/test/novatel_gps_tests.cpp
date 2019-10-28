@@ -41,11 +41,11 @@ TEST(NovatelGpsTestSuite, testGpsFixParsing)
   std::string path = ros::package::getPath("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/gpgga-gprmc-bestpos.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<gps_common::GPSFixPtr> fix_messages;
+  std::vector<gps_msgs::GPSFixPtr> fix_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<gps_common::GPSFixPtr> tmp_messages;
+    std::vector<gps_msgs::GPSFixPtr> tmp_messages;
     gps.GetFixMessages(tmp_messages);
     fix_messages.insert(fix_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }

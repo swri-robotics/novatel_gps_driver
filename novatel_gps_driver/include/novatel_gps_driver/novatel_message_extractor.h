@@ -35,7 +35,7 @@
 #include <string>
 #include <vector>
 
-#include <gps_common/GPSFix.h>
+#include <gps_msgs/GPSFix.h>
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
 #include <novatel_gps_msgs/Gpgsv.h>
@@ -94,7 +94,7 @@ namespace novatel_gps_driver
 
     /**
      * @brief Combines data receives in GPRMC and GPGGA message to produce
-     * a gps_common/GPSFixPtr ROS message.
+     * a gps_msgs/GPSFixPtr ROS message.
      * @param[in] gprmc A valid GPRMC message.
      * @param[in] gpgga A valid GPGGA message.
      * @param[out] gps_fix An initialised GPSFixPtr message must be provided;
@@ -103,7 +103,7 @@ namespace novatel_gps_driver
     void GetGpsFixMessage(
         const novatel_gps_msgs::Gprmc& gprmc,
         const novatel_gps_msgs::Gpgga& gpgga,
-        const gps_common::GPSFixPtr& gps_fix);
+        const gps_msgs::GPSFixPtr& gps_fix);
 
   private:
     // Constants for parsing message structures

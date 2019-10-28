@@ -31,7 +31,7 @@
  * \file
  *
  * This nodelet is a driver for Novatel OEM6 and FlexPack6 GPS receivers. It
- * publishes standard ROS gps_common/GPSFix messages, as well as custom
+ * publishes standard ROS gps_msgs/GPSFix messages, as well as custom
  * NovatelPosition, GPGGA, and GPRMC messages.
  *
  * <b>Topics Subscribed:</b>
@@ -42,7 +42,7 @@
  *
  * <b>Topics Published:</b>
  *
- * \e gps <tt>gps_common/GPSFix</tt> - GPS data for navigation
+ * \e gps <tt>gps_msgs/GPSFix</tt> - GPS data for navigation
  * \e corrimudata <tt>novatel_gps_message/NovatelCorrectedImuData</tt> - Raw
  *    Novatel IMU data. (only published if `publish_imu_messages` is set `true`)
  * \e gppga <tt>novatel_gps_driver/Gpgga</tt> - Raw GPGGA data for debugging (only
@@ -140,7 +140,7 @@
 #include <diagnostic_msgs/DiagnosticStatus.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <diagnostic_updater/publisher.h>
-#include <gps_common/GPSFix.h>
+#include <gps_msgs/GPSFix.h>
 #include <nodelet/nodelet.h>
 #include <novatel_gps_msgs/NovatelCorrectedImuData.h>
 #include <novatel_gps_msgs/NovatelFRESET.h>
@@ -274,7 +274,7 @@ namespace novatel_gps_driver
       sync_sub_ = swri::Subscriber(node, "gps_sync", 100, &NovatelGpsNodelet::SyncCallback, this);
 
       std::string gps_topic = node.resolveName("gps");
-      gps_pub_ = swri::advertise<gps_common::GPSFix>(node, gps_topic, 100);
+      gps_pub_ = swri::advertise<gps_msgs::GPSFix>(node, gps_topic, 100);
       fix_pub_ = swri::advertise<sensor_msgs::NavSatFix>(node, "fix", 100);
 
       if (publish_clock_steering_)
@@ -689,7 +689,7 @@ namespace novatel_gps_driver
      */
     void CheckDeviceForData()
     {
-      std::vector<gps_common::GPSFixPtr> fix_msgs;
+      std::vector<gps_msgs::GPSFixPtr> fix_msgs;
       std::vector<novatel_gps_msgs::NovatelPositionPtr> position_msgs;
       std::vector<novatel_gps_msgs::GpggaPtr> gpgga_msgs;
 
@@ -1025,7 +1025,7 @@ namespace novatel_gps_driver
       }
     }
 
-    sensor_msgs::NavSatFixPtr ConvertGpsFixToNavSatFix(const gps_common::GPSFixPtr& msg)
+    sensor_msgs::NavSatFixPtr ConvertGpsFixToNavSatFix(const gps_msgs::GPSFixPtr& msg)
     {
       sensor_msgs::NavSatFixPtr fix_msg = boost::make_shared<sensor_msgs::NavSatFix>();
       fix_msg->header = msg->header;
@@ -1035,20 +1035,20 @@ namespace novatel_gps_driver
       fix_msg->position_covariance = msg->position_covariance;
       switch (msg->status.status)
       {
-        case gps_common::GPSStatus::STATUS_NO_FIX:
+        case gps_msgs::GPSStatus::STATUS_NO_FIX:
           fix_msg->status.status = sensor_msgs::NavSatStatus::STATUS_NO_FIX;
           break;
-        case gps_common::GPSStatus::STATUS_FIX:
+        case gps_msgs::GPSStatus::STATUS_FIX:
           fix_msg->status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
           break;
-        case gps_common::GPSStatus::STATUS_SBAS_FIX:
+        case gps_msgs::GPSStatus::STATUS_SBAS_FIX:
           fix_msg->status.status = sensor_msgs::NavSatStatus::STATUS_SBAS_FIX;
           break;
-        case gps_common::GPSStatus::STATUS_GBAS_FIX:
+        case gps_msgs::GPSStatus::STATUS_GBAS_FIX:
           fix_msg->status.status = sensor_msgs::NavSatStatus::STATUS_GBAS_FIX;
           break;
-        case gps_common::GPSStatus::STATUS_DGPS_FIX:
-        case gps_common::GPSStatus::STATUS_WAAS_FIX:
+        case gps_msgs::GPSStatus::STATUS_DGPS_FIX:
+        case gps_msgs::GPSStatus::STATUS_WAAS_FIX:
         default:
           ROS_WARN_ONCE("Unsupported fix status: %d", msg->status.status);
           fix_msg->status.status = sensor_msgs::NavSatStatus::STATUS_FIX;
@@ -1056,16 +1056,16 @@ namespace novatel_gps_driver
       }
       switch (msg->position_covariance_type)
       {
-        case gps_common::GPSFix::COVARIANCE_TYPE_KNOWN:
+        case gps_msgs::GPSFix::COVARIANCE_TYPE_KNOWN:
           fix_msg->position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_KNOWN;
           break;
-        case gps_common::GPSFix::COVARIANCE_TYPE_APPROXIMATED:
+        case gps_msgs::GPSFix::COVARIANCE_TYPE_APPROXIMATED:
           fix_msg->position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_APPROXIMATED;
           break;
-        case gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN:
+        case gps_msgs::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN:
           fix_msg->position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
           break;
-        case gps_common::GPSFix::COVARIANCE_TYPE_UNKNOWN:
+        case gps_msgs::GPSFix::COVARIANCE_TYPE_UNKNOWN:
           fix_msg->position_covariance_type = sensor_msgs::NavSatFix::COVARIANCE_TYPE_UNKNOWN;
           break;
         default:
