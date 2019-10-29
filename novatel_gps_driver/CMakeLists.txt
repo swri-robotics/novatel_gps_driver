@@ -93,14 +93,21 @@ target_link_libraries(${PROJECT_NAME}_nodes
 ### Build unit tests
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_index_cpp REQUIRED)
 
-#  catkin_add_gtest(parser_tests test/parser_tests.cpp)
-#  target_link_libraries(parser_tests ${PROJECT_NAME})
-#  set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
-#
-#  add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
-#  target_link_libraries(novatel_gps_tests ${PROJECT_NAME})
-#  set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+  ament_add_gtest(parser_tests test/parser_tests.cpp)
+  target_link_libraries(parser_tests
+    Boost::system
+    ${PROJECT_NAME}
+  )
+  ament_target_dependencies(parser_tests ament_index_cpp)
+
+  ament_add_gtest(novatel_gps_tests test/novatel_gps_tests.cpp)
+  target_link_libraries(novatel_gps_tests
+    Boost::system
+    ${PROJECT_NAME}
+  )
+  ament_target_dependencies(novatel_gps_tests ament_index_cpp)
 endif()
 
 ### Install Libraries and Headers ###
@@ -113,6 +120,10 @@ install(TARGETS
 )
 install(DIRECTORY include/
   DESTINATION include
+)
+install(DIRECTORY test/
+  DESTINATION test
+  FILES_MATCHING PATTERN "*.pcap"
 )
 
 ### Install Launch Files ###
