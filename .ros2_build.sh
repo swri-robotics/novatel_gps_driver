@@ -13,3 +13,4 @@ cd /ws
 
 rosdep install src --from-paths -i -y
 colcon build
+colcon test
