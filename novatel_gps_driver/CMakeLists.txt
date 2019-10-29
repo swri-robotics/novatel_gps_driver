@@ -79,7 +79,7 @@ ament_target_dependencies(${PROJECT_NAME}
 
 ### Nodelets ###
 add_library(${PROJECT_NAME}_nodes SHARED
-  src/nodelets/novatel_gps_node.cpp
+  src/nodes/novatel_gps_node.cpp
 )
 target_compile_definitions(${PROJECT_NAME}_nodes
   PRIVATE "COMPOSITION_BUILDING_DLL")
@@ -127,7 +127,9 @@ install(DIRECTORY test/
 )
 
 ### Install Launch Files ###
-install(DIRECTORY launch DESTINATION share)
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
 
 ament_export_dependencies(ament_cmake)
 ament_export_include_directories(include)

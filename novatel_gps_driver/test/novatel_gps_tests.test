@@ -1,3 +1,0 @@
-<launch>
-    <test test-name="novatel_gps_tests" pkg="novatel_gps_driver" type="novatel_gps_tests"/>
-</launch>
