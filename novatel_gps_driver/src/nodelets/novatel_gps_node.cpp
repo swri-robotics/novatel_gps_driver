@@ -483,7 +483,14 @@ namespace novatel_gps_driver
         while (gps_.IsConnected() && rclcpp::ok())
         {
           // Read data from the device and publish any received messages
-          CheckDeviceForData();
+          try
+          {
+            CheckDeviceForData();
+          }
+          catch (const std::runtime_error& e)
+          {
+            RCLCPP_ERROR(this->get_logger(), "Error when checking for data: %s", e.what());
+          }
 
           // Poke the diagnostic updater. It will only fire diagnostics if
           // its internal timer (1 Hz) has elapsed. Otherwise, this is a
@@ -654,17 +661,25 @@ namespace novatel_gps_driver
     // an acculumator of their offset, which is used to
     // calculate a rolling mean of the offset to apply to all messages
     rclcpp::Duration sync_offset(0); // If no TimeSyncs, assume 0 offset
-    if (last_sync_ != rclcpp::Time(this->get_clock()->get_clock_type()))
+    try
     {
-      sync_offset = std::chrono::duration<double>(stats::rolling_mean(rolling_offset_));
+      if (last_sync_ != rclcpp::Time(this->get_clock()->get_clock_type()))
+      {
+        sync_offset = std::chrono::duration<double>(stats::rolling_mean(rolling_offset_));
+      }
+      RCLCPP_DEBUG(this->get_logger(), "GPS TimeSync offset is %f", sync_offset.seconds());
     }
-    RCLCPP_DEBUG(this->get_logger(), "GPS TimeSync offset is %f", sync_offset.seconds());
+    catch (const std::runtime_error& e)
+    {
+      RCLCPP_ERROR(this->get_logger(), "Error comparing times: %s; last_sync_: %d",
+          e.what(), last_sync_.get_clock_type());
+    }
 
     if (publish_nmea_messages_)
     {
       for (const auto& msg : gpgga_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         gpgga_pub_->publish(msg);
       }
@@ -673,7 +688,7 @@ namespace novatel_gps_driver
       gps_.GetGprmcMessages(gprmc_msgs);
       for (const auto& msg : gprmc_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         gprmc_pub_->publish(msg);
       }
@@ -719,7 +734,7 @@ namespace novatel_gps_driver
     {
       for (const auto& msg : position_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_position_pub_->publish(msg);
       }
@@ -731,7 +746,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelXYZPositions(xyz_position_msgs);
       for (const auto& msg : xyz_position_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_xyz_position_pub_->publish(msg);
       }
@@ -743,7 +758,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelUtmPositions(utm_msgs);
       for (const auto& msg : utm_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_utm_pub_->publish(msg);
       }
@@ -755,7 +770,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelHeading2Messages(heading2_msgs);
       for (const auto& msg : heading2_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_heading2_pub_->publish(msg);
       }
@@ -767,7 +782,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
       for (const auto& msg : dual_antenna_heading_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_dual_antenna_heading_pub_->publish(msg);
       }
@@ -789,7 +804,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelVelocities(velocity_msgs);
       for (const auto& msg : velocity_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         novatel_velocity_pub_->publish(msg);
       }
@@ -800,7 +815,7 @@ namespace novatel_gps_driver
       gps_.GetTimeMessages(time_msgs);
       for (const auto& msg : time_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         time_pub_->publish(msg);
       }
@@ -811,7 +826,7 @@ namespace novatel_gps_driver
       gps_.GetRangeMessages(range_msgs);
       for (const auto& msg : range_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         range_pub_->publish(msg);
       }
@@ -822,7 +837,7 @@ namespace novatel_gps_driver
       gps_.GetTrackstatMessages(trackstat_msgs);
       for (const auto& msg : trackstat_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         trackstat_pub_->publish(msg);
       }
@@ -833,7 +848,7 @@ namespace novatel_gps_driver
       gps_.GetNovatelCorrectedImuData(novatel_imu_msgs);
       for (const auto& msg : novatel_imu_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         novatel_imu_pub_->publish(msg);
       }
@@ -842,7 +857,7 @@ namespace novatel_gps_driver
       gps_.GetImuMessages(imu_msgs);
       for (const auto& msg : imu_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         imu_pub_->publish(msg);
       }
@@ -851,7 +866,7 @@ namespace novatel_gps_driver
       gps_.GetInscovMessages(inscov_msgs);
       for (const auto& msg : inscov_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         inscov_pub_->publish(msg);
       }
@@ -860,7 +875,7 @@ namespace novatel_gps_driver
       gps_.GetInspvaMessages(inspva_msgs);
       for (const auto& msg : inspva_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         inspva_pub_->publish(msg);
       }
@@ -869,7 +884,7 @@ namespace novatel_gps_driver
       gps_.GetInspvaxMessages(inspvax_msgs);
       for (const auto& msg : inspvax_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         inspvax_pub_->publish(msg);
       }
@@ -878,7 +893,7 @@ namespace novatel_gps_driver
       gps_.GetInsstdevMessages(insstdev_msgs);
       for (const auto& msg : insstdev_msgs)
       {
-        msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
         insstdev_pub_->publish(msg);
       }
@@ -886,7 +901,7 @@ namespace novatel_gps_driver
 
     for (const auto& msg : fix_msgs)
     {
-      msg->header.stamp = rclcpp::Time(msg->header.stamp) + sync_offset;
+      msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
       msg->header.frame_id = frame_id_;
       gps_pub_->publish(msg);
 
@@ -900,14 +915,22 @@ namespace novatel_gps_driver
       // If the time between GPS message stamps is greater than 1.5
       // times the expected publish rate, increment the
       // publish_rate_warnings_ counter, which is used in diagnostics
-      if (last_published_ != rclcpp::Time(this->get_clock()->get_clock_type()) &&
-          (rclcpp::Time(msg->header.stamp) - last_published_).seconds() > 1.5 * (1.0 / expected_rate_))
+      rclcpp::Time msgTime = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
+      try
       {
-        publish_rate_warnings_++;
+        if (last_published_.seconds() > 0 &&
+            (msgTime - last_published_).seconds() > 1.5 * (1.0 / expected_rate_))
+        {
+          publish_rate_warnings_++;
+        }
+      }
+      catch (const std::runtime_error& e)
+      {
+        RCLCPP_WARN(this->get_logger(), "last_published_ clock type (%d) wasn't the same as node's clock (%d)",
+            last_published_.get_clock_type(), msgTime.get_clock_type());
       }
 
-      last_published_ = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
-      RCLCPP_INFO(this->get_logger(), "CheckDeviceForData: Last published clock type: %d", last_published_.get_clock_type());
+      last_published_ = msgTime;
     }
   }
 
@@ -1174,8 +1197,6 @@ namespace novatel_gps_driver
   void NovatelGpsNode::RateDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status)
   {
     status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Nominal Publish Rate");
-    RCLCPP_INFO(this->get_logger(), "This clock type: %d", this->get_clock()->get_clock_type());
-    RCLCPP_INFO(this->get_logger(), "RateDiagnostic: Last published clock type: %d", last_published_.get_clock_type());
 
     bool gap_detected = false;
     try
