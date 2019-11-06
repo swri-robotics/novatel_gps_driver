@@ -129,7 +129,6 @@
 
 #include <swri_math_util/math_util.h>
 
-#include <swri_roscpp/parameters.h>
 #include <swri_roscpp/publisher.h>
 
 #include <rcl/time.h>
@@ -187,50 +186,45 @@ namespace novatel_gps_driver
      * Init method reads parameters and sets up publishers and subscribers.
      * It does not connect to the device.
      */
-    RCLCPP_INFO(this->get_logger(), "Getting params");
-    swri::param(*this, "device", device_, device_);
-    swri::param(*this, "imu_rate", imu_rate_, imu_rate_);
-    swri::param(*this, "imu_sample_rate", imu_sample_rate_, imu_sample_rate_);
-    swri::param(*this, "publish_clocksteering", publish_clock_steering_, publish_clock_steering_);
-    swri::param(*this, "publish_gpgsa", publish_gpgsa_, publish_gpgsa_);
-    swri::param(*this, "publish_gpgsv", publish_gpgsv_, publish_gpgsv_);
-    swri::param(*this, "publish_gphdt", publish_gphdt_, publish_gphdt_);
-    swri::param(*this, "publish_imu_messages", publish_imu_messages_, publish_imu_messages_);
-    swri::param(*this, "publish_novatel_positions", publish_novatel_positions_, publish_novatel_positions_);
-    swri::param(*this, "publish_novatel_xyz_positions", publish_novatel_xyz_positions_,
-                publish_novatel_xyz_positions_);
-    swri::param(*this, "publish_novatel_utm_positions", publish_novatel_utm_positions_,
-                publish_novatel_utm_positions_);
-    swri::param(*this, "publish_novatel_velocity", publish_novatel_velocity_, publish_novatel_velocity_);
-    swri::param(*this, "publish_novatel_heading2", publish_novatel_heading2_, publish_novatel_heading2_);
-    swri::param(*this, "publish_novatel_dual_antenna_heading", publish_novatel_dual_antenna_heading_,
-                publish_novatel_dual_antenna_heading_);
-    swri::param(*this, "publish_nmea_messages", publish_nmea_messages_, publish_nmea_messages_);
-    swri::param(*this, "publish_range_messages", publish_range_messages_, publish_range_messages_);
-    swri::param(*this, "publish_time_messages", publish_time_messages_, publish_time_messages_);
-    swri::param(*this, "publish_trackstat", publish_trackstat_, publish_trackstat_);
-    swri::param(*this, "publish_diagnostics", publish_diagnostics_, publish_diagnostics_);
-    swri::param(*this, "publish_sync_diagnostic", publish_sync_diagnostic_, publish_sync_diagnostic_);
-    swri::param(*this, "polling_period", polling_period_, polling_period_);
-    swri::param(*this, "reconnect_delay_s", reconnect_delay_s_, reconnect_delay_s_);
-    swri::param(*this, "use_binary_messages", use_binary_messages_, use_binary_messages_);
-    swri::param(*this, "span_frame_to_ros_frame", span_frame_to_ros_frame_, span_frame_to_ros_frame_);
+    RCLCPP_INFO(this->get_logger(), "Initializing...");
+    device_ = this->declare_parameter("device", device_);
+    imu_rate_ = this->declare_parameter("imu_rate", imu_rate_);
+    imu_sample_rate_ = this->declare_parameter("imu_sample_rate", imu_sample_rate_);
+    publish_clock_steering_ = this->declare_parameter("publish_clocksteering", publish_clock_steering_);
+    publish_gpgsa_ = this->declare_parameter("publish_gpgsa", publish_gpgsa_);
+    publish_gpgsv_ = this->declare_parameter("publish_gpgsv", publish_gpgsv_);
+    publish_gphdt_ = this->declare_parameter("publish_gphdt", publish_gphdt_);
+    publish_imu_messages_ = this->declare_parameter("publish_imu_messages", publish_imu_messages_);
+    publish_novatel_positions_ = this->declare_parameter("publish_novatel_positions", publish_novatel_positions_);
+    publish_novatel_xyz_positions_ = this->declare_parameter("publish_novatel_xyz_positions", publish_novatel_xyz_positions_);
+    publish_novatel_utm_positions_ = this->declare_parameter("publish_novatel_utm_positions", publish_novatel_utm_positions_);
+    publish_novatel_velocity_ = this->declare_parameter("publish_novatel_velocity", publish_novatel_velocity_);
+    publish_novatel_heading2_ = this->declare_parameter("publish_novatel_heading2", publish_novatel_heading2_);
+    publish_novatel_dual_antenna_heading_ = this->declare_parameter("publish_novatel_dual_antenna_heading", publish_novatel_dual_antenna_heading_);
+    publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
+    publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
+    publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
+    publish_trackstat_ = this->declare_parameter("publish_trackstat", publish_trackstat_);
+    publish_diagnostics_ = this->declare_parameter("publish_diagnostics", publish_diagnostics_);
+    publish_sync_diagnostic_ = this->declare_parameter("publish_sync_diagnostic", publish_sync_diagnostic_);
+    polling_period_ = this->declare_parameter("polling_period", polling_period_);
+    reconnect_delay_s_ = this->declare_parameter("reconnect_delay_s", reconnect_delay_s_);
+    use_binary_messages_ = this->declare_parameter("use_binary_messages", use_binary_messages_);
+    span_frame_to_ros_frame_ = this->declare_parameter("span_frame_to_ros_frame", span_frame_to_ros_frame_);
 
-    swri::param(*this, "connection_type", connection_type_, connection_type_);
+    connection_type_ = this->declare_parameter("connection_type", connection_type_);
     connection_ = NovatelGps::ParseConnection(connection_type_);
-    swri::param(*this, "serial_baud", serial_baud_, serial_baud_);
+    serial_baud_ = this->declare_parameter("serial_baud", serial_baud_);
 
-    swri::param(*this, "imu_frame_id", imu_frame_id_, std::string(""));
-    swri::param(*this, "frame_id", frame_id_, std::string(""));
+    imu_frame_id_ = this->declare_parameter("imu_frame_id", std::string(""));
+    frame_id_ = this->declare_parameter("frame_id", std::string(""));
 
     //set NovatelGps parameters
-    swri::param(*this, "gpgga_gprmc_sync_tol", gps_.gpgga_gprmc_sync_tol_, 0.01);
-    swri::param(*this, "gpgga_position_sync_tol", gps_.gpgga_position_sync_tol_, 0.01);
-    swri::param(*this, "wait_for_position", gps_.wait_for_position_, false);
+    gps_.gpgga_gprmc_sync_tol_ = this->declare_parameter("gpgga_gprmc_sync_tol", 0.01);
+    gps_.gpgga_position_sync_tol_ = this->declare_parameter("gpgga_position_sync_tol", 0.01);
+    gps_.wait_for_position_ = this->declare_parameter("wait_for_position", false);
 
-    RCLCPP_INFO(this->get_logger(), "Creating service");
     // Reset Service
-
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
                                                                                 std::bind(
                                                                                     &NovatelGpsNode::resetService,
@@ -238,12 +232,9 @@ namespace novatel_gps_driver
                                                                                     std::placeholders::_2,
                                                                                     std::placeholders::_3));
 
-    RCLCPP_INFO(this->get_logger(), "Creating subscriber");
 
     sync_sub_ = swri::Subscriber(*this, "gps_sync", 100,
                                  &NovatelGpsNode::SyncCallback, this);
-
-    RCLCPP_INFO(this->get_logger(), "Advertising");
 
     gps_pub_ = swri::advertise<gps_msgs::msg::GPSFix>(*this, "gps", 100);
     fix_pub_ = swri::advertise<sensor_msgs::msg::NavSatFix>(*this, "fix", 100);
@@ -331,9 +322,6 @@ namespace novatel_gps_driver
       trackstat_pub_ = swri::advertise<novatel_gps_msgs::msg::Trackstat>(*this, "trackstat", 100);
     }
 
-    RCLCPP_INFO(this->get_logger(), "Setting up diagnostics");
-
-
     hw_id_ = "Novatel GPS (" + device_ + ")";
     if (publish_diagnostics_)
     {
@@ -364,11 +352,8 @@ namespace novatel_gps_driver
 
     gps_.ApplyVehicleBodyRotation(span_frame_to_ros_frame_);
 
-    RCLCPP_INFO(this->get_logger(), "Starting thread");
     thread_ = boost::thread(&NovatelGpsNode::Spin, this);
     RCLCPP_INFO(this->get_logger(), "%s initialized", hw_id_.c_str());
-
-    RCLCPP_INFO(this->get_logger(), "Constructor: Last published clock type: %d", last_published_.get_clock_type());
   }
 
   NovatelGpsNode::~NovatelGpsNode()
