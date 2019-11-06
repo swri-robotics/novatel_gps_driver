@@ -1381,7 +1381,7 @@ namespace novatel_gps_driver
         { "52", std::pair<double, std::string>(200, "Litef microIMU") },
         { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
         { "58", std::pair<double, std::string>(200, "Honeywell HG4930 AN01") },
-        { "61", std::pair<double, std::string>(100, "Epson G370") },
+        { "61", std::pair<double, std::string>(100, "Epson G370N") },
        };
 
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
