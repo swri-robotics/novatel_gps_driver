@@ -552,7 +552,7 @@ namespace novatel_gps_driver
   void NovatelMessageExtractor::GetGpsFixMessage(
       const novatel_gps_msgs::msg::Gprmc& gprmc,
       const novatel_gps_msgs::msg::Gpgga& gpgga,
-      const gps_msgs::msg::GPSFix::SharedPtr& gps_fix)
+      const gps_msgs::msg::GPSFix::UniquePtr& gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
     gps_fix->altitude = gpgga.alt;

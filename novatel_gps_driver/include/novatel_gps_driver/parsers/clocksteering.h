@@ -35,14 +35,14 @@
 
 namespace novatel_gps_driver
 {
-  class ClockSteeringParser : MessageParser<novatel_gps_msgs::msg::ClockSteering::SharedPtr>
+  class ClockSteeringParser : public MessageParser<novatel_gps_msgs::msg::ClockSteering::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::ClockSteering::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static const std::string MESSAGE_NAME;
   };

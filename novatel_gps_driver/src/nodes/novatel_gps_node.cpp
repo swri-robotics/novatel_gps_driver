@@ -110,7 +110,7 @@
  *    publishes Novatel RANGE messages [false]
  * \e publish_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic.
  *    This is ignored if publish_diagnostics is false. [true]
- * \e publish_time <tt>bool</tt> - If set true, the driver publishes Novatel
+ * \e publish_time_messages <tt>bool</tt> - If set true, the driver publishes Novatel
  *    Time messages (see Topics Published) [false]
  * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
  *    Novatel Trackstat messages (see Topics Published) [false]
@@ -565,9 +565,9 @@ namespace novatel_gps_driver
    */
   void NovatelGpsNode::CheckDeviceForData()
   {
-    std::vector<gps_msgs::msg::GPSFix::SharedPtr> fix_msgs;
-    std::vector<novatel_gps_msgs::msg::NovatelPosition::SharedPtr> position_msgs;
-    std::vector<novatel_gps_msgs::msg::Gpgga::SharedPtr> gpgga_msgs;
+    std::vector<gps_msgs::msg::GPSFix::UniquePtr> fix_msgs;
+    std::vector<novatel_gps_driver::BestposParser::MessageType> position_msgs;
+    std::vector<novatel_gps_driver::GpggaParser::MessageType> gpgga_msgs;
 
     // This call appears to block if the serial device is disconnected
     NovatelGps::ReadResult result = gps_.ProcessData();
@@ -662,180 +662,180 @@ namespace novatel_gps_driver
 
     if (publish_nmea_messages_)
     {
-      for (const auto& msg : gpgga_msgs)
+      for (auto& msg : gpgga_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        gpgga_pub_->publish(msg);
+        gpgga_pub_->publish(std::move(msg));
       }
 
-      std::vector<novatel_gps_msgs::msg::Gprmc::SharedPtr> gprmc_msgs;
+      std::vector<novatel_gps_driver::GprmcParser::MessageType> gprmc_msgs;
       gps_.GetGprmcMessages(gprmc_msgs);
-      for (const auto& msg : gprmc_msgs)
+      for (auto& msg : gprmc_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        gprmc_pub_->publish(msg);
+        gprmc_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_gpgsa_)
     {
-      std::vector<novatel_gps_msgs::msg::Gpgsa::SharedPtr> gpgsa_msgs;
+      std::vector<novatel_gps_driver::GpgsaParser::MessageType> gpgsa_msgs;
       gps_.GetGpgsaMessages(gpgsa_msgs);
-      for (const auto& msg : gpgsa_msgs)
+      for (auto& msg : gpgsa_msgs)
       {
         msg->header.stamp = this->get_clock()->now();
         msg->header.frame_id = frame_id_;
-        gpgsa_pub_->publish(msg);
+        gpgsa_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_gpgsv_)
     {
-      std::vector<novatel_gps_msgs::msg::Gpgsv::SharedPtr> gpgsv_msgs;
+      std::vector<novatel_gps_driver::GpgsvParser::MessageType> gpgsv_msgs;
       gps_.GetGpgsvMessages(gpgsv_msgs);
-      for (const auto& msg : gpgsv_msgs)
+      for (auto& msg : gpgsv_msgs)
       {
         msg->header.stamp = this->get_clock()->now();
         msg->header.frame_id = frame_id_;
-        gpgsv_pub_->publish(msg);
+        gpgsv_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_gphdt_)
     {
-      std::vector<novatel_gps_msgs::msg::Gphdt::SharedPtr> gphdt_msgs;
+      std::vector<novatel_gps_driver::GphdtParser::MessageType> gphdt_msgs;
       gps_.GetGphdtMessages(gphdt_msgs);
-      for (const auto& msg : gphdt_msgs)
+      for (auto& msg : gphdt_msgs)
       {
         msg->header.stamp = this->get_clock()->now();
         msg->header.frame_id = frame_id_;
-        gphdt_pub_->publish(msg);
+        gphdt_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_novatel_positions_)
     {
-      for (const auto& msg : position_msgs)
+      for (auto& msg : position_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_position_pub_->publish(msg);
+        novatel_position_pub_->publish(*msg);
       }
     }
 
     if (publish_novatel_xyz_positions_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelXYZ::SharedPtr> xyz_position_msgs;
+      std::vector<novatel_gps_driver::BestxyzParser::MessageType> xyz_position_msgs;
       gps_.GetNovatelXYZPositions(xyz_position_msgs);
-      for (const auto& msg : xyz_position_msgs)
+      for (auto& msg : xyz_position_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_xyz_position_pub_->publish(msg);
+        novatel_xyz_position_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_novatel_utm_positions_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelUtmPosition::SharedPtr> utm_msgs;
+      std::vector<novatel_gps_driver::BestutmParser::MessageType> utm_msgs;
       gps_.GetNovatelUtmPositions(utm_msgs);
-      for (const auto& msg : utm_msgs)
+      for (auto& msg : utm_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_utm_pub_->publish(msg);
+        novatel_utm_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_novatel_heading2_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelHeading2::SharedPtr> heading2_msgs;
+      std::vector<novatel_gps_driver::Heading2Parser::MessageType> heading2_msgs;
       gps_.GetNovatelHeading2Messages(heading2_msgs);
-      for (const auto& msg : heading2_msgs)
+      for (auto& msg : heading2_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_heading2_pub_->publish(msg);
+        novatel_heading2_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_novatel_dual_antenna_heading_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelDualAntennaHeading::SharedPtr> dual_antenna_heading_msgs;
+      std::vector<novatel_gps_driver::DualAntennaHeadingParser::MessageType> dual_antenna_heading_msgs;
       gps_.GetNovatelDualAntennaHeadingMessages(dual_antenna_heading_msgs);
-      for (const auto& msg : dual_antenna_heading_msgs)
+      for (auto& msg : dual_antenna_heading_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_dual_antenna_heading_pub_->publish(msg);
+        novatel_dual_antenna_heading_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_clock_steering_)
     {
-      std::vector<novatel_gps_msgs::msg::ClockSteering::SharedPtr> msgs;
+      std::vector<novatel_gps_driver::ClockSteeringParser::MessageType> msgs;
       gps_.GetClockSteeringMessages(msgs);
-      for (const auto& msg : msgs)
+      for (auto& msg : msgs)
       {
-        clocksteering_pub_->publish(msg);
+        clocksteering_pub_->publish(std::move(msg));
       }
     }
 
     if (publish_novatel_velocity_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelVelocity::SharedPtr> velocity_msgs;
+      std::vector<novatel_gps_driver::BestvelParser::MessageType> velocity_msgs;
       gps_.GetNovatelVelocities(velocity_msgs);
-      for (const auto& msg : velocity_msgs)
+      for (auto& msg : velocity_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_velocity_pub_->publish(msg);
+        novatel_velocity_pub_->publish(std::move(msg));
       }
     }
     if (publish_time_messages_)
     {
-      std::vector<novatel_gps_msgs::msg::Time::SharedPtr> time_msgs;
+      std::vector<novatel_gps_driver::TimeParser::MessageType> time_msgs;
       gps_.GetTimeMessages(time_msgs);
-      for (const auto& msg : time_msgs)
+      for (auto& msg : time_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        time_pub_->publish(msg);
+        time_pub_->publish(std::move(msg));
       }
     }
     if (publish_range_messages_)
     {
-      std::vector<novatel_gps_msgs::msg::Range::SharedPtr> range_msgs;
+      std::vector<novatel_gps_driver::RangeParser::MessageType> range_msgs;
       gps_.GetRangeMessages(range_msgs);
-      for (const auto& msg : range_msgs)
+      for (auto& msg : range_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        range_pub_->publish(msg);
+        range_pub_->publish(std::move(msg));
       }
     }
     if (publish_trackstat_)
     {
-      std::vector<novatel_gps_msgs::msg::Trackstat::SharedPtr> trackstat_msgs;
+      std::vector<novatel_gps_driver::TrackstatParser::MessageType> trackstat_msgs;
       gps_.GetTrackstatMessages(trackstat_msgs);
-      for (const auto& msg : trackstat_msgs)
+      for (auto& msg : trackstat_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        trackstat_pub_->publish(msg);
+        trackstat_pub_->publish(std::move(msg));
       }
     }
     if (publish_imu_messages_)
     {
-      std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> novatel_imu_msgs;
+      std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> novatel_imu_msgs;
       gps_.GetNovatelCorrectedImuData(novatel_imu_msgs);
-      for (const auto& msg : novatel_imu_msgs)
+      for (auto& msg : novatel_imu_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        novatel_imu_pub_->publish(msg);
+        novatel_imu_pub_->publish(*msg);
       }
 
       std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_msgs;
@@ -844,63 +844,66 @@ namespace novatel_gps_driver
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        imu_pub_->publish(msg);
+        imu_pub_->publish(*msg);
       }
 
-      std::vector<novatel_gps_msgs::msg::Inscov::SharedPtr> inscov_msgs;
+      std::vector<novatel_gps_driver::InscovParser::MessageType> inscov_msgs;
       gps_.GetInscovMessages(inscov_msgs);
       for (const auto& msg : inscov_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        inscov_pub_->publish(msg);
+        inscov_pub_->publish(*msg);
       }
 
-      std::vector<novatel_gps_msgs::msg::Inspva::SharedPtr> inspva_msgs;
+      std::vector<novatel_gps_driver::InspvaParser::MessageType> inspva_msgs;
       gps_.GetInspvaMessages(inspva_msgs);
-      for (const auto& msg : inspva_msgs)
+      for (auto& msg : inspva_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        inspva_pub_->publish(msg);
+        inspva_pub_->publish(*msg);
       }
 
-      std::vector<novatel_gps_msgs::msg::Inspvax::SharedPtr> inspvax_msgs;
+      std::vector<novatel_gps_driver::InspvaxParser::MessageType> inspvax_msgs;
       gps_.GetInspvaxMessages(inspvax_msgs);
-      for (const auto& msg : inspvax_msgs)
+      for (auto& msg : inspvax_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        inspvax_pub_->publish(msg);
+        inspvax_pub_->publish(std::move(msg));
       }
 
-      std::vector<novatel_gps_msgs::msg::Insstdev::SharedPtr> insstdev_msgs;
+      std::vector<novatel_gps_driver::InsstdevParser::MessageType> insstdev_msgs;
       gps_.GetInsstdevMessages(insstdev_msgs);
       for (const auto& msg : insstdev_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        insstdev_pub_->publish(msg);
+        insstdev_pub_->publish(*msg);
       }
     }
 
-    for (const auto& msg : fix_msgs)
+    for (auto& msg : fix_msgs)
     {
       msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
       msg->header.frame_id = frame_id_;
-      gps_pub_->publish(msg);
 
       if (fix_pub_->get_subscription_count() > 0)
       {
-        sensor_msgs::msg::NavSatFix::SharedPtr fix_msg = ConvertGpsFixToNavSatFix(msg);
+        sensor_msgs::msg::NavSatFix::UniquePtr fix_msg = ConvertGpsFixToNavSatFix(msg);
 
-        fix_pub_->publish(fix_msg);
+        fix_pub_->publish(std::move(fix_msg));
       }
 
       // If the time between GPS message stamps is greater than 1.5
       // times the expected publish rate, increment the
       // publish_rate_warnings_ counter, which is used in diagnostics
       rclcpp::Time msgTime = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
+
+      // Publish it; note that after this point, we no longer own the object
+      gps_pub_->publish(std::move(msg));
+
       try
       {
         if (last_published_.seconds() > 0 &&
@@ -919,10 +922,10 @@ namespace novatel_gps_driver
     }
   }
 
-  sensor_msgs::msg::NavSatFix::SharedPtr
-  NovatelGpsNode::ConvertGpsFixToNavSatFix(const gps_msgs::msg::GPSFix::SharedPtr& msg)
+  sensor_msgs::msg::NavSatFix::UniquePtr
+  NovatelGpsNode::ConvertGpsFixToNavSatFix(const gps_msgs::msg::GPSFix::UniquePtr& msg)
   {
-    sensor_msgs::msg::NavSatFix::SharedPtr fix_msg = std::make_shared<sensor_msgs::msg::NavSatFix>();
+    sensor_msgs::msg::NavSatFix::UniquePtr fix_msg = std::make_unique<sensor_msgs::msg::NavSatFix>();
     fix_msg->header = msg->header;
     fix_msg->latitude = msg->latitude;
     fix_msg->longitude = msg->longitude;

@@ -47,7 +47,7 @@ namespace novatel_gps_driver
     return MESSAGE_NAME;
   }
 
-  novatel_gps_msgs::msg::NovatelHeading2::SharedPtr Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false) 
+  Heading2Parser::MessageType Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
   {
     if (bin_msg.data_.size() != BINARY_LENGTH)
     {
@@ -55,8 +55,7 @@ namespace novatel_gps_driver
       error << "Unexpected HEADING2 message length: " << bin_msg.data_.size();
       throw ParseException(error.str());
     }
-    novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ros_msg =
-        std::make_shared<novatel_gps_msgs::msg::NovatelHeading2>();
+    auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser header_parser;
     ros_msg->novatel_msg_header = header_parser.ParseBinary(bin_msg);
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -112,10 +111,9 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  novatel_gps_msgs::msg::NovatelHeading2::SharedPtr Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
+  Heading2Parser::MessageType Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
-    novatel_gps_msgs::msg::NovatelHeading2::SharedPtr ros_msg =
-        std::make_shared<novatel_gps_msgs::msg::NovatelHeading2>();
+    auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser h_parser;
     ros_msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

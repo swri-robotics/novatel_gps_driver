@@ -52,13 +52,16 @@ TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
   std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/gpgga-gprmc-bestpos.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<gps_msgs::msg::GPSFix::SharedPtr> fix_messages;
+  std::vector<gps_msgs::msg::GPSFix::UniquePtr> fix_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<gps_msgs::msg::GPSFix::SharedPtr> tmp_messages;
+    std::vector<gps_msgs::msg::GPSFix::UniquePtr> tmp_messages;
     gps.GetFixMessages(tmp_messages);
-    fix_messages.insert(fix_messages.end(), tmp_messages.begin(), tmp_messages.end());
+
+    std::move(std::make_move_iterator(tmp_messages.begin()),
+        std::make_move_iterator(tmp_messages.end()),
+        std::back_inserter(fix_messages));
   }
 
   ASSERT_EQ(40, fix_messages.size());
@@ -71,18 +74,18 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
   std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/corrimudata.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> imu_messages;
+  std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> imu_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr> tmp_messages;
+    std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> tmp_messages;
     gps.GetNovatelCorrectedImuData(tmp_messages);
     imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
   ASSERT_EQ(26, imu_messages.size());
 
-  novatel_gps_msgs::msg::NovatelCorrectedImuData::SharedPtr msg = imu_messages.front();
+  novatel_gps_driver::CorrImuDataParser::MessageType msg = imu_messages.front();
   EXPECT_EQ(1820, msg->gps_week_num);
   EXPECT_DOUBLE_EQ(160205.899999999994, msg->gps_seconds);
   EXPECT_DOUBLE_EQ(0.0000039572689929003956, msg->pitch_rate);

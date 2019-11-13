@@ -35,17 +35,17 @@
 
 namespace novatel_gps_driver
 {
-  class GpggaParser : public MessageParser<novatel_gps_msgs::msg::Gpgga::SharedPtr>
+  class GpggaParser : public MessageParser<novatel_gps_msgs::msg::Gpgga::UniquePtr>
   {
   public:
-    GpggaParser(): MessageParser<novatel_gps_msgs::msg::Gpgga::SharedPtr>(),
+    GpggaParser(): MessageParser<MessageType>(),
                    was_last_gps_valid_(false)
     {}
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::Gpgga::SharedPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     bool WasLastGpsValid() const;
 

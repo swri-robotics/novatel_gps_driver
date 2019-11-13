@@ -61,6 +61,8 @@ namespace novatel_gps_driver
   public:
     virtual ~MessageParser() = default;
 
+    typedef T MessageType;
+
     /**
      * @return The binary message ID. Should be 0 for messages that have no
      * binary representation.

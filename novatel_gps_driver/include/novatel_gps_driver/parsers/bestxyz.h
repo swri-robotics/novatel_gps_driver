@@ -37,16 +37,16 @@
 
 namespace novatel_gps_driver
 {
-  class BestxyzParser : public MessageParser<novatel_gps_msgs::msg::NovatelXYZ::SharedPtr>
+  class BestxyzParser : public MessageParser<novatel_gps_msgs::msg::NovatelXYZ::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::NovatelXYZ::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::msg::NovatelXYZ::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 241;
     static constexpr size_t BINARY_LENGTH = 112;

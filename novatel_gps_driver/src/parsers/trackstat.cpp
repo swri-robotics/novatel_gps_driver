@@ -43,7 +43,7 @@ const std::string novatel_gps_driver::TrackstatParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::msg::Trackstat::SharedPtr
+novatel_gps_driver::TrackstatParser::MessageType
 novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   uint32_t num_chans = ParseUInt32(&bin_msg.data_[12]);
@@ -63,7 +63,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Trackstat::SharedPtr ros_msg = std::make_shared<novatel_gps_msgs::msg::Trackstat>();
+  auto ros_msg = std::make_unique<novatel_gps_msgs::msg::Trackstat>();
   ros_msg->solution_status = SOLUTION_STATUSES[solution_status];
   uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
   if (pos_type > MAX_DATUM)
@@ -188,7 +188,7 @@ novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::Binar
   return ros_msg;
 }
 
-novatel_gps_msgs::msg::Trackstat::SharedPtr
+novatel_gps_driver::TrackstatParser::MessageType
 novatel_gps_driver::TrackstatParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.body.size() < ASCII_BODY_FIELDS)
@@ -209,7 +209,7 @@ novatel_gps_driver::TrackstatParser::ParseAscii(const novatel_gps_driver::Novate
   }
 
   bool valid = true;
-  novatel_gps_msgs::msg::Trackstat::SharedPtr msg = std::make_shared<novatel_gps_msgs::msg::Trackstat>();
+  auto msg = std::make_unique<novatel_gps_msgs::msg::Trackstat>();
   msg->solution_status = sentence.body[0];
   msg->position_type = sentence.body[1];
   valid &= ParseFloat(sentence.body[2], msg->cutoff);

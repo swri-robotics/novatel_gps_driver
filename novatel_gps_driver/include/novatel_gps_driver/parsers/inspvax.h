@@ -35,16 +35,16 @@
 
 namespace novatel_gps_driver
 {
-  class InspvaxParser : public MessageParser<novatel_gps_msgs::msg::Inspvax::SharedPtr>
+  class InspvaxParser : public MessageParser<novatel_gps_msgs::msg::Inspvax::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::Inspvax::SharedPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::msg::Inspvax::SharedPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint32_t MESSAGE_ID = 1465;
     static const std::string MESSAGE_NAME;

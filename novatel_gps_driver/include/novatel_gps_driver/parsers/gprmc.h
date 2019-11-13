@@ -35,10 +35,10 @@
 
 namespace novatel_gps_driver
 {
-  class GprmcParser : public MessageParser<novatel_gps_msgs::msg::Gprmc::SharedPtr>
+  class GprmcParser : public MessageParser<novatel_gps_msgs::msg::Gprmc::UniquePtr>
   {
   public:
-    GprmcParser() : MessageParser<novatel_gps_msgs::msg::Gprmc::SharedPtr>(),
+    GprmcParser() : MessageParser<MessageType>(),
                     was_last_gps_valid_(false)
     {}
 
@@ -46,7 +46,7 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::Gprmc::SharedPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     bool WasLastGpsValid() const;
 

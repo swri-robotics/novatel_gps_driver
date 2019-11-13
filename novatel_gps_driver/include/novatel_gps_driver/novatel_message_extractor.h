@@ -106,7 +106,7 @@ namespace novatel_gps_driver
     void GetGpsFixMessage(
         const novatel_gps_msgs::msg::Gprmc& gprmc,
         const novatel_gps_msgs::msg::Gpgga& gpgga,
-        const gps_msgs::msg::GPSFix::SharedPtr& gps_fix);
+        const gps_msgs::msg::GPSFix::UniquePtr& gps_fix);
 
   private:
     // Constants for parsing message structures

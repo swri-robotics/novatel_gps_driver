@@ -285,7 +285,7 @@ namespace novatel_gps_driver
      */
     void CheckDeviceForData();
 
-    sensor_msgs::msg::NavSatFix::SharedPtr ConvertGpsFixToNavSatFix(const gps_msgs::msg::GPSFix::SharedPtr& msg);
+    sensor_msgs::msg::NavSatFix::UniquePtr ConvertGpsFixToNavSatFix(const gps_msgs::msg::GPSFix::UniquePtr& msg);
 
     /**
      * Updates the time sync offsets by matching up timesync messages to gps

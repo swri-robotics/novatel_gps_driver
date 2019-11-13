@@ -35,14 +35,14 @@
 
 namespace novatel_gps_driver
 {
-  class GpgsaParser : public MessageParser<novatel_gps_msgs::msg::Gpgsa::SharedPtr>
+  class GpgsaParser : public MessageParser<novatel_gps_msgs::msg::Gpgsa::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::msg::Gpgsa::SharedPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     static const std::string MESSAGE_NAME;
   };
