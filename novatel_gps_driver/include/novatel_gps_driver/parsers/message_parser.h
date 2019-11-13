@@ -54,6 +54,9 @@ namespace novatel_gps_driver
    * http://docs.novatel.com/OEM7/Content/Logs/Core_Logs.htm
    *
    * @tparam T The ROS message Ptr type that the parser should produce.
+   * UniquePtr types are preferred for efficient intraprocess communication,
+   * but SharedPtrs may be necessary if the driver needs multiple references
+   * to a message for synchronization or other purposes.
    */
   template<typename T>
   class MessageParser

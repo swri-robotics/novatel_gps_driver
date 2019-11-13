@@ -41,7 +41,7 @@ const std::string novatel_gps_driver::HeaderParser::GetMessageName() const
   return "HEADER";
 }
 
-novatel_gps_msgs::msg::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseBinary(
+novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::ParseBinary(
     const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   // No point in checking whether the port identifier is valid here, because
@@ -100,7 +100,7 @@ novatel_gps_msgs::msg::NovatelMessageHeader novatel_gps_driver::HeaderParser::Pa
   return msg;
 }
 
-novatel_gps_msgs::msg::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseAscii(
+novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::ParseAscii(
     const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.header.size() != NOVATEL_MESSAGE_HEADER_LENGTH)

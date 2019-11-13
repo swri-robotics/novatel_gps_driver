@@ -4,6 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 project(novatel_gps_driver)
 
+# Ament packages
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(gps_msgs REQUIRED)
@@ -18,11 +19,10 @@ find_package(swri_roscpp REQUIRED)
 find_package(swri_serial_util REQUIRED)
 find_package(tf2 REQUIRED)
 
+# Boost
 find_package(Boost REQUIRED COMPONENTS system thread)
 
-include_directories(include)
-
-# libpcap doesn't provide PkgConfig or CMake modules
+# libpcap; it doesn't provide PkgConfig or CMake modules
 find_library(libpcap_LIBRARIES pcap)
 if ("${libpcap_LIBRARIES}" STREQUAL "pcap-NOTFOUND")
   set(libpcap_FOUND FALSE)
@@ -30,7 +30,10 @@ else()
   set(libpcap_FOUND TRUE)
 endif()
 
-add_library(${PROJECT_NAME} 
+include_directories(include)
+
+### Driver library ###
+add_library(${PROJECT_NAME}
   src/novatel_gps.cpp
   src/novatel_message_extractor.cpp
   src/parsers/bestpos.cpp
@@ -77,7 +80,7 @@ ament_target_dependencies(${PROJECT_NAME}
   tf2
 )
 
-### Nodelets ###
+### ROS Node ###
 add_library(${PROJECT_NAME}_nodes SHARED
   src/nodes/novatel_gps_node.cpp
 )
@@ -90,7 +93,7 @@ target_link_libraries(${PROJECT_NAME}_nodes
   ${PROJECT_NAME}
 )
 
-### Build unit tests
+### Unit tests
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_index_cpp REQUIRED)
@@ -121,6 +124,8 @@ install(TARGETS
 install(DIRECTORY include/
   DESTINATION include
 )
+# I'd rather not install the sample .pcap data, but it seems that it needs to be
+# installed for the tests to be able to find it...
 install(DIRECTORY test/
   DESTINATION test
   FILES_MATCHING PATTERN "*.pcap"
