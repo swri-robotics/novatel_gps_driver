@@ -2,6 +2,11 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* ROS2 Dashing support (`#61 <https://github.com/pjreed/novatel_gps_driver/issues/61>`_)
+* Contributors: P. J. Reed
+
 3.9.0 (2019-09-04)
 ------------------
 * Use GPGGA quality to set GPSFix status (`#55 <https://github.com/swri-robotics/novatel_gps_driver/issues/55>`_)
