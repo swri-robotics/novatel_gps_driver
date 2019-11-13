@@ -579,7 +579,7 @@ namespace novatel_gps_driver
       if (!Configure(opts))
       {
         // We will not kill the connection here, because the device may already
-        // be setup to communicate correctly, but we will print a warning         
+        // be setup to communicate correctly, but we will print a warning
         RCLCPP_ERROR(node_.get_logger(), "Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
@@ -1362,19 +1362,18 @@ namespace novatel_gps_driver
         { "52", std::pair<double, std::string>(200, "Litef microIMU") },
         { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
         { "58", std::pair<double, std::string>(200, "Honeywell HG4930 AN01") },
+        { "61", std::pair<double, std::string>(100, "Epson G370N") },
        };
-      
+
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
       std::string id = sentence.body.size() > 1 ? sentence.body[1] : "";
       if (rates.find(id) != rates.end())
       {
         double rate = rates[id].first;
- 
         RCLCPP_INFO(node_.get_logger(), "IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
-        
         // Set the rate only if it hasn't been forced already
         if (!imu_rate_forced_)
-        {        
+        {
           SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
         }
       }
