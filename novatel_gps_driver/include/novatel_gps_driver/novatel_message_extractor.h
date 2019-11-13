@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -286,4 +286,4 @@ namespace novatel_gps_driver
   };
 }
 
-#endif  // NOVATEL_OEM628_NOVATEL_MESSAGE_PARSER_H_
+#endif  // NOVATEL_GPS_DRIVER_NOVATEL_MESSAGE_PARSER_H_

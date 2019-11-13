@@ -1,4 +1,4 @@
-"""Launch an example driver that communicates using TCP"""
+"""Launch an example driver that communicates using USB"""
 
 from launch import LaunchDescription
 import launch_ros.actions

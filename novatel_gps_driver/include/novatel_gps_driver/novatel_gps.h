@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,49 +27,39 @@
 //
 // *****************************************************************************
 
-#ifndef NOVATEL_OEM628_NOVATEL_GPS_H_
-#define NOVATEL_OEM628_NOVATEL_GPS_H_
+#ifndef NOVATEL_GPS_DRIVER_NOVATEL_GPS_H_
+#define NOVATEL_GPS_DRIVER_NOVATEL_GPS_H_
 
+// std libraries
 #include <chrono>
 #include <map>
 #include <queue>
 #include <string>
 #include <vector>
 
+// Boost
 #include <boost/asio.hpp>
 #include <boost/circular_buffer.hpp>
 
-#include <pcap.h>
-
+// ROS
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/time.hpp>
 
-#include <swri_serial_util/serial_port.h>
-
+// Messages
 #include <gps_msgs/msg/gps_fix.hpp>
 
-#include <novatel_gps_msgs/msg/clock_steering.hpp>
 #include <novatel_gps_msgs/msg/gpgga.hpp>
-#include <novatel_gps_msgs/msg/gpgsa.hpp>
-#include <novatel_gps_msgs/msg/gpgsv.hpp>
-#include <novatel_gps_msgs/msg/gphdt.hpp>
 #include <novatel_gps_msgs/msg/gprmc.hpp>
-#include <novatel_gps_msgs/msg/inscov.hpp>
-#include <novatel_gps_msgs/msg/inspva.hpp>
-#include <novatel_gps_msgs/msg/inspvax.hpp>
-#include <novatel_gps_msgs/msg/insstdev.hpp>
-#include <novatel_gps_msgs/msg/novatel_corrected_imu_data.hpp>
-#include <novatel_gps_msgs/msg/novatel_dual_antenna_heading.hpp>
-#include <novatel_gps_msgs/msg/novatel_heading2.hpp>
-#include <novatel_gps_msgs/msg/novatel_position.hpp>
-#include <novatel_gps_msgs/msg/novatel_xyz.hpp>
-#include <novatel_gps_msgs/msg/novatel_utm_position.hpp>
-#include <novatel_gps_msgs/msg/novatel_velocity.hpp>
-#include <novatel_gps_msgs/msg/range.hpp>
-#include <novatel_gps_msgs/msg/time.hpp>
-#include <novatel_gps_msgs/msg/trackstat.hpp>
 
+#include <sensor_msgs/msg/imu.hpp>
+
+// Other libraries
+#include <swri_serial_util/serial_port.h>
+
+#include <pcap.h>
+
+// Local include files
 #include <novatel_gps_driver/novatel_message_extractor.h>
-
 #include <novatel_gps_driver/parsers/bestpos.h>
 #include <novatel_gps_driver/parsers/bestxyz.h>
 #include <novatel_gps_driver/parsers/bestutm.h>
@@ -83,16 +73,13 @@
 #include <novatel_gps_driver/parsers/gprmc.h>
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
+#include <novatel_gps_driver/parsers/inscov.h>
 #include <novatel_gps_driver/parsers/inspva.h>
 #include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
 #include <novatel_gps_driver/parsers/time.h>
 #include <novatel_gps_driver/parsers/trackstat.h>
-
-#include <sensor_msgs/msg/imu.hpp>
-#include <novatel_gps_driver/parsers/inscov.h>
-#include <rclcpp/time.hpp>
 
 namespace novatel_gps_driver
 {
@@ -550,4 +537,4 @@ namespace novatel_gps_driver
   };
 }
 
-#endif  // NOVATEL_OEM628_NOVATEL_GPS_H_
+#endif  //NOVATEL_GPS_DRIVER_NOVATEL_GPS_H_
