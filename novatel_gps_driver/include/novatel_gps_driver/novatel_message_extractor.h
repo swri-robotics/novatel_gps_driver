@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -35,29 +35,32 @@
 #include <string>
 #include <vector>
 
-#include <gps_common/GPSFix.h>
-#include <novatel_gps_msgs/Gpgga.h>
-#include <novatel_gps_msgs/Gpgsa.h>
-#include <novatel_gps_msgs/Gpgsv.h>
-#include <novatel_gps_msgs/Gprmc.h>
-#include <novatel_gps_msgs/NovatelCorrectedImuData.h>
-#include <novatel_gps_msgs/NovatelPosition.h>
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
-#include <novatel_gps_msgs/NovatelReceiverStatus.h>
-#include <novatel_gps_msgs/NovatelVelocity.h>
-#include <novatel_gps_msgs/Range.h>
-#include <novatel_gps_msgs/Time.h>
-#include <novatel_gps_msgs/Trackstat.h>
+#include <gps_msgs/msg/gps_fix.hpp>
+#include <novatel_gps_msgs/msg/gpgga.hpp>
+#include <novatel_gps_msgs/msg/gpgsa.hpp>
+#include <novatel_gps_msgs/msg/gpgsv.hpp>
+#include <novatel_gps_msgs/msg/gprmc.hpp>
+#include <novatel_gps_msgs/msg/novatel_corrected_imu_data.hpp>
+#include <novatel_gps_msgs/msg/novatel_position.hpp>
+#include <novatel_gps_msgs/msg/novatel_message_header.hpp>
+#include <novatel_gps_msgs/msg/novatel_receiver_status.hpp>
+#include <novatel_gps_msgs/msg/novatel_velocity.hpp>
+#include <novatel_gps_msgs/msg/range.hpp>
+#include <novatel_gps_msgs/msg/time.hpp>
+#include <novatel_gps_msgs/msg/trackstat.hpp>
 
 #include <novatel_gps_driver/binary_message.h>
 #include <novatel_gps_driver/nmea_sentence.h>
 #include <novatel_gps_driver/novatel_sentence.h>
+
+#include <rclcpp/logger.hpp>
 
 namespace novatel_gps_driver
 {
   class NovatelMessageExtractor
   {
   public:
+    explicit NovatelMessageExtractor(rclcpp::Logger logger);
     /**
       * @brief Extracts messages from a buffer of NovAtel data.
       *
@@ -94,16 +97,16 @@ namespace novatel_gps_driver
 
     /**
      * @brief Combines data receives in GPRMC and GPGGA message to produce
-     * a gps_common/GPSFixPtr ROS message.
+     * a gps_msgs/GPSFixPtr ROS message.
      * @param[in] gprmc A valid GPRMC message.
      * @param[in] gpgga A valid GPGGA message.
      * @param[out] gps_fix An initialised GPSFixPtr message must be provided;
      * it will be filled in based on the provided GPRMC/GPGGA messages.
      */
     void GetGpsFixMessage(
-        const novatel_gps_msgs::Gprmc& gprmc,
-        const novatel_gps_msgs::Gpgga& gpgga,
-        const gps_common::GPSFixPtr& gps_fix);
+        const novatel_gps_msgs::msg::Gprmc& gprmc,
+        const novatel_gps_msgs::msg::Gpgga& gpgga,
+        const gps_msgs::msg::GPSFix::UniquePtr& gps_fix);
 
   private:
     // Constants for parsing message structures
@@ -125,6 +128,8 @@ namespace novatel_gps_driver
     static const std::string NOVATEL_ENDLINE;
 
     static constexpr uint32_t NOVATEL_CRC32_POLYNOMIAL = 0xEDB88320L;
+
+    rclcpp::Logger logger_;
 
     // From Novatel OEMV® Family Firmware Reference Manual
     /**
@@ -281,4 +286,4 @@ namespace novatel_gps_driver
   };
 }
 
-#endif  // NOVATEL_OEM628_NOVATEL_MESSAGE_PARSER_H_
+#endif  // NOVATEL_GPS_DRIVER_NOVATEL_MESSAGE_PARSER_H_

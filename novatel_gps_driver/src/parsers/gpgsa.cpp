@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/gpgsa.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::GpgsaParser::MESSAGE_NAME = "GPGSA";
 
@@ -42,7 +43,7 @@ const std::string novatel_gps_driver::GpgsaParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GpgsaPtr novatel_gps_driver::GpgsaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
+novatel_gps_driver::GpgsaParser::MessageType novatel_gps_driver::GpgsaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   // Check the length first -- should be 18 elements long
   const size_t LENGTH = 18;
@@ -54,7 +55,7 @@ novatel_gps_msgs::GpgsaPtr novatel_gps_driver::GpgsaParser::ParseAscii(const nov
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::GpgsaPtr msg = boost::make_shared<novatel_gps_msgs::Gpgsa>();
+  auto msg = std::make_unique<novatel_gps_msgs::msg::Gpgsa>();
   msg->message_id = sentence.body[0];
   msg->auto_manual_mode = sentence.body[1];
   ParseUInt8(sentence.body[2], msg->fix_mode);

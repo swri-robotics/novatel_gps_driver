@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,9 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/inspvax.h>
-#include <boost/make_shared.hpp>
 #include <novatel_gps_driver/parsers/header.h>
 
 
@@ -44,7 +45,7 @@ const std::string novatel_gps_driver::InspvaxParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::InspvaxPtr
+novatel_gps_driver::InspvaxParser::MessageType
 novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   if (bin_msg.data_.size() != BINARY_LENGTH)
@@ -53,7 +54,7 @@ novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryM
     error << "Unexpected inspvax message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::InspvaxPtr ros_msg = boost::make_shared<novatel_gps_msgs::Inspvax>();
+  auto ros_msg = std::make_unique<novatel_gps_msgs::msg::Inspvax>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
@@ -106,7 +107,7 @@ novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryM
   return ros_msg;
 }
 
-novatel_gps_msgs::InspvaxPtr
+novatel_gps_driver::InspvaxParser::MessageType
 novatel_gps_driver::InspvaxParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.body.size() != ASCII_FIELDS)
@@ -115,7 +116,7 @@ novatel_gps_driver::InspvaxParser::ParseAscii(const novatel_gps_driver::NovatelS
     error << "Unexpected number of fields in INSPVA log: " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::InspvaxPtr msg = boost::make_shared<novatel_gps_msgs::Inspvax>();
+  auto msg = std::make_unique<novatel_gps_msgs::msg::Inspvax>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

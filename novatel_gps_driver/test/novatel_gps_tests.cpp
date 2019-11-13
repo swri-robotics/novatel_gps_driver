@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,47 +31,61 @@
 
 #include <gtest/gtest.h>
 
-#include <ros/ros.h>
-#include <ros/package.h>
+#include <ament_index_cpp/get_package_prefix.hpp>
 
-TEST(NovatelGpsTestSuite, testGpsFixParsing)
+#include <rclcpp/rclcpp.hpp>
+
+class NovatelGpsTestSuite : public ::testing::Test, public rclcpp::Node
 {
-  novatel_gps_driver::NovatelGps gps;
+public:
+  explicit NovatelGpsTestSuite() :
+    rclcpp::Node("novatel_gps_test_suite")
+  {}
+protected:
 
-  std::string path = ros::package::getPath("novatel_gps_driver");
+};
+
+TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/gpgga-gprmc-bestpos.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<gps_common::GPSFixPtr> fix_messages;
+  std::vector<gps_msgs::msg::GPSFix::UniquePtr> fix_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<gps_common::GPSFixPtr> tmp_messages;
+    std::vector<gps_msgs::msg::GPSFix::UniquePtr> tmp_messages;
     gps.GetFixMessages(tmp_messages);
-    fix_messages.insert(fix_messages.end(), tmp_messages.begin(), tmp_messages.end());
+
+    std::move(std::make_move_iterator(tmp_messages.begin()),
+        std::make_move_iterator(tmp_messages.end()),
+        std::back_inserter(fix_messages));
   }
 
   ASSERT_EQ(40, fix_messages.size());
 }
 
-TEST(NovatelGpsTestSuite, testCorrImuDataParsing)
+TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 {
-  novatel_gps_driver::NovatelGps gps;
+  novatel_gps_driver::NovatelGps gps(*this);
 
-  std::string path = ros::package::getPath("novatel_gps_driver");
+  std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/corrimudata.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
-  std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> imu_messages;
+  std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> imu_messages;
 
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
-    std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr> tmp_messages;
+    std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> tmp_messages;
     gps.GetNovatelCorrectedImuData(tmp_messages);
     imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
   ASSERT_EQ(26, imu_messages.size());
 
-  novatel_gps_msgs::NovatelCorrectedImuDataPtr msg = imu_messages.front();
+  novatel_gps_driver::CorrImuDataParser::MessageType msg = imu_messages.front();
   EXPECT_EQ(1820, msg->gps_week_num);
   EXPECT_DOUBLE_EQ(160205.899999999994, msg->gps_seconds);
   EXPECT_DOUBLE_EQ(0.0000039572689929003956, msg->pitch_rate);
@@ -84,8 +98,7 @@ TEST(NovatelGpsTestSuite, testCorrImuDataParsing)
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "novatel_gps_test_suite", ros::init_options::AnonymousName);
-  ros::NodeHandle nh;
+  rclcpp::init(argc, argv);
 
   testing::InitGoogleTest(&argc, argv);
 

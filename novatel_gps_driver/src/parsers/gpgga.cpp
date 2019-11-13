@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,10 +27,11 @@
 //
 // *****************************************************************************
 
-#include <novatel_gps_driver/parsers/gpgga.h>
-#include <boost/make_shared.hpp>
+#include <sstream>
 
-#include <swri_string_util/string_util.h>
+#include <novatel_gps_driver/parsers/gpgga.h>
+
+#include <boost/lexical_cast.hpp>
 
 const std::string novatel_gps_driver::GpggaParser::MESSAGE_NAME = "GPGGA";
 
@@ -44,7 +45,7 @@ const std::string novatel_gps_driver::GpggaParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GpggaPtr novatel_gps_driver::GpggaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
+novatel_gps_driver::GpggaParser::MessageType novatel_gps_driver::GpggaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   // Check the length first -- should be 15 elements long
   const size_t MAX_LEN = 15;
@@ -57,7 +58,7 @@ novatel_gps_msgs::GpggaPtr novatel_gps_driver::GpggaParser::ParseAscii(const nov
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::GpggaPtr msg = boost::make_shared<novatel_gps_msgs::Gpgga>();
+  auto msg = std::make_unique<novatel_gps_msgs::msg::Gpgga>();
 
   msg->message_id = sentence.body[0];
 
@@ -67,12 +68,11 @@ novatel_gps_msgs::GpggaPtr novatel_gps_driver::GpggaParser::ParseAscii(const nov
   }
   else
   {
-    double utc_float;
-    if (swri_string_util::ToDouble(sentence.body[1], utc_float))
+    try
     {
-      msg->utc_seconds = UtcFloatToSeconds(utc_float);
+      msg->utc_seconds = boost::lexical_cast<double>(sentence.body[1]);
     }
-    else
+    catch (boost::bad_lexical_cast& e)
     {
       throw ParseException("Error parsing UTC seconds in GPGGA");
     }

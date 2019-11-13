@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,20 +31,20 @@
 #define NOVATEL_GPS_DRIVER_TRACKSTAT_H_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/Trackstat.h>
+#include <novatel_gps_msgs/msg/trackstat.hpp>
 
 namespace novatel_gps_driver
 {
-  class TrackstatParser : public MessageParser<novatel_gps_msgs::TrackstatPtr>
+  class TrackstatParser : public MessageParser<novatel_gps_msgs::msg::Trackstat::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::TrackstatPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::TrackstatPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint16_t MESSAGE_ID = 83;
     static constexpr size_t ASCII_BODY_FIELDS = 4;

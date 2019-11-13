@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,14 +31,14 @@
 #define NOVATEL_GPS_DRIVER_GPRMC_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/Gprmc.h>
+#include <novatel_gps_msgs/msg/gprmc.hpp>
 
 namespace novatel_gps_driver
 {
-  class GprmcParser : public MessageParser<novatel_gps_msgs::GprmcPtr>
+  class GprmcParser : public MessageParser<novatel_gps_msgs::msg::Gprmc::UniquePtr>
   {
   public:
-    GprmcParser() : MessageParser<novatel_gps_msgs::GprmcPtr>(),
+    GprmcParser() : MessageParser<MessageType>(),
                     was_last_gps_valid_(false)
     {}
 
@@ -46,7 +46,7 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::GprmcPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     bool WasLastGpsValid() const;
 

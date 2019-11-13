@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,11 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/bestxyz.h>
 
 #include <novatel_gps_driver/parsers/header.h>
-
-#include <boost/make_shared.hpp>
 
 namespace novatel_gps_driver
 {
@@ -47,7 +47,7 @@ namespace novatel_gps_driver
     return MESSAGE_NAME;
   }
 
-  novatel_gps_msgs::NovatelXYZPtr BestxyzParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false) 
+  BestxyzParser::MessageType BestxyzParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
   {
     if (bin_msg.data_.size() != BINARY_LENGTH)
     {
@@ -55,8 +55,7 @@ namespace novatel_gps_driver
       error << "Unexpected BESTXYZ message length: " << bin_msg.data_.size();
       throw ParseException(error.str());
     }
-    novatel_gps_msgs::NovatelXYZPtr ros_msg =
-        boost::make_shared<novatel_gps_msgs::NovatelXYZ>();
+    auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelXYZ>();
     HeaderParser header_parser;
     ros_msg->novatel_msg_header = header_parser.ParseBinary(bin_msg);
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -134,10 +133,9 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  novatel_gps_msgs::NovatelXYZPtr BestxyzParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
+  BestxyzParser::MessageType BestxyzParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
-    novatel_gps_msgs::NovatelXYZPtr msg =
-        boost::make_shared<novatel_gps_msgs::NovatelXYZ>();
+    auto msg = std::make_unique<novatel_gps_msgs::msg::NovatelXYZ>();
     HeaderParser h_parser;
     msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

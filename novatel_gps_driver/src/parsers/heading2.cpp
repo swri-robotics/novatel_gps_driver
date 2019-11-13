@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,11 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/heading2.h>
 
 #include <novatel_gps_driver/parsers/header.h>
-
-#include <boost/make_shared.hpp>
 
 namespace novatel_gps_driver
 {
@@ -47,7 +47,7 @@ namespace novatel_gps_driver
     return MESSAGE_NAME;
   }
 
-  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false) 
+  Heading2Parser::MessageType Heading2Parser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
   {
     if (bin_msg.data_.size() != BINARY_LENGTH)
     {
@@ -55,8 +55,7 @@ namespace novatel_gps_driver
       error << "Unexpected HEADING2 message length: " << bin_msg.data_.size();
       throw ParseException(error.str());
     }
-    novatel_gps_msgs::NovatelHeading2Ptr ros_msg =
-        boost::make_shared<novatel_gps_msgs::NovatelHeading2>();
+    auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser header_parser;
     ros_msg->novatel_msg_header = header_parser.ParseBinary(bin_msg);
     ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -112,10 +111,9 @@ namespace novatel_gps_driver
     return ros_msg;
   }
 
-  novatel_gps_msgs::NovatelHeading2Ptr Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
+  Heading2Parser::MessageType Heading2Parser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
   {
-    novatel_gps_msgs::NovatelHeading2Ptr ros_msg =
-        boost::make_shared<novatel_gps_msgs::NovatelHeading2>();
+    auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelHeading2>();
     HeaderParser h_parser;
     ros_msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 
@@ -179,9 +177,9 @@ namespace novatel_gps_driver
     switch (source_bits)
     {
       case 0:
-        return novatel_gps_msgs::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
+        return novatel_gps_msgs::msg::NovatelHeading2::SOURCE_PRIMARY_ANTENNA;
       case 1:
-        return novatel_gps_msgs::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
+        return novatel_gps_msgs::msg::NovatelHeading2::SOURCE_SECONDARY_ANTENNA;
       default:
         throw ParseException("HEADING2 Solution Source could not be parsed due to unknown source");
     }

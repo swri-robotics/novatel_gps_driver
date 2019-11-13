@@ -1,6 +1,6 @@
 # Channel tracking status information for each of the receiver parallel channels
 
-Header header
+std_msgs/Header header
 
 string solution_status
 string position_type

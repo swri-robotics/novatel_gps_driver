@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -54,12 +54,17 @@ namespace novatel_gps_driver
    * http://docs.novatel.com/OEM7/Content/Logs/Core_Logs.htm
    *
    * @tparam T The ROS message Ptr type that the parser should produce.
+   * UniquePtr types are preferred for efficient intraprocess communication,
+   * but SharedPtrs may be necessary if the driver needs multiple references
+   * to a message for synchronization or other purposes.
    */
   template<typename T>
   class MessageParser
   {
   public:
     virtual ~MessageParser() = default;
+
+    typedef T MessageType;
 
     /**
      * @return The binary message ID. Should be 0 for messages that have no

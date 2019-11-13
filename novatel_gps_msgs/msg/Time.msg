@@ -1,5 +1,5 @@
 # Parsed Best Position or Omnistar XP or HP pos data from Novatel OEM6 receiver
-Header header
+std_msgs/Header header
 
 # Clock model status
 # see Table 65 on pg 322 of the OEM6 Family Firmware Reference Manual, Rev3

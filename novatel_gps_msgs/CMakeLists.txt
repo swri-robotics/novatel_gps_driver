@@ -1,49 +1,50 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10)
 project(novatel_gps_msgs)
+
+set(CMAKE_CXX_STANDARD 14)
 
 set(MSG_DEPS 
   std_msgs)
 
-find_package(catkin REQUIRED COMPONENTS
-  message_generation
-  ${MSG_DEPS}
+find_package(ament_cmake REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(std_msgs REQUIRED)
+
+set(MSG_FILES
+  msg/ClockSteering.msg
+  msg/Gpgga.msg
+  msg/Gpgsa.msg
+  msg/Gpgsv.msg
+  msg/Gphdt.msg
+  msg/Gprmc.msg
+  msg/Inscov.msg
+  msg/Inspva.msg
+  msg/Inspvax.msg
+  msg/Insstdev.msg
+  msg/NovatelCorrectedImuData.msg
+  msg/NovatelDualAntennaHeading.msg
+  msg/NovatelExtendedSolutionStatus.msg
+  msg/NovatelHeading2.msg
+  msg/NovatelMessageHeader.msg
+  msg/NovatelPosition.msg
+  msg/NovatelReceiverStatus.msg
+  msg/NovatelSignalMask.msg
+  msg/NovatelUtmPosition.msg
+  msg/NovatelVelocity.msg
+  msg/NovatelXYZ.msg
+  msg/Range.msg
+  msg/RangeInformation.msg
+  msg/Satellite.msg
+  msg/Time.msg
+  msg/Trackstat.msg
+  msg/TrackstatChannel.msg
+  srv/NovatelFRESET.srv
 )
 
-add_service_files(
-  FILES
-  NovatelFRESET.srv
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${MSG_FILES}
+  DEPENDENCIES ${MSG_DEPS}
 )
 
-add_message_files(DIRECTORY msg FILES
-  ClockSteering.msg
-  Gpgga.msg
-  Gpgsa.msg
-  Gpgsv.msg
-  Gphdt.msg
-  Gprmc.msg
-  Inscov.msg
-  Inspva.msg
-  Inspvax.msg
-  Insstdev.msg
-  NovatelCorrectedImuData.msg
-  NovatelDualAntennaHeading.msg
-  NovatelExtendedSolutionStatus.msg
-  NovatelHeading2.msg
-  NovatelMessageHeader.msg
-  NovatelPosition.msg
-  NovatelReceiverStatus.msg
-  NovatelSignalMask.msg
-  NovatelUtmPosition.msg
-  NovatelVelocity.msg
-  NovatelXYZ.msg
-  Range.msg
-  RangeInformation.msg
-  Satellite.msg
-  Time.msg
-  Trackstat.msg
-  TrackstatChannel.msg
-)
-generate_messages(DEPENDENCIES ${MSG_DEPS})
-catkin_package(
-  CATKIN_DEPENDS message_runtime ${MSG_DEPS}
-)
+ament_export_dependencies(rosidl_default_runtime)
+ament_package()

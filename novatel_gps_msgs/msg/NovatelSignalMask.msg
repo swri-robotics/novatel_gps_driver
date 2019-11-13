@@ -7,8 +7,8 @@
 #  5     0x20      GLONASS L2 used in Solution
 # 6-7  0x40-0x80   <Reserved>
 uint32 original_mask
-bool gps_L1_used_in_solution
-bool gps_L2_used_in_solution
-bool gps_L3_used_in_solution
-bool glonass_L1_used_in_solution
-bool glonass_L2_used_in_solution
+bool gps_l1_used_in_solution
+bool gps_l2_used_in_solution
+bool gps_l3_used_in_solution
+bool glonass_l1_used_in_solution
+bool glonass_l2_used_in_solution

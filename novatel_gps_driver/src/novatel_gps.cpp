@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,7 @@
 //
 // *****************************************************************************
 
+#include <iomanip>
 #include <sstream>
 #include <net/ethernet.h>
 #include <netinet/udp.h>
@@ -36,16 +37,18 @@
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/make_shared.hpp>
+#include <rclcpp/node.hpp>
 
-#include <ros/ros.h>
-#include <tf/tf.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/utils.h>
 
 namespace novatel_gps_driver
 {
-  NovatelGps::NovatelGps() :
+  NovatelGps::NovatelGps(rclcpp::Node& node) :
       gpgga_gprmc_sync_tol_(0.01),
       gpgga_position_sync_tol_(0.01),
       wait_for_position_(false),
+      node_(node),
       connection_(SERIAL),
       is_connected_(false),
       imu_rate_forced_(false),
@@ -53,6 +56,7 @@ namespace novatel_gps_driver
       serial_baud_(115200),
       tcp_socket_(io_service_),
       pcap_(nullptr),
+      extractor_(node_.get_logger()),
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
@@ -197,7 +201,7 @@ namespace novatel_gps_driver
       return read_result;
     }
 
-    ros::Time stamp = ros::Time::now();
+    rclcpp::Time stamp = node_.get_clock()->now();
     std::vector<NmeaSentence> nmea_sentences;
     std::vector<NovatelSentence> novatel_sentences;
     std::vector<BinaryMessage> binary_messages;
@@ -225,11 +229,11 @@ namespace novatel_gps_driver
 
       nmea_buffer_ = remaining_buffer;
 
-      ROS_DEBUG("Parsed: %lu NMEA / %lu NovAtel / %lu Binary messages",
+      RCLCPP_DEBUG(node_.get_logger(), "Parsed: %lu NMEA / %lu NovAtel / %lu Binary messages",
                nmea_sentences.size(), novatel_sentences.size(), binary_messages.size());
       if (!nmea_buffer_.empty())
       {
-        ROS_DEBUG("%lu unparsed bytes left over.", nmea_buffer_.size());
+        RCLCPP_DEBUG(node_.get_logger(), "%lu unparsed bytes left over.", nmea_buffer_.size());
       }
     }
 
@@ -248,8 +252,8 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        ROS_WARN("%s", p.what());
-        ROS_WARN("For sentence: [%s]", boost::algorithm::join(sentence.body, ",").c_str());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "For sentence: [%s]", boost::algorithm::join(sentence.body, ",").c_str());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -267,7 +271,7 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        ROS_WARN("%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -285,7 +289,7 @@ namespace novatel_gps_driver
       catch (const ParseException& p)
       {
         error_msg_ = p.what();
-        ROS_WARN("%s", p.what());
+        RCLCPP_WARN(node_.get_logger(), "%s", p.what());
         read_result = READ_PARSE_FAILED;
       }
     }
@@ -293,35 +297,29 @@ namespace novatel_gps_driver
     return read_result;
   }
 
-  void NovatelGps::GetNovatelPositions(std::vector<novatel_gps_msgs::NovatelPositionPtr>& positions)
+  void NovatelGps::GetNovatelPositions(std::vector<novatel_gps_driver::BestposParser::MessageType>& positions)
   {
     positions.clear();
     positions.insert(positions.end(), novatel_positions_.begin(), novatel_positions_.end());
     novatel_positions_.clear();
   }
 
-  void NovatelGps::GetNovatelXYZPositions(std::vector<novatel_gps_msgs::NovatelXYZPtr>& positions)
+  void NovatelGps::GetNovatelXYZPositions(std::vector<novatel_gps_driver::BestxyzParser::MessageType>& positions)
   {
-    positions.clear();
-    positions.insert(positions.end(), novatel_xyz_positions_.begin(), novatel_xyz_positions_.end());
-    novatel_xyz_positions_.clear();
+    DrainQueue(novatel_xyz_positions_, positions);
   }
 
-  void NovatelGps::GetNovatelUtmPositions(std::vector<novatel_gps_msgs::NovatelUtmPositionPtr>& utm_positions)
+  void NovatelGps::GetNovatelUtmPositions(std::vector<novatel_gps_driver::BestutmParser::MessageType>& utm_positions)
   {
-    utm_positions.clear();
-    utm_positions.insert(utm_positions.end(), novatel_utm_positions_.begin(), novatel_utm_positions_.end());
-    novatel_utm_positions_.clear();
+    DrainQueue(novatel_utm_positions_, utm_positions);
   }
 
-  void NovatelGps::GetNovatelVelocities(std::vector<novatel_gps_msgs::NovatelVelocityPtr>& velocities)
+  void NovatelGps::GetNovatelVelocities(std::vector<novatel_gps_driver::BestvelParser::MessageType>& velocities)
   {
-    velocities.resize(novatel_velocities_.size());
-    std::copy(novatel_velocities_.begin(), novatel_velocities_.end(), velocities.begin());
-    novatel_velocities_.clear();
+    DrainQueue(novatel_velocities_, velocities);
   }
 
-  void NovatelGps::GetFixMessages(std::vector<gps_common::GPSFixPtr>& fix_messages)
+  void NovatelGps::GetFixMessages(std::vector<gps_msgs::msg::GPSFix::UniquePtr>& fix_messages)
   {
     // Clear out the fix_messages list before filling it
     fix_messages.clear();
@@ -392,14 +390,14 @@ namespace novatel_gps_driver
           {
             // The position message is more than tol older than the gpgga message,
             // discard it and continue
-            ROS_DEBUG("Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
+            RCLCPP_DEBUG(node_.get_logger(), "Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
             position_sync_buffer_.pop_front();
           }
           else if (-pos_dt > gpgga_position_sync_tol_)
           {
             // The position message is more than tol ahead of the gpgga message,
             // use it but don't pop it
-            ROS_DEBUG("Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
+            RCLCPP_DEBUG(node_.get_logger(), "Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
             has_position = true;
             break;
           }
@@ -415,7 +413,7 @@ namespace novatel_gps_driver
         {
           // If we have a position message (or don't need one), create and fill
           // a GPS fix message
-          gps_common::GPSFixPtr gps_fix = boost::make_shared<gps_common::GPSFix>();
+          gps_msgs::msg::GPSFix::UniquePtr gps_fix = std::make_unique<gps_msgs::msg::GPSFix>();
           // Fill GPS fix message using the messages at the front of the two
           // sync queues
           extractor_.GetGpsFixMessage(
@@ -441,7 +439,7 @@ namespace novatel_gps_driver
             gps_fix->position_covariance[8] = sigma_z * sigma_z;
 
             gps_fix->position_covariance_type =
-                gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
+                gps_msgs::msg::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
 
             if (pop_position)
             {
@@ -450,7 +448,7 @@ namespace novatel_gps_driver
           }
 
           // Add the message to the fix message list
-          fix_messages.push_back(gps_fix);
+          fix_messages.push_back(std::move(gps_fix));
         }
         else  // There is no position message (and wait_for_position is true)
         {
@@ -461,123 +459,98 @@ namespace novatel_gps_driver
     }  // while (gpgga and gprmc buffers contain messages)
   }
 
-  void  NovatelGps::GetNovatelHeading2Messages(std::vector<novatel_gps_msgs::NovatelHeading2Ptr>& headings) {
-    headings.clear();
-    headings.insert(headings.end(), heading2_msgs_.begin(), heading2_msgs_.end());
-    heading2_msgs_.clear();
-  }
-
-  void  NovatelGps::GetNovatelDualAntennaHeadingMessages(std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr>& headings) {
-    headings.clear();
-    headings.insert(headings.end(), dual_antenna_heading_msgs_.begin(), dual_antenna_heading_msgs_.end());
-    dual_antenna_heading_msgs_.clear();
-  }
-
-  void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_msgs::NovatelCorrectedImuDataPtr>& imu_messages)
+  void  NovatelGps::GetNovatelHeading2Messages(std::vector<novatel_gps_driver::Heading2Parser::MessageType>& headings)
   {
-    imu_messages.clear();
-    imu_messages.insert(imu_messages.end(), corrimudata_msgs_.begin(), corrimudata_msgs_.end());
-    corrimudata_msgs_.clear();
+    DrainQueue(heading2_msgs_, headings);
   }
 
-  void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_msgs::GpggaPtr>& gpgga_messages)
+  void  NovatelGps::GetNovatelDualAntennaHeadingMessages(
+      std::vector<novatel_gps_driver::DualAntennaHeadingParser::MessageType>& headings)
   {
-    gpgga_messages.clear();
-    gpgga_messages.insert(gpgga_messages.end(), gpgga_msgs_.begin(), gpgga_msgs_.end());
-    gpgga_msgs_.clear();
+    DrainQueue(dual_antenna_heading_msgs_, headings);
   }
 
-  void NovatelGps::GetGpgsaMessages(std::vector<novatel_gps_msgs::GpgsaPtr>& gpgsa_messages)
+  void NovatelGps::GetNovatelCorrectedImuData(std::vector<novatel_gps_driver::CorrImuDataParser::MessageType>& imu_messages)
   {
-    gpgsa_messages.resize(gpgsa_msgs_.size());
-    std::copy(gpgsa_msgs_.begin(), gpgsa_msgs_.end(), gpgsa_messages.begin());
-    gpgsa_msgs_.clear();
+    DrainQueue(corrimudata_msgs_, imu_messages);
   }
 
-  void NovatelGps::GetGpgsvMessages(std::vector<novatel_gps_msgs::GpgsvPtr>& gpgsv_messages)
+  void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_driver::GpggaParser::MessageType>& gpgga_messages)
   {
-    gpgsv_messages.resize(gpgsv_msgs_.size());
-    std::copy(gpgsv_msgs_.begin(), gpgsv_msgs_.end(), gpgsv_messages.begin());
-    gpgsv_msgs_.clear();
+    DrainQueue(gpgga_msgs_, gpgga_messages);
   }
 
-  void NovatelGps::GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages)
+  void NovatelGps::GetGpgsaMessages(std::vector<novatel_gps_driver::GpgsaParser::MessageType>& gpgsa_messages)
   {
-    gphdt_messages.resize(gphdt_msgs_.size());
-    std::copy(gphdt_msgs_.begin(), gphdt_msgs_.end(), gphdt_messages.begin());
-    gphdt_msgs_.clear();
+    DrainQueue(gpgsa_msgs_, gpgsa_messages);
   }
 
-  void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages)
+  void NovatelGps::GetGpgsvMessages(std::vector<novatel_gps_driver::GpgsvParser::MessageType>& gpgsv_messages)
   {
-    gprmc_messages.clear();
-    gprmc_messages.insert(gprmc_messages.end(), gprmc_msgs_.begin(), gprmc_msgs_.end());
-    gprmc_msgs_.clear();
+    DrainQueue(gpgsv_msgs_, gpgsv_messages);
   }
 
-  void NovatelGps::GetInscovMessages(std::vector<novatel_gps_msgs::InscovPtr>& inscov_messages)
+  void NovatelGps::GetGphdtMessages(std::vector<novatel_gps_driver::GphdtParser::MessageType>& gphdt_messages)
+  {
+    DrainQueue(gphdt_msgs_, gphdt_messages);
+  }
+
+  void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_driver::GprmcParser::MessageType>& gprmc_messages)
+  {
+    DrainQueue(gprmc_msgs_, gprmc_messages);
+  }
+
+  void NovatelGps::GetInscovMessages(std::vector<novatel_gps_driver::InscovParser::MessageType>& inscov_messages)
   {
     inscov_messages.clear();
     inscov_messages.insert(inscov_messages.end(), inscov_msgs_.begin(), inscov_msgs_.end());
     inscov_msgs_.clear();
   }
 
-  void NovatelGps::GetInspvaMessages(std::vector<novatel_gps_msgs::InspvaPtr>& inspva_messages)
+  void NovatelGps::GetInspvaMessages(std::vector<novatel_gps_driver::InspvaParser::MessageType>& inspva_messages)
   {
-    inspva_messages.clear();
-    inspva_messages.insert(inspva_messages.end(), inspva_msgs_.begin(), inspva_msgs_.end());
-    inspva_msgs_.clear();
+    DrainQueue(inspva_msgs_, inspva_messages);
   }
 
-  void NovatelGps::GetInspvaxMessages(std::vector<novatel_gps_msgs::InspvaxPtr>& inspvax_messages)
+  void NovatelGps::GetInspvaxMessages(std::vector<novatel_gps_driver::InspvaxParser::MessageType>& inspvax_messages)
   {
-    inspvax_messages.clear();
-    inspvax_messages.insert(inspvax_messages.end(), inspvax_msgs_.begin(), inspvax_msgs_.end());
-    inspvax_msgs_.clear();
+    DrainQueue(inspvax_msgs_, inspvax_messages);
   }
 
-  void NovatelGps::GetInsstdevMessages(std::vector<novatel_gps_msgs::InsstdevPtr>& insstdev_messages)
+  void NovatelGps::GetInsstdevMessages(std::vector<novatel_gps_driver::InsstdevParser::MessageType>& insstdev_messages)
   {
     insstdev_messages.clear();
     insstdev_messages.insert(insstdev_messages.end(), insstdev_msgs_.begin(), insstdev_msgs_.end());
     insstdev_msgs_.clear();
   }
 
-  void NovatelGps::GetRangeMessages(std::vector<novatel_gps_msgs::RangePtr>& range_messages)
+  void NovatelGps::GetRangeMessages(std::vector<novatel_gps_driver::RangeParser::MessageType>& range_messages)
   {
-    range_messages.resize(range_msgs_.size());
-    std::copy(range_msgs_.begin(), range_msgs_.end(), range_messages.begin());
-    range_msgs_.clear();
+    DrainQueue(range_msgs_, range_messages);
   }
 
-  void NovatelGps::GetTimeMessages(std::vector<novatel_gps_msgs::TimePtr>& time_messages)
+  void NovatelGps::GetTimeMessages(std::vector<novatel_gps_driver::TimeParser::MessageType>& time_messages)
   {
-    time_messages.resize(time_msgs_.size());
-    std::copy(time_msgs_.begin(), time_msgs_.end(), time_messages.begin());
-    time_msgs_.clear();
+    DrainQueue(time_msgs_, time_messages);
   }
 
-  void NovatelGps::GetTrackstatMessages(std::vector<novatel_gps_msgs::TrackstatPtr>& trackstat_msgs)
+  void NovatelGps::GetTrackstatMessages(std::vector<novatel_gps_driver::TrackstatParser::MessageType>& trackstat_msgs)
   {
-    trackstat_msgs.resize(trackstat_msgs_.size());
-    std::copy(trackstat_msgs_.begin(), trackstat_msgs_.end(), trackstat_msgs.begin());
-    trackstat_msgs_.clear();
+    DrainQueue(trackstat_msgs_, trackstat_msgs);
   }
 
-  void NovatelGps::GetClockSteeringMessages(std::vector<novatel_gps_msgs::ClockSteeringPtr>& clocksteering_msgs)
+  void NovatelGps::GetClockSteeringMessages(std::vector<novatel_gps_driver::ClockSteeringParser::MessageType>& clocksteering_msgs)
   {
-    clocksteering_msgs.resize(clocksteering_msgs_.size());
-    std::copy(clocksteering_msgs_.begin(), clocksteering_msgs_.end(), clocksteering_msgs.begin());
-    clocksteering_msgs_.clear();
+    DrainQueue(clocksteering_msgs_, clocksteering_msgs);
   }
 
   bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
   {
-    ROS_INFO("Opening pcap file: %s", device.c_str());
+    RCLCPP_INFO(node_.get_logger(), "Opening pcap file: %s", device.c_str());
 
     if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == nullptr)
     {
-      ROS_FATAL("Unable to open pcap file.");
+      RCLCPP_FATAL(node_.get_logger(), "Unable to open pcap file.");
       return false;
     }
 
@@ -607,7 +580,7 @@ namespace novatel_gps_driver
       {
         // We will not kill the connection here, because the device may already
         // be setup to communicate correctly, but we will print a warning         
-        ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
+        RCLCPP_ERROR(node_.get_logger(), "Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
                  "been pre-configured.");
@@ -629,7 +602,7 @@ namespace novatel_gps_driver
     size_t sep_pos = endpoint.find(':');
     if (sep_pos == std::string::npos || sep_pos == endpoint.size() - 1)
     {
-      ROS_INFO("Using default port.");
+      RCLCPP_INFO(node_.get_logger(), "Using default port.");
       std::stringstream ss;
       if (connection_ == TCP)
       {
@@ -663,16 +636,16 @@ namespace novatel_gps_driver
           boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
 
           boost::asio::connect(tcp_socket_, iter);
-          ROS_INFO("Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
         }
         else
         {
           boost::asio::ip::udp::resolver resolver(io_service_);
           boost::asio::ip::udp::resolver::query query(ip, port);
-          udp_endpoint_ = boost::make_shared<boost::asio::ip::udp::endpoint>(*resolver.resolve(query));
+          udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>(*resolver.resolve(query));
           udp_socket_.reset(new boost::asio::ip::udp::socket(io_service_));
           udp_socket_->open(boost::asio::ip::udp::v4());
-          ROS_INFO("Connecting via UDP to %s:%s", ip.c_str(), port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Connecting via UDP to %s:%s", ip.c_str(), port.c_str());
         }
       }
       else
@@ -683,9 +656,9 @@ namespace novatel_gps_driver
           boost::asio::ip::tcp::acceptor acceptor(io_service_,
                                                   boost::asio::ip::tcp::endpoint(
                                                       boost::asio::ip::tcp::v4(), port_num));
-          ROS_INFO("Listening on TCP port %s", port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Listening on TCP port %s", port.c_str());
           acceptor.accept(tcp_socket_);
-          ROS_INFO("Accepted TCP connection from client: %s",
+          RCLCPP_INFO(node_.get_logger(), "Accepted TCP connection from client: %s",
                    tcp_socket_.remote_endpoint().address().to_string().c_str());
         }
         else
@@ -694,18 +667,18 @@ namespace novatel_gps_driver
               io_service_,
               boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(),
                                              port_num)));
-          boost::array<char, 1> recv_buf;
-          udp_endpoint_ = boost::make_shared<boost::asio::ip::udp::endpoint>();
+          std::array<char, 1> recv_buf;
+          udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>();
           boost::system::error_code error;
 
-          ROS_INFO("Listening on UDP port %s", port.c_str());
+          RCLCPP_INFO(node_.get_logger(), "Listening on UDP port %s", port.c_str());
           udp_socket_->receive_from(boost::asio::buffer(recv_buf), *udp_endpoint_, 0, error);
           if (error && error != boost::asio::error::message_size)
           {
             throw boost::system::system_error(error);
           }
 
-          ROS_INFO("Accepted UDP connection from client: %s",
+          RCLCPP_INFO(node_.get_logger(), "Accepted UDP connection from client: %s",
                    udp_endpoint_->address().to_string().c_str());
         }
       }
@@ -713,7 +686,7 @@ namespace novatel_gps_driver
     catch (std::exception& e)
     {
       error_msg_ = e.what();
-      ROS_ERROR("Unable to connect: %s", e.what());
+      RCLCPP_ERROR(node_.get_logger(), "Unable to connect: %s", e.what());
       return false;
     }
 
@@ -721,13 +694,13 @@ namespace novatel_gps_driver
 
     if (Configure(opts))
     {
-      ROS_INFO("Configured GPS.");
+      RCLCPP_INFO(node_.get_logger(), "Configured GPS.");
     }
     else
     {
       // We will not kill the connection here, because the device may already
       // be setup to communicate correctly, but we will print a warning
-      ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
+      RCLCPP_ERROR(node_.get_logger(), "Failed to configure GPS. This port may be read only, or the "
                    "device may not be functioning as expected; however, the "
                    "driver may still function correctly if the port has already "
                    "been pre-configured.");
@@ -788,7 +761,7 @@ namespace novatel_gps_driver
       }
       catch (std::exception& e)
       {
-        ROS_WARN("TCP connection error: %s", e.what());
+        RCLCPP_WARN(node_.get_logger(), "TCP connection error: %s", e.what());
       }
     }
     else if (connection_ == PCAP)
@@ -886,19 +859,19 @@ namespace novatel_gps_driver
             break;
           }
           default:
-            ROS_WARN("Unexpected protocol: %u", iph->protocol);
+            RCLCPP_WARN(node_.get_logger(), "Unexpected protocol: %u", iph->protocol);
             return READ_ERROR;
         }
 
         // Add a slight delay after reading packets; if the node is being tested offline
         // and this loop is hammering the TCP, logs won't output properly.
-        ros::Duration(0.001).sleep();
+        rclcpp::sleep_for(std::chrono::milliseconds(1));
 
         return READ_SUCCESS;
       }
       else if (result == -2)
       {
-        ROS_INFO("Done reading pcap file.");
+        RCLCPP_INFO(node_.get_logger(), "Done reading pcap file.");
         if (!last_tcp_packet_.empty())
         {
           // Don't forget to submit the last packet if we still have one!
@@ -916,7 +889,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        ROS_WARN("Error reading pcap data: %s", pcap_geterr(pcap_));
+        RCLCPP_WARN(node_.get_logger(), "Error reading pcap data: %s", pcap_geterr(pcap_));
         return READ_ERROR;
       }
     }
@@ -926,7 +899,7 @@ namespace novatel_gps_driver
     return READ_ERROR;
   }
 
-  void NovatelGps::GetImuMessages(std::vector<sensor_msgs::ImuPtr>& imu_messages)
+  void NovatelGps::GetImuMessages(std::vector<sensor_msgs::msg::Imu::SharedPtr>& imu_messages)
   {
     imu_messages.clear();
     imu_messages.insert(imu_messages.end(), imu_msgs_.begin(), imu_msgs_.end());
@@ -937,22 +910,23 @@ namespace novatel_gps_driver
   {
     if (imu_rate_ <= 0.0)
     {
-      ROS_WARN_ONCE("IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
+      RCLCPP_WARN_ONCE(node_.get_logger(), "IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
       return;
     }
 
     if (!latest_insstdev_ && !latest_inscov_)
     {
+      // TODO pjr Make this a _THROTTLE log when it's available
       // If we haven't received an INSSTDEV or an INSCOV message, don't do anything, just return.
-      ROS_WARN_THROTTLE(1.0, "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
+      RCLCPP_WARN(node_.get_logger(), "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
     }
 
     size_t previous_size = imu_msgs_.size();
     // Only do anything if we have both CORRIMUDATA and INSPVA messages.
     while (!corrimudata_queue_.empty() && !inspva_queue_.empty())
     {
-      novatel_gps_msgs::NovatelCorrectedImuDataPtr corrimudata = corrimudata_queue_.front();
-      novatel_gps_msgs::InspvaPtr inspva = inspva_queue_.front();
+      const auto& corrimudata = corrimudata_queue_.front();
+      const auto& inspva = inspva_queue_.front();
 
       double corrimudata_time = corrimudata->gps_week_num * SECONDS_PER_WEEK + corrimudata->gps_seconds;
       double inspva_time = inspva->novatel_msg_header.gps_week_num *
@@ -961,16 +935,16 @@ namespace novatel_gps_driver
       if (std::fabs(corrimudata_time - inspva_time) > IMU_TOLERANCE_S)
       {
         // If the two messages are too far apart to sync, discard the oldest one.
-        ROS_DEBUG("INSPVA and CORRIMUDATA were unacceptably far apart.");
+        RCLCPP_DEBUG(node_.get_logger(), "INSPVA and CORRIMUDATA were unacceptably far apart.");
         if (corrimudata_time < inspva_time)
         {
-          ROS_DEBUG("Discarding oldest CORRIMUDATA.");
+          RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest CORRIMUDATA.");
           corrimudata_queue_.pop();
           continue;
         }
         else
         {
-          ROS_DEBUG("Discarding oldest INSPVA.");
+          RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest INSPVA.");
           inspva_queue_.pop();
           continue;
         }
@@ -980,12 +954,15 @@ namespace novatel_gps_driver
       corrimudata_queue_.pop();
 
       // Now we can combine them together to make an Imu message.
-      sensor_msgs::ImuPtr imu = boost::make_shared<sensor_msgs::Imu>();
+      auto imu = std::make_shared<sensor_msgs::msg::Imu>();
 
       imu->header.stamp = corrimudata->header.stamp;
-      imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(inspva->roll * DEGREES_TO_RADIANS,
-                                              -(inspva->pitch) * DEGREES_TO_RADIANS,
-                                              -(inspva->azimuth) * DEGREES_TO_RADIANS);
+
+      tf2::Quaternion q;
+      q.setRPY(inspva->roll * DEGREES_TO_RADIANS,
+               -(inspva->pitch) * DEGREES_TO_RADIANS,
+               -(inspva->azimuth) * DEGREES_TO_RADIANS);
+      imu->orientation = tf2::toMsg(q);
 
       if (latest_inscov_)
       {
@@ -1022,12 +999,12 @@ namespace novatel_gps_driver
     }
 
     size_t new_size = imu_msgs_.size() - previous_size;
-    ROS_DEBUG("Created %lu new sensor_msgs/Imu messages.", new_size);
+    RCLCPP_DEBUG(node_.get_logger(), "Created %lu new sensor_msgs/Imu messages.", new_size);
   }
 
   void NovatelGps::SetImuRate(double imu_rate, bool imu_rate_forced)
   {
-    ROS_INFO("IMU sample rate: %f", imu_rate);
+    RCLCPP_INFO(node_.get_logger(), "IMU sample rate: %f", imu_rate);
     imu_rate_ = imu_rate;
     if (imu_rate_forced)
     {
@@ -1037,18 +1014,18 @@ namespace novatel_gps_driver
 
   void NovatelGps::SetSerialBaud(int32_t serial_baud)
   {
-    ROS_INFO("Serial baud rate : %d", serial_baud);
+    RCLCPP_INFO(node_.get_logger(), "Serial baud rate : %d", serial_baud);
     serial_baud_ = serial_baud;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
-                                                        const ros::Time& stamp) noexcept(false)
+                                                        const rclcpp::Time& stamp) noexcept(false)
   {
     switch (msg.header_.message_id_)
     {
       case BestposParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelPositionPtr position = bestpos_parser_.ParseBinary(msg);
+        auto position = bestpos_parser_.ParseBinary(msg);
         position->header.stamp = stamp;
         novatel_positions_.push_back(position);
         position_sync_buffer_.push_back(position);
@@ -1056,48 +1033,49 @@ namespace novatel_gps_driver
       }
       case BestxyzParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelXYZPtr xyz_position = bestxyz_parser_.ParseBinary(msg);
+        auto xyz_position = bestxyz_parser_.ParseBinary(msg);
         xyz_position->header.stamp = stamp;
-        novatel_xyz_positions_.push_back(xyz_position);
+        novatel_xyz_positions_.push_back(std::move(xyz_position));
         break;
       }
       case BestutmParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseBinary(msg);
+        auto utm_position = bestutm_parser_.ParseBinary(msg);
         utm_position->header.stamp = stamp;
-        novatel_utm_positions_.push_back(utm_position);
+        novatel_utm_positions_.push_back(std::move(utm_position));
         break;
       }
       case BestvelParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelVelocityPtr velocity = bestvel_parser_.ParseBinary(msg);
+        auto velocity = bestvel_parser_.ParseBinary(msg);
         velocity->header.stamp = stamp;
-        novatel_velocities_.push_back(velocity);
+        novatel_velocities_.push_back(std::move(velocity));
         break;
       }
       case Heading2Parser::MESSAGE_ID:
       {
-	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+        auto heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
-        heading2_msgs_.push_back(heading);
+        heading2_msgs_.push_back(std::move(heading));
         break;
       }
       case DualAntennaHeadingParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseBinary(msg);
+        auto heading = dual_antenna_heading_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
-        dual_antenna_heading_msgs_.push_back(heading);
+        dual_antenna_heading_msgs_.push_back(std::move(heading));
         break;
       }
       case CorrImuDataParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseBinary(msg);
+        auto imu = corrimudata_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
         corrimudata_msgs_.push_back(imu);
         corrimudata_queue_.push(imu);
         if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
         {
-          ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
           corrimudata_queue_.pop();
         }
         GenerateImuMessages();
@@ -1105,7 +1083,7 @@ namespace novatel_gps_driver
       }
       case InscovParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::InscovPtr inscov = inscov_parser_.ParseBinary(msg);
+        auto inscov = inscov_parser_.ParseBinary(msg);
         inscov->header.stamp = stamp;
         inscov_msgs_.push_back(inscov);
         latest_inscov_ = inscov;
@@ -1113,13 +1091,14 @@ namespace novatel_gps_driver
       }
       case InspvaParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::InspvaPtr inspva = inspva_parser_.ParseBinary(msg);
+        auto inspva = inspva_parser_.ParseBinary(msg);
         inspva->header.stamp = stamp;
         inspva_msgs_.push_back(inspva);
         inspva_queue_.push(inspva);
         if (inspva_queue_.size() > MAX_BUFFER_SIZE)
         {
-          ROS_WARN_THROTTLE(1.0, "INSPVA queue overflow.");
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "INSPVA queue overflow.");
           inspva_queue_.pop();
         }
         GenerateImuMessages();
@@ -1127,14 +1106,14 @@ namespace novatel_gps_driver
       }
       case InspvaxParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::InspvaxPtr inspvax = inspvax_parser_.ParseBinary(msg);
+        auto inspvax = inspvax_parser_.ParseBinary(msg);
         inspvax->header.stamp = stamp;
-        inspvax_msgs_.push_back(inspvax);
+        inspvax_msgs_.push_back(std::move(inspvax));
         break;
       }
       case InsstdevParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::InsstdevPtr insstdev = insstdev_parser_.ParseBinary(msg);
+        auto insstdev = insstdev_parser_.ParseBinary(msg);
         insstdev->header.stamp = stamp;
         insstdev_msgs_.push_back(insstdev);
         latest_insstdev_ = insstdev;
@@ -1142,29 +1121,29 @@ namespace novatel_gps_driver
       }
       case RangeParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::RangePtr range = range_parser_.ParseBinary(msg);
+        auto range = range_parser_.ParseBinary(msg);
         range->header.stamp = stamp;
-        range_msgs_.push_back(range);
+        range_msgs_.push_back(std::move(range));
         break;
       }
       case TimeParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::TimePtr time = time_parser_.ParseBinary(msg);
+        auto time = time_parser_.ParseBinary(msg);
         utc_offset_ = time->utc_offset;
-        ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+        RCLCPP_DEBUG(node_.get_logger(), "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
         time->header.stamp = stamp;
-        time_msgs_.push_back(time);
+        time_msgs_.push_back(std::move(time));
         break;
       }
       case TrackstatParser::MESSAGE_ID:
       {
-        novatel_gps_msgs::TrackstatPtr trackstat = trackstat_parser_.ParseBinary(msg);
+        auto trackstat = trackstat_parser_.ParseBinary(msg);
         trackstat->header.stamp = stamp;
-        trackstat_msgs_.push_back(trackstat);
+        trackstat_msgs_.push_back(std::move(trackstat));
         break;
       }
       default:
-        ROS_WARN("Unexpected binary message id: %u", msg.header_.message_id_);
+        RCLCPP_WARN(node_.get_logger(), "Unexpected binary message id: %u", msg.header_.message_id_);
         break;
     }
 
@@ -1172,185 +1151,187 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
-                                                       const ros::Time& stamp,
+                                                       const rclcpp::Time& stamp,
                                                        double most_recent_utc_time) noexcept(false)
   {
     if (sentence.id == GpggaParser::MESSAGE_NAME)
     {
-      novatel_gps_msgs::GpggaPtr gpgga = gpgga_parser_.ParseAscii(sentence);
+      auto gpgga = gpgga_parser_.ParseAscii(sentence);
 
       if (most_recent_utc_time < gpgga->utc_seconds)
       {
         most_recent_utc_time = gpgga->utc_seconds;
       }
 
-      gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga->utc_seconds);
+      gpgga->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gpgga->utc_seconds);
 
       if (gpgga_parser_.WasLastGpsValid())
       {
-        gpgga_msgs_.push_back(gpgga);
-
         // Make a deep copy for the sync buffer so the GPSFix messages
         // don't get adjusted multiple times for the sync offset.
         gpgga_sync_buffer_.push_back(*gpgga);
+
+        gpgga_msgs_.push_back(std::move(gpgga));
       }
       else
       {
-        gpgga_msgs_.push_back(gpgga);
+        gpgga_msgs_.push_back(std::move(gpgga));
       }
     }
     else if (sentence.id == GprmcParser::MESSAGE_NAME)
     {
-      novatel_gps_msgs::GprmcPtr gprmc = gprmc_parser_.ParseAscii(sentence);
+      auto gprmc = gprmc_parser_.ParseAscii(sentence);
 
       if (most_recent_utc_time < gprmc->utc_seconds)
       {
         most_recent_utc_time = gprmc->utc_seconds;
       }
 
-      gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc->utc_seconds);
+      gprmc->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gprmc->utc_seconds);
 
       if (gprmc_parser_.WasLastGpsValid())
       {
-        gprmc_msgs_.push_back(gprmc);
-
         // Make a deep copy for the sync buffer so the GPSFix messages
         // don't get adjusted multiple times for the sync offset.
         gprmc_sync_buffer_.push_back(*gprmc);
+
+        gprmc_msgs_.push_back(std::move(gprmc));
       }
       else
       {
-        gprmc_msgs_.push_back(gprmc);
+        gprmc_msgs_.push_back(std::move(gprmc));
       }
     }
     else if (sentence.id == GpgsaParser::MESSAGE_NAME)
     {
-      novatel_gps_msgs::GpgsaPtr gpgsa = gpgsa_parser_.ParseAscii(sentence);
-      gpgsa_msgs_.push_back(gpgsa);
+      auto gpgsa = gpgsa_parser_.ParseAscii(sentence);
+      gpgsa_msgs_.push_back(std::move(gpgsa));
     }
     else if (sentence.id == GpgsvParser::MESSAGE_NAME)
     {
-      novatel_gps_msgs::GpgsvPtr gpgsv = gpgsv_parser_.ParseAscii(sentence);
-      gpgsv_msgs_.push_back(gpgsv);
+      auto gpgsv = gpgsv_parser_.ParseAscii(sentence);
+      gpgsv_msgs_.push_back(std::move(gpgsv));
     }
     else if (sentence.id == GphdtParser::MESSAGE_NAME)
     {
-      novatel_gps_msgs::GphdtPtr gphdt = gphdt_parser_.ParseAscii(sentence);
-      gphdt_msgs_.push_back(gphdt);
+      auto gphdt = gphdt_parser_.ParseAscii(sentence);
+      gphdt_msgs_.push_back(std::move(gphdt));
     }
     else
     {
-      ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << sentence.id);
+      RCLCPP_DEBUG(node_.get_logger(), "Unrecognized NMEA sentence %s", sentence.id.c_str());
     }
 
     return READ_SUCCESS;
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
-                                                          const ros::Time& stamp) noexcept(false)
+                                                          const rclcpp::Time& stamp) noexcept(false)
   {
     if (sentence.id == "BESTPOSA")
     {
-      novatel_gps_msgs::NovatelPositionPtr position = bestpos_parser_.ParseAscii(sentence);
+      auto position = bestpos_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
       novatel_positions_.push_back(position);
       position_sync_buffer_.push_back(position);
     }
     else if (sentence.id == "BESTXYZA")
     {
-      novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
+      auto position = bestxyz_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
-      novatel_xyz_positions_.push_back(position);
+      novatel_xyz_positions_.push_back(std::move(position));
     }
     else if (sentence.id == "BESTUTMA")
     {
-      novatel_gps_msgs::NovatelUtmPositionPtr utm_position = bestutm_parser_.ParseAscii(sentence);
+      auto utm_position = bestutm_parser_.ParseAscii(sentence);
       utm_position->header.stamp = stamp;
-      novatel_utm_positions_.push_back(utm_position);
+      novatel_utm_positions_.push_back(std::move(utm_position));
     }
     else if (sentence.id == "BESTVELA")
     {
-      novatel_gps_msgs::NovatelVelocityPtr velocity = bestvel_parser_.ParseAscii(sentence);
+      auto velocity = bestvel_parser_.ParseAscii(sentence);
       velocity->header.stamp = stamp;
-      novatel_velocities_.push_back(velocity);
+      novatel_velocities_.push_back(std::move(velocity));
     }
     else if (sentence.id == "HEADING2A")
     {
-      novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
+      auto heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
-      heading2_msgs_.push_back(heading);
+      heading2_msgs_.push_back(std::move(heading));
     }
     else if (sentence.id == "DUALANTENNAHEADINGA")
     {
-      novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
+      auto heading = dual_antenna_heading_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
-      dual_antenna_heading_msgs_.push_back(heading);
+      dual_antenna_heading_msgs_.push_back(std::move(heading));
     }
     else if (sentence.id == "CORRIMUDATAA")
     {
-      novatel_gps_msgs::NovatelCorrectedImuDataPtr imu = corrimudata_parser_.ParseAscii(sentence);
+      auto imu = corrimudata_parser_.ParseAscii(sentence);
       imu->header.stamp = stamp;
       corrimudata_msgs_.push_back(imu);
       corrimudata_queue_.push(imu);
       if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
       {
-        ROS_WARN_THROTTLE(1.0, "CORRIMUDATA queue overflow.");
+        // TODO pjr Make this a _THROTTLE log when it's available
+        RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
         corrimudata_queue_.pop();
       }
       GenerateImuMessages();
     }
     else if (sentence.id == "INSCOVA")
     {
-      novatel_gps_msgs::InscovPtr inscov = inscov_parser_.ParseAscii(sentence);
+      auto inscov = inscov_parser_.ParseAscii(sentence);
       inscov->header.stamp = stamp;
       inscov_msgs_.push_back(inscov);
       latest_inscov_ = inscov;
     }
     else if (sentence.id == "INSPVAA")
     {
-      novatel_gps_msgs::InspvaPtr inspva = inspva_parser_.ParseAscii(sentence);
+      auto inspva = inspva_parser_.ParseAscii(sentence);
       inspva->header.stamp = stamp;
       inspva_msgs_.push_back(inspva);
       inspva_queue_.push(inspva);
       if (inspva_queue_.size() > MAX_BUFFER_SIZE)
       {
-        ROS_WARN_THROTTLE(1.0, "INSPVA queue overflow.");
+        // TODO pjr Make this a _THROTTLE log when it's available
+        RCLCPP_WARN(node_.get_logger(), "INSPVA queue overflow.");
         inspva_queue_.pop();
       }
       GenerateImuMessages();
     }
     else if (sentence.id == "INSPVAXA")
     {
-      novatel_gps_msgs::InspvaxPtr inspvax = inspvax_parser_.ParseAscii(sentence);
+      auto inspvax = inspvax_parser_.ParseAscii(sentence);
       inspvax->header.stamp = stamp;
-      inspvax_msgs_.push_back(inspvax);
+      inspvax_msgs_.push_back(std::move(inspvax));
     }
     else if (sentence.id == "INSSTDEVA")
     {
-      novatel_gps_msgs::InsstdevPtr insstdev = insstdev_parser_.ParseAscii(sentence);
+      auto insstdev = insstdev_parser_.ParseAscii(sentence);
       insstdev->header.stamp = stamp;
       insstdev_msgs_.push_back(insstdev);
       latest_insstdev_ = insstdev;
     }
     else if (sentence.id == "TIMEA")
     {
-      novatel_gps_msgs::TimePtr time = time_parser_.ParseAscii(sentence);
+      auto time = time_parser_.ParseAscii(sentence);
       utc_offset_ = time->utc_offset;
-      ROS_DEBUG("Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
+      RCLCPP_DEBUG(node_.get_logger(), "Got a new TIME with offset %f. UTC offset is %f", time->utc_offset, utc_offset_);
       time->header.stamp = stamp;
-      time_msgs_.push_back(time);
+      time_msgs_.push_back(std::move(time));
     }
     else if (sentence.id == "RANGEA")
     {
-      novatel_gps_msgs::RangePtr range = range_parser_.ParseAscii(sentence);
+      auto range = range_parser_.ParseAscii(sentence);
       range->header.stamp = stamp;
-      range_msgs_.push_back(range);
+      range_msgs_.push_back(std::move(range));
     }
     else if (sentence.id == "TRACKSTATA")
     {
-      novatel_gps_msgs::TrackstatPtr trackstat = trackstat_parser_.ParseAscii(sentence);
+      auto trackstat = trackstat_parser_.ParseAscii(sentence);
       trackstat->header.stamp = stamp;
-      trackstat_msgs_.push_back(trackstat);
+      trackstat_msgs_.push_back(std::move(trackstat));
     }
     else if (sentence.id == "RAWIMUXA")
     {
@@ -1389,7 +1370,7 @@ namespace novatel_gps_driver
       {
         double rate = rates[id].first;
  
-        ROS_INFO("IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
+        RCLCPP_INFO(node_.get_logger(), "IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
         
         // Set the rate only if it hasn't been forced already
         if (!imu_rate_forced_)
@@ -1400,13 +1381,13 @@ namespace novatel_gps_driver
       else
       {
         // Error because the imu type was unknown
-        ROS_ERROR("Unknown IMU Type Received: %s", id.c_str());
+        RCLCPP_ERROR(node_.get_logger(), "Unknown IMU Type Received: %s", id.c_str());
       }
     }
     else if (sentence.id == "CLOCKSTEERINGA")
     {
-      novatel_gps_msgs::ClockSteeringPtr clocksteering = clocksteering_parser_.ParseAscii(sentence);
-      clocksteering_msgs_.push_back(clocksteering);
+      novatel_gps_driver::ClockSteeringParser::MessageType clocksteering = clocksteering_parser_.ParseAscii(sentence);
+      clocksteering_msgs_.push_back(std::move(clocksteering));
     }
 
     return READ_SUCCESS;
@@ -1421,7 +1402,7 @@ namespace novatel_gps_driver
       int32_t written = serial_.Write(bytes);
       if (written != (int32_t)command.length())
       {
-        ROS_ERROR("Failed to send command: %s", command.c_str());
+        RCLCPP_ERROR(node_.get_logger(), "Failed to send command: %s", command.c_str());
       }
       return written == (int32_t)command.length();
     }
@@ -1441,21 +1422,21 @@ namespace novatel_gps_driver
         }
         if (error)
         {
-          ROS_ERROR("Error writing TCP data: %s", error.message().c_str());
+          RCLCPP_ERROR(node_.get_logger(), "Error writing TCP data: %s", error.message().c_str());
           Disconnect();
         }
-        ROS_DEBUG("Wrote %lu bytes.", written);
+        RCLCPP_DEBUG(node_.get_logger(), "Wrote %lu bytes.", written);
         return written == (int32_t) command.length();
       }
       catch (std::exception& e)
       {
         Disconnect();
-        ROS_ERROR("Exception writing TCP data: %s", e.what());
+        RCLCPP_ERROR(node_.get_logger(), "Exception writing TCP data: %s", e.what());
       }
     }
     else if (connection_ == PCAP)
     {
-      ROS_WARN_ONCE("Writing data is unsupported in pcap mode.");
+      RCLCPP_WARN_ONCE(node_.get_logger(), "Writing data is unsupported in pcap mode.");
       return true;
     }
 

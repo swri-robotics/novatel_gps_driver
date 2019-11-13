@@ -1,6 +1,6 @@
 # Message from GPGGA NMEA String
 # Based on https://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm
-Header header
+std_msgs/Header header
 
 string message_id
 

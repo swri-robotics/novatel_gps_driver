@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,20 +31,20 @@
 #define NOVATEL_GPS_DRIVER_INSPVAX_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/Inspvax.h>
+#include <novatel_gps_msgs/msg/inspvax.hpp>
 
 namespace novatel_gps_driver
 {
-  class InspvaxParser : public MessageParser<novatel_gps_msgs::InspvaxPtr>
+  class InspvaxParser : public MessageParser<novatel_gps_msgs::msg::Inspvax::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::InspvaxPtr ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+    MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    novatel_gps_msgs::InspvaxPtr ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
     static constexpr uint32_t MESSAGE_ID = 1465;
     static const std::string MESSAGE_NAME;

@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
 #ifndef NOVATEL_GPS_DRIVER_PARSE_EXCEPTION_H
 #define NOVATEL_GPS_DRIVER_PARSE_EXCEPTION_H
 
-#include <exception>
+#include <stdexcept>
 
 namespace novatel_gps_driver
 {

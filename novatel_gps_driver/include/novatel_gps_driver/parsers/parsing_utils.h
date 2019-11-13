@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,11 +30,11 @@
 #ifndef NOVATEL_GPS_DRIVER_BASE_PARSER_H
 #define NOVATEL_GPS_DRIVER_BASE_PARSER_H
 
-#include <novatel_gps_msgs/NovatelMessageHeader.h>
+#include <novatel_gps_msgs/msg/novatel_message_header.hpp>
 
-#include <novatel_gps_msgs/NovatelExtendedSolutionStatus.h>
+#include <novatel_gps_msgs/msg/novatel_extended_solution_status.hpp>
 
-#include <novatel_gps_msgs/NovatelSignalMask.h>
+#include <novatel_gps_msgs/msg/novatel_signal_mask.hpp>
 
 #include <cstdint>
 
@@ -117,16 +117,16 @@ namespace novatel_gps_driver
 
   void GetExtendedSolutionStatusMessage(
       uint32_t status,
-      novatel_gps_msgs::NovatelExtendedSolutionStatus& msg);
+      novatel_gps_msgs::msg::NovatelExtendedSolutionStatus& msg);
 
 
   void GetNovatelReceiverStatusMessage(
       uint32_t status,
-      novatel_gps_msgs::NovatelReceiverStatus& receiver_status_msg);
+      novatel_gps_msgs::msg::NovatelReceiverStatus& receiver_status_msg);
 
   void GetSignalsUsed(
       uint32_t mask,
-      novatel_gps_msgs::NovatelSignalMask& msg);
+      novatel_gps_msgs::msg::NovatelSignalMask& msg);
 
   /**
    * @brief Converts a buffer containing 8 bytes into a double.

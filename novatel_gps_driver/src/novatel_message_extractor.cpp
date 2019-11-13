@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -34,13 +34,13 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/lexical_cast.hpp>
 
-#include <ros/ros.h>
-
-#include <swri_string_util/string_util.h>
 #include <novatel_gps_driver/parsers/header.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
+
+#include <rclcpp/logging.hpp>
 
 namespace novatel_gps_driver
 {
@@ -52,6 +52,10 @@ namespace novatel_gps_driver
   const std::string NovatelMessageExtractor::NOVATEL_ASCII_FLAGS = "$#";
   const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
   const std::string NovatelMessageExtractor::NOVATEL_ENDLINE = "\r\n";
+  
+  NovatelMessageExtractor::NovatelMessageExtractor(rclcpp::Logger logger) :
+    logger_(logger)
+  {}
   
   uint32_t NovatelMessageExtractor::CRC32Value(int32_t i)
   {
@@ -149,11 +153,11 @@ namespace novatel_gps_driver
     {
       // The shortest a binary message can be (header + no data + CRC)
       // is 32 bytes, so just return if we don't have at least that many.
-      ROS_DEBUG("Binary message was too short to parse.");
+      RCLCPP_DEBUG(this->logger_, "Binary message was too short to parse.");
       return -1;
     }
 
-    ROS_DEBUG("Reading binary header.");
+    RCLCPP_DEBUG(this->logger_, "Reading binary header.");
     msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
     auto data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
     uint16_t data_length = msg.header_.message_length_;
@@ -162,48 +166,48 @@ namespace novatel_gps_driver
         msg.header_.sync1_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[1]) ||
         msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]))
     {
-      ROS_ERROR("Sync bytes were incorrect; this should never happen and is definitely a bug: %x %x %x",
+      RCLCPP_ERROR(this->logger_, "Sync bytes were incorrect; this should never happen and is definitely a bug: %x %x %x",
                msg.header_.sync0_, msg.header_.sync1_, msg.header_.sync2_);
       return -2;
     }
 
     if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH)
     {
-      ROS_WARN("Binary header length was unexpected: %u (expected %u)",
+      RCLCPP_WARN(this->logger_, "Binary header length was unexpected: %u (expected %u)",
                msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH);
     }
 
-    ROS_DEBUG("Msg ID: %u    Data start / length: %u / %u",
+    RCLCPP_DEBUG(this->logger_, "Msg ID: %u    Data start / length: %u / %u",
               msg.header_.message_id_, data_start, data_length);
 
     if (data_start + data_length + 4 > str.length())
     {
-      ROS_DEBUG("Not enough data.");
+      RCLCPP_DEBUG(this->logger_, "Not enough data.");
       return -1;
     }
 
-    ROS_DEBUG("Reading binary message data.");
+    RCLCPP_DEBUG(this->logger_, "Reading binary message data.");
     msg.data_.resize(data_length);
     std::copy(&str[data_start], &str[data_start+data_length], reinterpret_cast<char*>(&msg.data_[0]));
 
-    ROS_DEBUG("Calculating CRC.");
+    RCLCPP_DEBUG(this->logger_, "Calculating CRC.");
 
     uint32_t crc = CalculateBlockCRC32(static_cast<uint32_t>(msg.header_.header_length_) + data_length,
                                        reinterpret_cast<const uint8_t*>(&str[start_idx]));
 
-    ROS_DEBUG("Reading CRC.");
+    RCLCPP_DEBUG(this->logger_, "Reading CRC.");
     msg.crc_ = ParseUInt32(reinterpret_cast<const uint8_t*>(&str[data_start+data_length]));
 
     if (crc != msg.crc_)
     {
       // Invalid CRC
-      ROS_DEBUG("Invalid CRC;  Calc: %u    In msg: %u", crc, msg.crc_);
+      RCLCPP_DEBUG(this->logger_, "Invalid CRC;  Calc: %u    In msg: %u", crc, msg.crc_);
       return -2;
     }
 
     // On success, return how many bytes we read
 
-    ROS_DEBUG("Finishing reading binary message.");
+    RCLCPP_DEBUG(this->logger_, "Finishing reading binary message.");
     return static_cast<int32_t>(msg.header_.header_length_ + data_length + 4);
   }
 
@@ -246,7 +250,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        ROS_WARN("Expected checksum: [%lx]", calculated_checksum);
+        RCLCPP_WARN(this->logger_, "Expected checksum: [%lx]", calculated_checksum);
         // Invalid checksum
         return 1;
       }
@@ -299,7 +303,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        ROS_WARN("Expected: [%lx]", calculated_checksum);
+        RCLCPP_WARN(this->logger_, "Expected: [%lx]", calculated_checksum);
         // Invalid checksum
         return 1;
       }
@@ -376,7 +380,7 @@ namespace novatel_gps_driver
 
       FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
-      ROS_DEBUG("Binary start: %lu   ASCII start / end / invalid: %lu / %lu / %lu",
+      RCLCPP_DEBUG(this->logger_, "Binary start: %lu   ASCII start / end / invalid: %lu / %lu / %lu",
                 binary_start_idx, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
       if (binary_start_idx == std::string::npos && ascii_start_idx == std::string::npos)
@@ -396,20 +400,20 @@ namespace novatel_gps_driver
         {
           binary_messages.push_back(cur_msg);
           sentence_start += binary_start_idx + result;
-          ROS_DEBUG("Parsed a binary message with %u bytes.", result);
+          RCLCPP_DEBUG(this->logger_, "Parsed a binary message with %u bytes.", result);
         }
         else if (result == -1)
         {
           // Sentence is not complete, add it to the remaining and break;
           remaining = input.substr(binary_start_idx);
-          ROS_DEBUG("Binary message was incomplete, waiting for more.");
+          RCLCPP_DEBUG(this->logger_, "Binary message was incomplete, waiting for more.");
           break;
         }
         else
         {
           // Sentence had an invalid checksum, just iterate to the next sentence
           sentence_start += 1;
-          ROS_WARN("Invalid binary message checksum");
+          RCLCPP_WARN(this->logger_, "Invalid binary message checksum");
           parse_error = true;
         }
       }
@@ -422,15 +426,15 @@ namespace novatel_gps_driver
           // If we see an invalid character, don't even bother trying to parse
           // the rest of the message.  By this point we also know there's no
           // binary header before this point, so just skip the data.
-          ROS_WARN("Invalid ASCII char: [%s]", input.substr(ascii_start_idx, ascii_len).c_str());
-          ROS_WARN("                     %s^", std::string(invalid_ascii_idx-ascii_start_idx-1, ' ').c_str());
+          RCLCPP_WARN(this->logger_, "Invalid ASCII char: [%s]", input.substr(ascii_start_idx, ascii_len).c_str());
+          RCLCPP_WARN(this->logger_, "                     %s^", std::string(invalid_ascii_idx-ascii_start_idx-1, ' ').c_str());
           sentence_start += invalid_ascii_idx + 1;
         }
         else if (ascii_end_idx != std::string::npos)
         {
           // If we've got a start, an end, and no invalid characters, we've
           // got a valid ASCII message.
-          ROS_DEBUG("ASCII sentence:\n[%s]", input.substr(ascii_start_idx, ascii_len).c_str());
+          RCLCPP_DEBUG(this->logger_, "ASCII sentence:\n[%s]", input.substr(ascii_start_idx, ascii_len).c_str());
           if (input[ascii_start_idx] == NMEA_SENTENCE_FLAG[0])
           {
             std::string cur_sentence;
@@ -452,12 +456,12 @@ namespace novatel_gps_driver
               // and it will probably never happen, but it doesn't hurt anything to
               // have it here.
               remaining = input.substr(ascii_start_idx);
-              ROS_DEBUG("Waiting for more NMEA data.");
+              RCLCPP_DEBUG(this->logger_, "Waiting for more NMEA data.");
               break;
             }
             else
             {
-              ROS_WARN("Invalid NMEA checksum for: [%s]",
+              RCLCPP_WARN(this->logger_, "Invalid NMEA checksum for: [%s]",
                        input.substr(ascii_start_idx, ascii_len).c_str());
               // Sentence had an invalid checksum, just iterate to the next sentence
               sentence_start += 1;
@@ -476,7 +480,8 @@ namespace novatel_gps_driver
               {
                 novatel_sentences.pop_back();
                 parse_error = true;
-                ROS_ERROR_THROTTLE(1.0, "Unable to vectorize novatel sentence");
+                // TODO pjr Replace with _THROTTLE when it's available
+                RCLCPP_ERROR(this->logger_, "Unable to vectorize novatel sentence");
               }
               sentence_start = ascii_end_idx;
             }
@@ -488,14 +493,14 @@ namespace novatel_gps_driver
               // and it will probably never happen, but it doesn't hurt anything to
               // have it here.
               remaining = input.substr(ascii_start_idx);
-              ROS_DEBUG("Waiting for more NovAtel data.");
+              RCLCPP_DEBUG(this->logger_, "Waiting for more NovAtel data.");
               break;
             }
             else
             {
               // Sentence had an invalid checksum, just iterate to the next sentence
               sentence_start += 1;
-              ROS_WARN("Invalid NovAtel checksum for: [%s]",
+              RCLCPP_WARN(this->logger_, "Invalid NovAtel checksum for: [%s]",
                        input.substr(ascii_start_idx, ascii_len).c_str());
               parse_error = true;
             }
@@ -503,7 +508,7 @@ namespace novatel_gps_driver
         }
         else
         {
-          ROS_DEBUG("Incomplete ASCII sentence, waiting for more.");
+          RCLCPP_DEBUG(this->logger_, "Incomplete ASCII sentence, waiting for more.");
           remaining = input.substr(ascii_start_idx);
           break;
         }
@@ -528,12 +533,14 @@ namespace novatel_gps_driver
           }
           else
           {
-            double utc_float;
-            if (swri_string_util::ToDouble(iter->body[1], utc_float))
+            try
             {
-              return UtcFloatToSeconds(utc_float);
+              return boost::lexical_cast<double>(iter->body[1]);
             }
-            return 0;
+            catch (boost::bad_lexical_cast& e)
+            {
+              return 0;
+            }
           }
         }
       }
@@ -543,9 +550,9 @@ namespace novatel_gps_driver
   }
 
   void NovatelMessageExtractor::GetGpsFixMessage(
-      const novatel_gps_msgs::Gprmc& gprmc,
-      const novatel_gps_msgs::Gpgga& gpgga,
-      const gps_common::GPSFixPtr& gps_fix)
+      const novatel_gps_msgs::msg::Gprmc& gprmc,
+      const novatel_gps_msgs::msg::Gpgga& gpgga,
+      const gps_msgs::msg::GPSFix::UniquePtr& gps_fix)
   {
     gps_fix->header.stamp = gpgga.header.stamp;
     gps_fix->altitude = gpgga.alt;
@@ -585,15 +592,15 @@ namespace novatel_gps_driver
 
     switch (gpgga.gps_qual)
     {
-      case novatel_gps_msgs::Gpgga::GPS_QUAL_INVALID:
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_NO_FIX;
+      case novatel_gps_msgs::msg::Gpgga::GPS_QUAL_INVALID:
+        gps_fix->status.status = gps_msgs::msg::GPSStatus::STATUS_NO_FIX;
         break;
-      case novatel_gps_msgs::Gpgga::GPS_QUAL_WASS:
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_WAAS_FIX;
+      case novatel_gps_msgs::msg::Gpgga::GPS_QUAL_WASS:
+        gps_fix->status.status = gps_msgs::msg::GPSStatus::STATUS_WAAS_FIX;
         break;
       default:
         // Other statuses don't seem to have an exact equivalent, so map them all to STATUS_FIX
-        gps_fix->status.status = gps_common::GPSStatus::STATUS_FIX;
+        gps_fix->status.status = gps_msgs::msg::GPSStatus::STATUS_FIX;
         break;
     }
     gps_fix->status.satellites_used = static_cast<uint16_t>(gpgga.num_sats);

@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -27,9 +27,10 @@
 //
 // *****************************************************************************
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/header.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::InsstdevParser::MESSAGE_NAME = "INSSTDEV";
 
@@ -43,7 +44,7 @@ const std::string novatel_gps_driver::InsstdevParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::InsstdevPtr
+novatel_gps_driver::InsstdevParser::MessageType
 novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   if (bin_msg.data_.size() != BINARY_LENGTH)
@@ -52,7 +53,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
     error << "Unexpected INSSTDEV message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::InsstdevPtr ros_msg = boost::make_shared<novatel_gps_msgs::Insstdev>();
+  auto ros_msg = std::make_shared<novatel_gps_msgs::msg::Insstdev>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
@@ -72,7 +73,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
   return ros_msg;
 }
 
-novatel_gps_msgs::InsstdevPtr
+novatel_gps_driver::InsstdevParser::MessageType
 novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.body.size() != ASCII_FIELDS)
@@ -81,7 +82,7 @@ novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::Novatel
     error << "Unexpected number of fields in INSSTDEV log: " << sentence.body.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::InsstdevPtr msg = boost::make_shared<novatel_gps_msgs::Insstdev>();
+  auto msg = std::make_shared<novatel_gps_msgs::msg::Insstdev>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

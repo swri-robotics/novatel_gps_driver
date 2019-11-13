@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -31,21 +31,21 @@
 #define NOVATEL_GPS_DRIVER_GPGGA_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/Gpgga.h>
+#include <novatel_gps_msgs/msg/gpgga.hpp>
 
 namespace novatel_gps_driver
 {
-  class GpggaParser : public MessageParser<novatel_gps_msgs::GpggaPtr>
+  class GpggaParser : public MessageParser<novatel_gps_msgs::msg::Gpgga::UniquePtr>
   {
   public:
-    GpggaParser(): MessageParser<novatel_gps_msgs::GpggaPtr>(),
+    GpggaParser(): MessageParser<MessageType>(),
                    was_last_gps_valid_(false)
     {}
     uint32_t GetMessageId() const override;
 
     const std::string GetMessageName() const override;
 
-    novatel_gps_msgs::GpggaPtr ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
+    MessageType ParseAscii(const NmeaSentence& sentence) noexcept(false) override;
 
     bool WasLastGpsValid() const;
 

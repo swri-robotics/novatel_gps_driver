@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2017, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,10 @@
 // *****************************************************************************
 
 
+#include <sstream>
+
 #include <novatel_gps_driver/parsers/bestvel.h>
 #include <novatel_gps_driver/parsers/header.h>
-#include <boost/make_shared.hpp>
 
 const std::string novatel_gps_driver::BestvelParser::MESSAGE_NAME = "BESTVEL";
 
@@ -44,7 +45,7 @@ const std::string novatel_gps_driver::BestvelParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
+novatel_gps_driver::BestvelParser::MessageType novatel_gps_driver::BestvelParser::ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
 {
   if (bin_msg.data_.size() != BINARY_LENGTH)
   {
@@ -52,7 +53,7 @@ novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBin
     error << "Unexpected velocity message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  novatel_gps_msgs::NovatelVelocityPtr ros_msg = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+  auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -82,9 +83,9 @@ novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseBin
   return ros_msg;
 }
 
-novatel_gps_msgs::NovatelVelocityPtr novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
+novatel_gps_driver::BestvelParser::MessageType novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
 {
-  novatel_gps_msgs::NovatelVelocityPtr msg = boost::make_shared<novatel_gps_msgs::NovatelVelocity>();
+  auto msg = std::make_unique<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 
