@@ -1,4 +1,6 @@
-NovAtel GPS Driver [![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=master)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
+NovAtel GPS Driver
+[![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=master)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
+[![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=dashing-devel)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
 ==================
 
 Overview
@@ -27,8 +29,9 @@ or failure in using this with other devices so we can update this page appropria
 Usage
 -----
 
-The driver should function on ROS Kinetic and Melodic, and binary packages are available
-for both of them.  To install them, first install ROS, then just run:
+The `master` branch for this driver functions on ROS Kinetic and Melodic;
+`dashing-devel` supports ROS 2 Dashing.  To install the binary packages, first install ROS,
+then just run:
 
 ```bash
 sudo apt-get install ros-${ROS_DISTRO}-novatel-gps-driver
