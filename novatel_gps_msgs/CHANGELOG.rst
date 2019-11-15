@@ -2,6 +2,9 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 4.0.0 (2019-11-13)
 ------------------
 * ROS2 Dashing support (`#61 <https://github.com/pjreed/novatel_gps_driver/issues/61>`_)

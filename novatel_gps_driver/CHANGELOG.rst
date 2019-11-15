@@ -2,6 +2,12 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Add missing dependencies (`#66 <https://github.com/swri-robotics/novatel_gps_driver/issues/66>`_)
+* Add epson g370 (`#63 <https://github.com/swri-robotics/novatel_gps_driver/issues/63>`_)
+* Contributors: P. J. Reed, icolwell-as
+
 4.0.0 (2019-11-13)
 ------------------
 * ROS2 Dashing support (`#61 <https://github.com/pjreed/novatel_gps_driver/issues/61>`_)
