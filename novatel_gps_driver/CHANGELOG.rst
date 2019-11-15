@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.0.1 (2019-11-15)
+------------------
 * Add missing dependencies (`#66 <https://github.com/swri-robotics/novatel_gps_driver/issues/66>`_)
 * Add epson g370 (`#63 <https://github.com/swri-robotics/novatel_gps_driver/issues/63>`_)
 * Contributors: P. J. Reed, icolwell-as
