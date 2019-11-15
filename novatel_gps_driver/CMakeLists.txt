@@ -97,6 +97,10 @@ target_link_libraries(${PROJECT_NAME}_nodes
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
   find_package(ament_index_cpp REQUIRED)
+  find_package(ament_lint_auto REQUIRED)
+
+  set(ament_cmake_copyright_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
 
   ament_add_gtest(parser_tests test/parser_tests.cpp)
   target_link_libraries(parser_tests
