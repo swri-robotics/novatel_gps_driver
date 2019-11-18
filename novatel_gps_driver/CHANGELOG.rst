@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.0.2 (2019-11-18)
+------------------
 * Add dependency on tf2_geometry_msgs (`#67 <https://github.com/swri-robotics/novatel_gps_driver/issues/67>`_)
 * Contributors: P. J. Reed
 
