@@ -327,8 +327,8 @@ namespace novatel_gps_driver
     // both a gpgga and a gprmc message are required to fill the GPSFix message
     while (!gpgga_sync_buffer_.empty() && !gprmc_sync_buffer_.empty())
     {
-      double gpgga_time = gpgga_sync_buffer_.front().utc_seconds;
-      double gprmc_time = gprmc_sync_buffer_.front().utc_seconds;
+      double gpgga_time = UtcFloatToSeconds(gpgga_sync_buffer_.front().utc_seconds);
+      double gprmc_time = UtcFloatToSeconds(gprmc_sync_buffer_.front().utc_seconds);
 
       // Find the time difference between gpgga and gprmc time
       double dt = gpgga_time - gprmc_time;
@@ -1158,12 +1158,14 @@ namespace novatel_gps_driver
     {
       auto gpgga = gpgga_parser_.ParseAscii(sentence);
 
-      if (most_recent_utc_time < gpgga->utc_seconds)
+      auto gpgga_time = UtcFloatToSeconds(gpgga->utc_seconds);
+
+      if (most_recent_utc_time < gpgga_time)
       {
-        most_recent_utc_time = gpgga->utc_seconds;
+        most_recent_utc_time = gpgga_time;
       }
 
-      gpgga->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gpgga->utc_seconds);
+      gpgga->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gpgga_time);
 
       if (gpgga_parser_.WasLastGpsValid())
       {
@@ -1182,12 +1184,14 @@ namespace novatel_gps_driver
     {
       auto gprmc = gprmc_parser_.ParseAscii(sentence);
 
-      if (most_recent_utc_time < gprmc->utc_seconds)
+      auto gprmc_time = UtcFloatToSeconds(gprmc->utc_seconds);
+
+      if (most_recent_utc_time < gprmc_time)
       {
-        most_recent_utc_time = gprmc->utc_seconds;
+        most_recent_utc_time = gprmc_time;
       }
 
-      gprmc->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gprmc->utc_seconds);
+      gprmc->header.stamp = stamp - std::chrono::duration<double>(most_recent_utc_time - gprmc_time);
 
       if (gprmc_parser_.WasLastGpsValid())
       {
