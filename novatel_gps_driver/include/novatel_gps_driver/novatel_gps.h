@@ -509,7 +509,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::NovatelXYZPtr> novatel_xyz_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelUtmPositionPtr> novatel_utm_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
-      boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> position_sync_buffer_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> bestpos_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
