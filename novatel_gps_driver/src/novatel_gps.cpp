@@ -393,7 +393,7 @@ namespace novatel_gps_driver
             // The position message is more than tol older than the gpgga message,
             // discard it and continue
             ROS_DEBUG("Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
-            position_sync_buffer_.pop_front();
+            bestpos_sync_buffer_.pop_front();
           }
           else
           {
