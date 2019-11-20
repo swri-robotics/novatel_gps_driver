@@ -7,7 +7,10 @@
       verbose: false
       connection_type: serial
       device: /dev/ttyUSB0
+      use_binary_messages: false
       publish_novatel_positions: true
+      publish_novatel_velocity: true
+      publish_novatel_psrdop2: true
       frame_id: /gps
     </rosparam>
   </node>
