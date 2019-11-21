@@ -388,25 +388,26 @@ namespace novatel_gps_driver
       gpsFix->status.satellites_visible = bestpos->num_satellites_tracked;
       gpsFix->status.satellites_used = bestpos->num_satellites_used_in_solution;
 
-      // We have a position message, so we can calculate variances
-      // from the standard deviations
       double sigma_x = bestpos->lon_sigma;
-      gpsFix->position_covariance[0] = sigma_x * sigma_x;
+      double sigma_x_squared = sigma_x * sigma_x;
+      gpsFix->position_covariance[0] = sigma_x_squared;
 
       double sigma_y = bestpos->lat_sigma;
-      gpsFix->position_covariance[4] = sigma_y * sigma_y;
+      double sigma_y_squared = sigma_y * sigma_y;
+      gpsFix->position_covariance[4] = sigma_y_squared;
 
       double sigma_z = bestpos->height_sigma;
       gpsFix->position_covariance[8] = sigma_z * sigma_z;
 
-      // 2D and 3D error values are the DRMS and and MRSE as described in
-      // https://www.novatel.com/assets/Documents/Bulletins/apn029.pdf
-      double horz_sum = std::pow(bestpos->lat_sigma, 2) + std::pow(bestpos->lon_sigma, 2);
-      gpsFix->err_horz = std::sqrt(horz_sum);
+      // See https://www.novatel.com/assets/Documents/Bulletins/apn029.pdf for info about errors
+      // 2D error is 2*DRMS, or 95% probability
+      gpsFix->err_horz = 2.0 * std::sqrt(sigma_x_squared + sigma_y_squared);
 
-      gpsFix->err = std::sqrt(horz_sum + std::pow(bestpos->height_sigma, 2));
+      // 3D error is 90% spherical accuracy standard
+      gpsFix->err = 0.833 * (sigma_x + sigma_y + sigma_z);
 
-      gpsFix->err_vert = bestpos->height_sigma;
+      // Vertical error is 2*sigma for 95% probability
+      gpsFix->err_vert = 2.0 * sigma_z;
 
       gpsFix->position_covariance_type =
           gps_msgs::msg::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
