@@ -90,12 +90,14 @@ novatel_gps_driver::GpgsvParser::MessageType novatel_gps_driver::GpgsvParser::Pa
   {
     n_sats_in_sentence = msg->n_satellites % static_cast<uint8_t>(4);
   }
-  if (n_sats_in_sentence == 0)
-  {
-    n_sats_in_sentence = 4;
-  }
   // Check that the sentence is the right length for the number of satellites
   size_t expected_length = MIN_LENGTH + 4 * n_sats_in_sentence;
+  if (n_sats_in_sentence == 0)
+  {
+    // Even if the number of sats is 0, the message will still have enough
+    // blank fields for 1 satellite.
+    expected_length += 4;
+  }
   if (sentence.body.size() != expected_length && sentence.body.size() != expected_length -1)
   {
     std::stringstream ss;
