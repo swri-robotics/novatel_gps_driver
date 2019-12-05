@@ -180,7 +180,8 @@ TEST(ParserTestSuite, testCorrimudataAsciiParsing)
 TEST(ParserTestSuite, testGpgsvParsing)
 {
   novatel_gps_driver::GpgsvParser parser;
-  std::string sentence_str = "$GPGSV,3,3,11,12,07,00.,32,13,03,227,36,22,0.,041,*4A\r\n";
+  std::string sentence_str = "$GPGSV,3,3,11,12,07,00.,32,13,03,227,36,22,0.,041,*4A\r\n"
+                             "$GPGSV,1,1,00,,,,*79\r\n";
   std::string extracted_str;
 
   novatel_gps_driver::NovatelMessageExtractor extractor;
@@ -193,7 +194,7 @@ TEST(ParserTestSuite, testGpgsvParsing)
   extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
                                     binary_messages, remaining);
 
-  ASSERT_EQ(1, nmea_sentences.size());
+  ASSERT_EQ(2, nmea_sentences.size());
   ASSERT_EQ(0, binary_messages.size());
   ASSERT_EQ(0, novatel_sentences.size());
 
@@ -222,6 +223,11 @@ TEST(ParserTestSuite, testGpgsvParsing)
   ASSERT_EQ(0, msg->satellites[2].elevation);
   ASSERT_EQ(41, msg->satellites[2].azimuth);
   ASSERT_EQ(-1, msg->satellites[2].snr);
+
+  msg = parser.ParseAscii(nmea_sentences.at(1));
+
+  ASSERT_NE(msg.get(), nullptr);
+  ASSERT_EQ(0, msg->satellites.size());
 }
 
 TEST(ParserTestSuite, testGphdtParsing)
