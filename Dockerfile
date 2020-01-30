@@ -1,4 +1,4 @@
-#  Copyright (C) 2018-2019 LEIDOS.
+#  Copyright (C) 2018-2020 LEIDOS.
 # 
 #  Licensed under the Apache License, Version 2.0 (the "License"); you may not
 #  use this file except in compliance with the License. You may obtain a copy of
@@ -12,7 +12,7 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:3.4.0 as deps
+FROM usdotfhwastol/carma-base:3.6.0 as deps
 
 FROM deps as setup
 
