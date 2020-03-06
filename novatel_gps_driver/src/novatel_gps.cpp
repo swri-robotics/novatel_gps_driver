@@ -985,10 +985,6 @@ namespace novatel_gps_driver
       double ros_pitch = -(inspva->pitch);
       double ros_yaw = (90 - inspva->azimuth); // ENU frame
 
-      double ros_roll_sigma = latest_insstdev_->roll_dev;
-      double ros_pitch_sigma = latest_insstdev_->pitch_dev;
-      double ros_yaw_sigma = latest_insstdev_->azimuth_dev;
-
       double ros_roll_rate = corrimudata->roll_rate;
       double ros_pitch_rate = -(corrimudata->pitch_rate);
       double ros_yaw_rate = corrimudata->yaw_rate;
@@ -1007,6 +1003,10 @@ namespace novatel_gps_driver
       }
       else if (latest_insstdev_)
       {
+        double ros_roll_sigma = latest_insstdev_->roll_dev;
+        double ros_pitch_sigma = latest_insstdev_->pitch_dev;
+        double ros_yaw_sigma = latest_insstdev_->azimuth_dev;
+
         imu->orientation_covariance[0] = std::pow(2, ros_roll_sigma);
         imu->orientation_covariance[4] = std::pow(2, ros_pitch_sigma);
         imu->orientation_covariance[8] = std::pow(2, ros_yaw_sigma);
@@ -1018,9 +1018,9 @@ namespace novatel_gps_driver
         imu->orientation_covariance[8] = 1e-3;
       }
 
-      imu->angular_velocity.x = corrimudata->ros_roll_rate * imu_rate_;
-      imu->angular_velocity.y = corrimudata->ros_pitch_rate * imu_rate_;
-      imu->angular_velocity.z = corrimudata->ros_yaw_rate * imu_rate_;
+      imu->angular_velocity.x = ros_roll_rate * imu_rate_;
+      imu->angular_velocity.y = ros_pitch_rate * imu_rate_;
+      imu->angular_velocity.z = ros_yaw_rate * imu_rate_;
       imu->angular_velocity_covariance[0] =
       imu->angular_velocity_covariance[4] =
       imu->angular_velocity_covariance[8] = 1e-3;
