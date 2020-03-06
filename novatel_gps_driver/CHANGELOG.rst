@@ -2,6 +2,13 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Handle GPGSV log with 0 satellites correctly (`#77 <https://github.com/pjreed/novatel_gps_driver/issues/77>`_)
+* Fill out error measurements in GPSFix messages (`#71 <https://github.com/pjreed/novatel_gps_driver/issues/71>`_)
+* Fix covariance in GPSFix messages (`#69 <https://github.com/pjreed/novatel_gps_driver/issues/69>`_)
+* Contributors: P. J. Reed
+
 4.0.2 (2019-11-18)
 ------------------
 * Add dependency on tf2_geometry_msgs (`#67 <https://github.com/swri-robotics/novatel_gps_driver/issues/67>`_)
