@@ -77,7 +77,7 @@ namespace novatel_gps_driver
       * @return false if there were any errors parsing sentences
       */
     bool ExtractCompleteMessages(
-        const std::string input,
+        const std::string& input,
         std::vector<NmeaSentence>& nmea_sentences,
         std::vector<NovatelSentence>& novatel_sentences,
         std::vector<BinaryMessage>& binary_messages,
@@ -103,7 +103,7 @@ namespace novatel_gps_driver
     void GetGpsFixMessage(
         const novatel_gps_msgs::Gprmc& gprmc,
         const novatel_gps_msgs::Gpgga& gpgga,
-        gps_common::GPSFixPtr gps_fix);
+        const gps_common::GPSFixPtr& gps_fix);
 
   private:
     // Constants for parsing message structures

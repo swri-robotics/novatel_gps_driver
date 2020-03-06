@@ -46,6 +46,7 @@
 
 #include <novatel_gps_msgs/Gpgga.h>
 #include <novatel_gps_msgs/Gpgsa.h>
+#include <novatel_gps_msgs/Gphdt.h>
 #include <novatel_gps_msgs/Gprmc.h>
 #include <novatel_gps_msgs/Inspva.h>
 #include <novatel_gps_msgs/Inspvax.h>
@@ -70,6 +71,7 @@
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
+#include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/parsers/gprmc.h>
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
@@ -161,6 +163,12 @@ namespace novatel_gps_driver
        * @param[out] gpgsv_messages New GPGSV messages.
        */
       void GetGpgsvMessages(std::vector<novatel_gps_msgs::GpgsvPtr>& gpgsv_messages);
+      /**
+       * @brief Provides any GPHDT messages that have been received since the
+       * last time this was called.
+       * @param[out] gpgsv_messages New GPHDT messages.
+       */
+      void GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages);
       /**
        * @brief Provides any GPRMC messages that have been received since the
        * last time this was called.
@@ -385,7 +393,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseBinaryMessage(const BinaryMessage& msg,
-                                                const ros::Time& stamp) throw(ParseException);
+                                                const ros::Time& stamp) noexcept(false);
       /**
        * @brief Converts an NMEA sentence into a ROS message of the appropriate type and
        * places it in the appropriate buffer.
@@ -397,7 +405,7 @@ namespace novatel_gps_driver
        */
       NovatelGps::ReadResult ParseNmeaSentence(const NmeaSentence& sentence,
                                                const ros::Time& stamp,
-                                               double most_recent_utc_time) throw(ParseException);
+                                               double most_recent_utc_time) noexcept(false);
       /**
        * @brief Converts a NovatelSentence object into a ROS message of the appropriate type
        * and places it in the appropriate buffer.
@@ -406,7 +414,7 @@ namespace novatel_gps_driver
        * @return A value indicating the success of the operation.
        */
       NovatelGps::ReadResult ParseNovatelSentence(const NovatelSentence& sentence,
-                                                  const ros::Time& stamp) throw(ParseException);
+                                                  const ros::Time& stamp) noexcept(false);
 
       /**
        * @brief Reads data from a connected NovAtel device.  Any read data will be appended to
@@ -472,6 +480,7 @@ namespace novatel_gps_driver
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;
+      GphdtParser gphdt_parser_;
       GprmcParser gprmc_parser_;
       InscovParser inscov_parser_;
       InspvaParser inspva_parser_;
@@ -488,6 +497,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::GphdtPtr> gphdt_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
       boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
       boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
@@ -499,7 +509,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::NovatelXYZPtr> novatel_xyz_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelUtmPositionPtr> novatel_utm_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
-      boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> position_sync_buffer_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> bestpos_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
