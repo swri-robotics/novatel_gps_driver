@@ -981,9 +981,21 @@ namespace novatel_gps_driver
       sensor_msgs::ImuPtr imu = boost::make_shared<sensor_msgs::Imu>();
 
       imu->header.stamp = corrimudata->header.stamp;
-      imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(inspva->roll * DEGREES_TO_RADIANS,
-                                              -(inspva->pitch) * DEGREES_TO_RADIANS,
-                                              -(inspva->azimuth) * DEGREES_TO_RADIANS);
+      double ros_roll = inspva->roll;
+      double ros_pitch = -(inspva->pitch);
+      double ros_yaw = (90 - inspva->azimuth); // ENU frame
+
+      double ros_roll_rate = corrimudata->roll_rate;
+      double ros_pitch_rate = -(corrimudata->pitch_rate);
+      double ros_yaw_rate = corrimudata->yaw_rate;
+
+      double ros_longitudinal_accel = corrimudata->longitudinal_acceleration;
+      double ros_lateral_accel = -(corrimudata->lateral_acceleration);
+      double ros_vertical_accel = corrimudata->vertical_acceleration;
+
+      imu->orientation = tf::createQuaternionMsgFromRollPitchYaw(ros_roll * DEGREES_TO_RADIANS,
+                                              ros_pitch * DEGREES_TO_RADIANS,
+                                              ros_yaw * DEGREES_TO_RADIANS);
 
       if (latest_inscov_)
       {
@@ -991,9 +1003,13 @@ namespace novatel_gps_driver
       }
       else if (latest_insstdev_)
       {
-        imu->orientation_covariance[0] = std::pow(2, latest_insstdev_->pitch_dev);
-        imu->orientation_covariance[4] = std::pow(2, latest_insstdev_->roll_dev);
-        imu->orientation_covariance[8] = std::pow(2, latest_insstdev_->azimuth_dev);
+        double ros_roll_sigma = latest_insstdev_->roll_dev;
+        double ros_pitch_sigma = latest_insstdev_->pitch_dev;
+        double ros_yaw_sigma = latest_insstdev_->azimuth_dev;
+
+        imu->orientation_covariance[0] = std::pow(2, ros_roll_sigma);
+        imu->orientation_covariance[4] = std::pow(2, ros_pitch_sigma);
+        imu->orientation_covariance[8] = std::pow(2, ros_yaw_sigma);
       }
       else
       {
@@ -1002,16 +1018,16 @@ namespace novatel_gps_driver
         imu->orientation_covariance[8] = 1e-3;
       }
 
-      imu->angular_velocity.x = corrimudata->pitch_rate * imu_rate_;
-      imu->angular_velocity.y = corrimudata->roll_rate * imu_rate_;
-      imu->angular_velocity.z = corrimudata->yaw_rate * imu_rate_;
+      imu->angular_velocity.x = ros_roll_rate * imu_rate_;
+      imu->angular_velocity.y = ros_pitch_rate * imu_rate_;
+      imu->angular_velocity.z = ros_yaw_rate * imu_rate_;
       imu->angular_velocity_covariance[0] =
       imu->angular_velocity_covariance[4] =
       imu->angular_velocity_covariance[8] = 1e-3;
 
-      imu->linear_acceleration.x = corrimudata->lateral_acceleration * imu_rate_;
-      imu->linear_acceleration.y = corrimudata->longitudinal_acceleration * imu_rate_;
-      imu->linear_acceleration.z = corrimudata->vertical_acceleration * imu_rate_;
+      imu->linear_acceleration.x = ros_longitudinal_accel * imu_rate_;
+      imu->linear_acceleration.y = ros_lateral_accel * imu_rate_;
+      imu->linear_acceleration.z = ros_vertical_accel * imu_rate_;
       imu->linear_acceleration_covariance[0] =
       imu->linear_acceleration_covariance[4] =
       imu->linear_acceleration_covariance[8] = 1e-3;
