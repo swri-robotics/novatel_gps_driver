@@ -2,6 +2,18 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.9.0 (2019-09-04)
+------------------
+* Use GPGGA quality to set GPSFix status (`#55 <https://github.com/swri-robotics/novatel_gps_driver/issues/55>`_)
+* Publish INSPVAX logs (`#54 <https://github.com/swri-robotics/novatel_gps_driver/issues/54>`_)
+* Add GPHDT message (`#51 <https://github.com/swri-robotics/novatel_gps_driver/issues/51>`_)
+* Fix ascii header message id in novatel_gps.cpp (`#50 <https://github.com/swri-robotics/novatel_gps_driver/issues/50>`_)
+* Correctly convert novatel header flags to bool and add tests for them (`#48 <https://github.com/swri-robotics/novatel_gps_driver/issues/48>`_)
+* Add DUALANTENNAHEADING msg (`#46 <https://github.com/swri-robotics/novatel_gps_driver/issues/46>`_)
+* Add HEADING2 msg (`#43 <https://github.com/swri-robotics/novatel_gps_driver/issues/43>`_)
+* Add BESTXYZ msg (`#42 <https://github.com/swri-robotics/novatel_gps_driver/issues/42>`_)
+* Contributors: Marcel Zeilinger, Matthew, Michael McConnell, P. J. Reed
+
 3.8.0 (2019-06-04)
 ------------------
 * Add fix for messages build order (`#41 <https://github.com/swri-robotics/novatel_gps_driver/issues/41>`_)

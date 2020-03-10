@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::GpgsaParser::GetMessageName() const
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::GpgsaPtr novatel_gps_driver::GpgsaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) throw(ParseException)
+novatel_gps_msgs::GpgsaPtr novatel_gps_driver::GpgsaParser::ParseAscii(const novatel_gps_driver::NmeaSentence& sentence) noexcept(false)
 {
   // Check the length first -- should be 18 elements long
   const size_t LENGTH = 18;

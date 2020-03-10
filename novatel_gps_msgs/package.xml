@@ -1,17 +1,19 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>novatel_gps_msgs</name>
-  <version>3.8.0</version>
+  <version>3.9.0</version>
   <description>
   Messages for proprietary (non-NMEA) sentences from Novatel GPS receivers.
   </description>
+
   <maintainer email="preed@swri.org">P. J. Reed</maintainer>
-  <license>Southwest Research Institute Proprietary</license>
-  <url type="repository">https://ivs-git.dyn.datasys.swri.edu/uss/novatel_gps.git</url>
+
+  <license>BSD</license>
+
+  <url type="repository">https://github.com/swri-robotics/novatel_gps_driver</url>
   
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>message_generation</build_depend>
   <depend>std_msgs</depend>
   <exec_depend>message_runtime</exec_depend>
-
 </package>
