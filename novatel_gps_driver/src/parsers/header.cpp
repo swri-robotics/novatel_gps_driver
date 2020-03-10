@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::HeaderParser::GetMessageName() const
 }
 
 novatel_gps_msgs::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseBinary(
-    const novatel_gps_driver::BinaryMessage& bin_msg) throw(ParseException)
+    const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   // No point in checking whether the port identifier is valid here, because
   // the variable's range is 0-255 and this array has 256 values in it.
@@ -101,7 +101,7 @@ novatel_gps_msgs::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseBi
 }
 
 novatel_gps_msgs::NovatelMessageHeader novatel_gps_driver::HeaderParser::ParseAscii(
-    const novatel_gps_driver::NovatelSentence& sentence) throw(ParseException)
+    const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.header.size() != NOVATEL_MESSAGE_HEADER_LENGTH)
   {

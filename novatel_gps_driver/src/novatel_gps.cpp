@@ -48,16 +48,18 @@ namespace novatel_gps_driver
       wait_for_position_(false),
       connection_(SERIAL),
       is_connected_(false),
+      imu_rate_forced_(false),
       utc_offset_(0),
       serial_baud_(115200),
       tcp_socket_(io_service_),
-      pcap_(NULL),
+      pcap_(nullptr),
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgga_sync_buffer_(SYNC_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
+      gphdt_msgs_(MAX_BUFFER_SIZE),
       gprmc_msgs_(MAX_BUFFER_SIZE),
       gprmc_sync_buffer_(SYNC_BUFFER_SIZE),
       imu_msgs_(MAX_BUFFER_SIZE),
@@ -65,18 +67,17 @@ namespace novatel_gps_driver
       inspva_msgs_(MAX_BUFFER_SIZE),
       inspvax_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
-      heading2_msgs_(MAX_BUFFER_SIZE),
-      dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
       novatel_xyz_positions_(MAX_BUFFER_SIZE),
       novatel_utm_positions_(MAX_BUFFER_SIZE),
       novatel_velocities_(MAX_BUFFER_SIZE),
-      position_sync_buffer_(SYNC_BUFFER_SIZE),
+      bestpos_sync_buffer_(SYNC_BUFFER_SIZE),
+      heading2_msgs_(MAX_BUFFER_SIZE),
+      dual_antenna_heading_msgs_(MAX_BUFFER_SIZE),
       range_msgs_(MAX_BUFFER_SIZE),
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0),
-      imu_rate_forced_(false),
       apply_vehicle_body_rotation_(false)
   {
   }
@@ -173,10 +174,10 @@ namespace novatel_gps_driver
     }
     else if (connection_ == PCAP)
     {
-      if (pcap_ != NULL)
+      if (pcap_ != nullptr)
       {
         pcap_close(pcap_);
-        pcap_ = NULL;
+        pcap_ = nullptr;
       }
     }
     is_connected_ = false;
@@ -328,8 +329,8 @@ namespace novatel_gps_driver
     // both a gpgga and a gprmc message are required to fill the GPSFix message
     while (!gpgga_sync_buffer_.empty() && !gprmc_sync_buffer_.empty())
     {
-      double gpgga_time = gpgga_sync_buffer_.front().utc_seconds;
-      double gprmc_time = gprmc_sync_buffer_.front().utc_seconds;
+      double gpgga_time = UtcFloatToSeconds(gpgga_sync_buffer_.front().utc_seconds);
+      double gprmc_time = UtcFloatToSeconds(gprmc_sync_buffer_.front().utc_seconds);
 
       // Find the time difference between gpgga and gprmc time
       double dt = gpgga_time - gprmc_time;
@@ -359,21 +360,20 @@ namespace novatel_gps_driver
       else // The gpgga and gprmc messages are synced
       {
         bool has_position = false;
-        bool pop_position = false;
 
-        // Iterate over the position message buffer until we find one
+        // Iterate over the bestpos message buffer until we find one
         // that is synced with the gpgga message
-        while (!position_sync_buffer_.empty())
+        while (!bestpos_sync_buffer_.empty())
         {
           // Calculate UTC position time from GPS seconds by subtracting out
           // full days and applying the UTC offset
-          double gps_seconds = position_sync_buffer_.front()->novatel_msg_header.gps_seconds + utc_offset_;
+          double gps_seconds = bestpos_sync_buffer_.front()->novatel_msg_header.gps_seconds + utc_offset_;
           if (gps_seconds < 0)
           {
               // Handle times around week boundaries
               gps_seconds = gps_seconds + 604800;  // 604800 = 7 * 24 * 60 * 60 (seconds in a week)
           }
-          int32_t days = static_cast<int32_t>(gps_seconds / 86400.0);
+          auto days = static_cast<int32_t>(gps_seconds / 86400.0);
           double position_time = gps_seconds - days * 86400.0;
 
           // Find the time difference between gpgga and position time
@@ -387,25 +387,19 @@ namespace novatel_gps_driver
           {
             pos_dt += 86400.0;
           }
+
           if (pos_dt > gpgga_position_sync_tol_)
           {
             // The position message is more than tol older than the gpgga message,
             // discard it and continue
             ROS_DEBUG("Discarding a position message that is too old (%f < %f)", position_time, gpgga_time);
-            position_sync_buffer_.pop_front();
+            bestpos_sync_buffer_.pop_front();
           }
-          else if (-pos_dt > gpgga_position_sync_tol_)
+          else
           {
-            // The position message is more than tol ahead of the gpgga message,
-            // use it but don't pop it
-            ROS_DEBUG("Waiting because the most recent GPGGA message is too old (%f > %f)", position_time, gpgga_time);
+            // There's a bestpos message that is close enough to the GPGGA message to use it
+            // It's ok if it's far ahead (even though that's weird), it's better than nothing
             has_position = true;
-            break;
-          }
-          else //the gpgga and position tol messages are in sync
-          {
-            has_position = true;
-            pop_position = true;
             break;
           }
         }
@@ -428,24 +422,29 @@ namespace novatel_gps_driver
 
           if (has_position)
           {
+            auto& position = bestpos_sync_buffer_.front();
             // We have a position message, so we can calculate variances
             // from the standard deviations
-            double sigma_x = position_sync_buffer_.front()->lon_sigma;
+            double sigma_x = position->lon_sigma;
             gps_fix->position_covariance[0] = sigma_x * sigma_x;
 
-            double sigma_y = position_sync_buffer_.front()->lat_sigma;
+            double sigma_y = position->lat_sigma;
             gps_fix->position_covariance[4] = sigma_y * sigma_y;
 
-            double sigma_z = position_sync_buffer_.front()->height_sigma;
+            double sigma_z = position->height_sigma;
             gps_fix->position_covariance[8] = sigma_z * sigma_z;
+
+            // 2D and 3D error values are the DRMS and and MRSE as described in
+            // https://www.novatel.com/assets/Documents/Bulletins/apn029.pdf
+            double horz_sum = std::pow(position->lat_sigma, 2) + std::pow(position->lon_sigma, 2);
+            gps_fix->err_horz = std::sqrt(horz_sum);
+
+            gps_fix->err = std::sqrt(horz_sum + std::pow(position->height_sigma, 2));
+
+            gps_fix->err_vert = position->height_sigma;
 
             gps_fix->position_covariance_type =
                 gps_common::GPSFix::COVARIANCE_TYPE_DIAGONAL_KNOWN;
-
-            if (pop_position)
-            {
-              position_sync_buffer_.pop_front();
-            }
           }
 
           // Add the message to the fix message list
@@ -498,6 +497,13 @@ namespace novatel_gps_driver
     gpgsv_messages.resize(gpgsv_msgs_.size());
     std::copy(gpgsv_msgs_.begin(), gpgsv_msgs_.end(), gpgsv_messages.begin());
     gpgsv_msgs_.clear();
+  }
+
+  void NovatelGps::GetGphdtMessages(std::vector<novatel_gps_msgs::GphdtPtr>& gphdt_messages)
+  {
+    gphdt_messages.resize(gphdt_msgs_.size());
+    std::copy(gphdt_msgs_.begin(), gphdt_msgs_.end(), gphdt_messages.begin());
+    gphdt_msgs_.clear();
   }
 
   void NovatelGps::GetGprmcMessages(std::vector<novatel_gps_msgs::GprmcPtr>& gprmc_messages)
@@ -567,7 +573,7 @@ namespace novatel_gps_driver
   {
     ROS_INFO("Opening pcap file: %s", device.c_str());
 
-    if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == NULL)
+    if ((pcap_ = pcap_open_offline(device.c_str(), pcap_errbuf_)) == nullptr)
     {
       ROS_FATAL("Unable to open pcap file.");
       return false;
@@ -598,7 +604,7 @@ namespace novatel_gps_driver
       if (!Configure(opts))
       {
         // We will not kill the connection here, because the device may already
-        // be setup to communicate correctly, but we will print a warning         
+        // be setup to communicate correctly, but we will print a warning
         ROS_ERROR("Failed to configure GPS. This port may be read only, or the "
                  "device may not be functioning as expected; however, the "
                  "driver may still function correctly if the port has already "
@@ -669,7 +675,7 @@ namespace novatel_gps_driver
       }
       else
       {
-        uint16_t port_num = static_cast<uint16_t>(strtoll(port.c_str(), NULL, 10));
+        auto port_num = static_cast<uint16_t>(strtoll(port.c_str(), nullptr, 10));
         if (connection_ == TCP)
         {
           boost::asio::ip::tcp::acceptor acceptor(io_service_,
@@ -792,8 +798,8 @@ namespace novatel_gps_driver
       result = pcap_next_ex(pcap_, &header, &pkt_data);
       if (result >= 0)
       {
-        struct iphdr* iph = (struct iphdr*)(pkt_data + sizeof(struct ethhdr));
-        uint32_t iphdrlen = iph->ihl * 4;
+        auto iph = reinterpret_cast<const iphdr*>(pkt_data + sizeof(struct ethhdr));
+        uint32_t iphdrlen = iph->ihl * 4u;
 
         switch (iph->protocol)
         {
@@ -818,10 +824,10 @@ namespace novatel_gps_driver
             bool store_packet = true;
             if (!last_tcp_packet_.empty())
             {
-              struct tcphdr* tcph = (struct tcphdr*) (pkt_data + iphdrlen + sizeof(struct ethhdr));
-              struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
-              uint32_t last_iphdrlen = last_iph->ihl * 4;
-              struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + last_iphdrlen);
+              auto tcph = reinterpret_cast<const tcphdr*>(pkt_data + iphdrlen + sizeof(struct ethhdr));
+              auto last_iph = reinterpret_cast<const iphdr*>(&(last_tcp_packet_[0]));
+              uint32_t last_iphdrlen = last_iph->ihl * 4u;
+              auto last_tcph = reinterpret_cast<const tcphdr*>(&(last_tcp_packet_[0]) + last_iphdrlen);
               uint16_t last_len = ntohs(static_cast<uint16_t>(last_iph->tot_len));
               uint16_t new_len = ntohs(static_cast<uint16_t>(iph->tot_len));
               uint32_t last_seq = ntohl(last_tcph->seq);
@@ -894,10 +900,10 @@ namespace novatel_gps_driver
         if (!last_tcp_packet_.empty())
         {
           // Don't forget to submit the last packet if we still have one!
-          struct iphdr* last_iph = (struct iphdr*) (&(last_tcp_packet_[0]));
-          uint32_t iphdrlen = last_iph->ihl * 4;
-          struct tcphdr* last_tcph = (struct tcphdr*) (&(last_tcp_packet_[0]) + iphdrlen);
-          uint32_t data_offset = last_tcph->doff * 4;
+          auto last_iph = reinterpret_cast<const iphdr*>(&(last_tcp_packet_[0]));
+          uint32_t iphdrlen = last_iph->ihl * 4u;
+          auto last_tcph = reinterpret_cast<const tcphdr*>(&(last_tcp_packet_[0]) + iphdrlen);
+          uint32_t data_offset = last_tcph->doff * 4u;
           data_buffer_.insert(data_buffer_.end(),
                               last_tcp_packet_.begin() + iphdrlen + data_offset,
                               last_tcp_packet_.end());
@@ -1034,7 +1040,7 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseBinaryMessage(const BinaryMessage& msg,
-                                                        const ros::Time& stamp) throw(ParseException)
+                                                        const ros::Time& stamp) noexcept(false)
   {
     switch (msg.header_.message_id_)
     {
@@ -1043,7 +1049,7 @@ namespace novatel_gps_driver
         novatel_gps_msgs::NovatelPositionPtr position = bestpos_parser_.ParseBinary(msg);
         position->header.stamp = stamp;
         novatel_positions_.push_back(position);
-        position_sync_buffer_.push_back(position);
+        bestpos_sync_buffer_.push_back(position);
         break;
       }
       case BestxyzParser::MESSAGE_ID:
@@ -1069,7 +1075,7 @@ namespace novatel_gps_driver
       }
       case Heading2Parser::MESSAGE_ID:
       {
-        novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
+	novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseBinary(msg);
         heading->header.stamp = stamp;
         heading2_msgs_.push_back(heading);
         break;
@@ -1165,18 +1171,20 @@ namespace novatel_gps_driver
 
   NovatelGps::ReadResult NovatelGps::ParseNmeaSentence(const NmeaSentence& sentence,
                                                        const ros::Time& stamp,
-                                                       double most_recent_utc_time) throw(ParseException)
+                                                       double most_recent_utc_time) noexcept(false)
   {
     if (sentence.id == GpggaParser::MESSAGE_NAME)
     {
       novatel_gps_msgs::GpggaPtr gpgga = gpgga_parser_.ParseAscii(sentence);
 
-      if (most_recent_utc_time < gpgga->utc_seconds)
+      auto gpgga_time = UtcFloatToSeconds(gpgga->utc_seconds);
+
+      if (most_recent_utc_time < gpgga_time)
       {
-        most_recent_utc_time = gpgga->utc_seconds;
+        most_recent_utc_time = gpgga_time;
       }
 
-      gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga->utc_seconds);
+      gpgga->header.stamp = stamp - ros::Duration(most_recent_utc_time - gpgga_time);
 
       if (gpgga_parser_.WasLastGpsValid())
       {
@@ -1195,12 +1203,14 @@ namespace novatel_gps_driver
     {
       novatel_gps_msgs::GprmcPtr gprmc = gprmc_parser_.ParseAscii(sentence);
 
-      if (most_recent_utc_time < gprmc->utc_seconds)
+      auto gprmc_time = UtcFloatToSeconds(gprmc->utc_seconds);
+
+      if (most_recent_utc_time < gprmc_time)
       {
-        most_recent_utc_time = gprmc->utc_seconds;
+        most_recent_utc_time = gprmc_time;
       }
 
-      gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc->utc_seconds);
+      gprmc->header.stamp = stamp - ros::Duration(most_recent_utc_time - gprmc_time);
 
       if (gprmc_parser_.WasLastGpsValid())
       {
@@ -1225,6 +1235,11 @@ namespace novatel_gps_driver
       novatel_gps_msgs::GpgsvPtr gpgsv = gpgsv_parser_.ParseAscii(sentence);
       gpgsv_msgs_.push_back(gpgsv);
     }
+    else if (sentence.id == GphdtParser::MESSAGE_NAME)
+    {
+      novatel_gps_msgs::GphdtPtr gphdt = gphdt_parser_.ParseAscii(sentence);
+      gphdt_msgs_.push_back(gphdt);
+    }
     else
     {
       ROS_DEBUG_STREAM("Unrecognized NMEA sentence " << sentence.id);
@@ -1234,16 +1249,16 @@ namespace novatel_gps_driver
   }
 
   NovatelGps::ReadResult NovatelGps::ParseNovatelSentence(const NovatelSentence& sentence,
-                                                          const ros::Time& stamp) throw(ParseException)
+                                                          const ros::Time& stamp) noexcept(false)
   {
     if (sentence.id == "BESTPOSA")
     {
       novatel_gps_msgs::NovatelPositionPtr position = bestpos_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
       novatel_positions_.push_back(position);
-      position_sync_buffer_.push_back(position);
+      bestpos_sync_buffer_.push_back(position);
     }
-    else if (sentence.id == "BESTXYZ")
+    else if (sentence.id == "BESTXYZA")
     {
       novatel_gps_msgs::NovatelXYZPtr position = bestxyz_parser_.ParseAscii(sentence);
       position->header.stamp = stamp;
@@ -1261,13 +1276,13 @@ namespace novatel_gps_driver
       velocity->header.stamp = stamp;
       novatel_velocities_.push_back(velocity);
     }
-    else if (sentence.id == "HEADING2")
+    else if (sentence.id == "HEADING2A")
     {
       novatel_gps_msgs::NovatelHeading2Ptr heading = heading2_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
       heading2_msgs_.push_back(heading);
     }
-    else if (sentence.id == "DUALANTENNAHEADING")
+    else if (sentence.id == "DUALANTENNAHEADINGA")
     {
       novatel_gps_msgs::NovatelDualAntennaHeadingPtr heading = dual_antenna_heading_parser_.ParseAscii(sentence);
       heading->header.stamp = stamp;
@@ -1368,19 +1383,20 @@ namespace novatel_gps_driver
         { "52", std::pair<double, std::string>(200, "Litef microIMU") },
         { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
         { "58", std::pair<double, std::string>(200, "Honeywell HG4930 AN01") },
+        { "61", std::pair<double, std::string>(100, "Epson G370N") },
        };
-      
+
       // Parse out the IMU type then save it, we don't care about the rest (3rd field)
       std::string id = sentence.body.size() > 1 ? sentence.body[1] : "";
       if (rates.find(id) != rates.end())
       {
         double rate = rates[id].first;
- 
+
         ROS_INFO("IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
-        
-        // Set the rate only if it hasnt been forced already
-        if (imu_rate_forced_ == false)
-        {        
+
+        // Set the rate only if it hasn't been forced already
+        if (!imu_rate_forced_)
+        {
           SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
         }
       }
@@ -1460,11 +1476,18 @@ namespace novatel_gps_driver
       configured = configured && Write("applyvehiclebodyrotation\r\n");
     }
 
-    for(NovatelMessageOpts::const_iterator option = opts.begin(); option != opts.end(); ++option)
+    for(const auto& option : opts)
     {
       std::stringstream command;
       command << std::setprecision(3);
-      command << "log " << option->first << " ontime " << option->second << "\r\n";
+      if (option.first.find("heading2") != std::string::npos)
+      {
+      	command << "log " << option.first << " onnew " << "\r\n";
+      }
+      else
+      {
+      	command << "log " << option.first << " ontime " << option.second << "\r\n";
+      }
       configured = configured && Write(command.str());
     }
 
