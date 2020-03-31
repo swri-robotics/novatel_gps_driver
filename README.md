@@ -1,6 +1,8 @@
 # CARMANovatelGpsDriver
 This is a CARMA-specific fork of the ROS driver for NovAtel GPS/GNSS receivers.  The next six sections provide standard CARMA contextual information, after which appears the original readme content from the master NovAtel repo.
 
+NOTE: This repo contains a modification to the IMU output frame. If novatel hardware is configured such that the novatel USER and VEHICLE frames have the same rotation then the sensor_msgs/Imu data output by this driver will be in the ROS standard base_link frame with +X forward, +Y to the righte, and +Z up. The orientation will be relative to an East North Up frame located on the vehicle.
+
 # CARMAPlatform
 The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/CARMAPlatform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMAPlatform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
