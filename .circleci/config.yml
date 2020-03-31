@@ -49,7 +49,7 @@ jobs:
           name: Pull Deps
           command: |
             source ${INIT_ENV}
-            ./src/CARMANovatelGpsDriver/docker/checkout.sh ${PWD}
+            ./src/CARMANovatelGpsDriver/docker/checkout.sh -r ${PWD}
       - run:
           name: Build Driver
           command: |
