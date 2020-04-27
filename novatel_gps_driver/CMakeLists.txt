@@ -68,6 +68,7 @@ add_library(${PROJECT_NAME}
   src/parsers/inspvax.cpp
   src/parsers/insstdev.cpp
   src/parsers/parsing_utils.cpp
+  src/parsers/psrdop2.cpp
   src/parsers/range.cpp
   src/parsers/time.cpp
   src/parsers/trackstat.cpp
