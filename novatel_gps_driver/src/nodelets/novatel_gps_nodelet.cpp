@@ -507,6 +507,7 @@ namespace novatel_gps_driver
       {
         gps_.SetSerialBaud(serial_baud_);
       }
+      ros::WallRate rate(1000.0);
       while (ros::ok())
       {
         if (gps_.Connect(device_, connection_, opts))
@@ -546,7 +547,7 @@ namespace novatel_gps_driver
         {
           // If ROS is still OK but we got disconnected, we're going to try
           // to reconnect, but wait just a bit so we don't spam the device.
-          ros::Duration(reconnect_delay_s_).sleep();
+          ros::WallDuration(reconnect_delay_s_).sleep();
         }
 
         // Poke the diagnostic updater. It will only fire diagnostics if
@@ -560,7 +561,7 @@ namespace novatel_gps_driver
         // Spin once to let the ROS callbacks fire
         ros::spinOnce();
         // Sleep for a microsecond to prevent CPU hogging
-        boost::this_thread::sleep(boost::posix_time::microseconds(1));
+        rate.sleep();
 
         if (connection_ == NovatelGps::PCAP)
         {
