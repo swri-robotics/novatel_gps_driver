@@ -20,6 +20,8 @@ def generate_launch_description():
                     'device': '/dev/ttyUSB0',
                     'verbose': True,
                     'publish_novatel_positions': True,
+                    'publish_novatel_psrdop2': True,
+                    'publish_novatel_velocity': True,
                     'frame_id': '/gps'
                 }]
             )

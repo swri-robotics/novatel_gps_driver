@@ -53,7 +53,7 @@ novatel_gps_driver::BestvelParser::MessageType novatel_gps_driver::BestvelParser
     error << "Unexpected velocity message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  auto ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelVelocity>();
+  auto ros_msg = std::make_shared<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = MESSAGE_NAME;
@@ -85,7 +85,7 @@ novatel_gps_driver::BestvelParser::MessageType novatel_gps_driver::BestvelParser
 
 novatel_gps_driver::BestvelParser::MessageType novatel_gps_driver::BestvelParser::ParseAscii(const NovatelSentence& sentence) noexcept(false)
 {
-  auto msg = std::make_unique<novatel_gps_msgs::msg::NovatelVelocity>();
+  auto msg = std::make_shared<novatel_gps_msgs::msg::NovatelVelocity>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

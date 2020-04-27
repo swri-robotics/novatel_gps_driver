@@ -30,9 +30,9 @@
 /**
  * \file
  *
- * This nodelet is a driver for Novatel OEM6 and FlexPack6 GPS receivers. It
- * publishes standard ROS gps_msgs/GPSFix messages, as well as custom
- * NovatelPosition, GPGGA, and GPRMC messages.
+ * This nodelet is a driver for NovAtel GNSS receivers. It publishes standard
+ * ROS gps_msgs/GPSFix and sensor_msgs/NavSatFix messages as well as NMEA
+ * logs and NovAtel logs.
  *
  * <b>Topics Subscribed:</b>
  *
@@ -60,6 +60,8 @@
  * \e bestvel <tt>novatel_gps_msgs/NovatelVelocity</tt> - High fidelity Novatel-
  *    specific velocity and receiver status data. (only published if
  *    `publish_novatel_velocity` is set `true`)
+ * \e psrdop2 <tt>novatel_gps_msgs/Psrdop2</tt> - Pseudorange Dilution of Precision
+ *    measurements. (only published if `publish_novatel_psrdop2` is set `true`)
  * \e range <tt>novatel_gps_msgs/Range</tt> - Satellite ranging information
  *    (only published if `publish_range_messages` is set `true`)
  * \e time <tt>novatel_gps_msgs/Time</tt> - Novatel-specific time data. (Only
@@ -82,10 +84,6 @@
  *    [""]
  * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
  *    headers. [""]
- * \e gpgga_gprmc_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for syncing
- *    GPGGA messages with GPRMC messages. [0.01]
- * \e gpgga_position_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for
- *    syncing GPGGA messages with BESTPOS messages. [0.01]
  * \e imu_rate <tt>dbl</tt> - Rate at which to publish sensor_msgs/Imu messages.
  *    [100.0]
  * \e imu_sample_rate <tt>dbl</tt> - Rate at which the device internally samples
@@ -103,24 +101,32 @@
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
  *    GPGGA and GPRMC messages (see Topics Published) [false]
  * \e publish_novatel_messages <tt>bool</tt> - If set true, the driver
- *    publishes Novatel Bestpos messages (see Topics Published) [false]
+ *    publishes Novatel Bestpos messages (see Topics Published); even if
+ *    this is false, these logs will still be requested from the receiver [false]
+ * \e publish_novatel_psrdop2 <tt>bool</tt> - If set true, the driver
+ *    published Novatel PSRDOP2 messages (see Topics Published); data from this
+ *    message will be used to filled in DoP values in gps_msgs/GPSFix messages.
+ *    Note that this topic is only published when the values changesages [false]
  * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
- *    publishes Novatel Bestvel messages (see Topics Published) [false]
+ *    publishes Novatel Bestvel messages (see Topics Published); data from
+ *    these messages will be used to fill in track/speed fields in
+ *    gps_msgs/GPSFix messages [false]
  * \e publish_range_messages <tt>bool</tt> - If set true, the driver
  *    publishes Novatel RANGE messages [false]
  * \e publish_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic.
  *    This is ignored if publish_diagnostics is false. [true]
- * \e publish_time <tt>bool</tt> - If set true, the driver publishes Novatel
+ * \e publish_time_messages <tt>bool</tt> - If set true, the driver publishes Novatel
  *    Time messages (see Topics Published) [false]
  * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
  *    Novatel Trackstat messages (see Topics Published) [false]
  * \e reconnect_delay_s <tt>bool</t> - If the driver is disconnected from the
  *    device, how long (in seconds) to wait between reconnect attempts. [0.5]
- * \e use_binary_message <tt>bool</tt> - If set true, the driver requests
+ * \e use_binary_messages <tt>bool</tt> - If set true, the driver requests
  *    binary NovAtel messages from the device; if false, it requests ASCII
  *    messages.  [false]
- * \e wait_for_position <tt>bool</tt> - Wait for BESTPOS messages to arrive
- *    before publishing GPSFix messages. [false]
+ * \e wait_for_sync <tt>bool</tt> - Wait for both BESTPOS and BESTVEL
+ *    logs to arrive before pushing GPSFixes.  This has no effect if
+ *    publish_novatel_velocity is false.  [true]
  * \e span_frame_to_ros_frame <tt>bool</tt> - Translate the SPAN coordinate
  *    frame to a ROS coordinate frame using the VEHICLEBODYROTATION and
  *    APPLYVEHICLEBODYROTATION commands. [false]
@@ -195,6 +201,7 @@ namespace novatel_gps_driver
     bool publish_novatel_velocity_;
     bool publish_novatel_heading2_;
     bool publish_novatel_dual_antenna_heading_;
+    bool publish_novatel_psrdop2_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
@@ -219,6 +226,7 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelVelocity>::SharedPtr novatel_velocity_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelHeading2>::SharedPtr novatel_heading2_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelDualAntennaHeading>::SharedPtr novatel_dual_antenna_heading_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::NovatelPsrdop2>::SharedPtr novatel_psrdop2_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgga>::SharedPtr gpgga_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsv>::SharedPtr gpgsv_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsa>::SharedPtr gpgsa_pub_;

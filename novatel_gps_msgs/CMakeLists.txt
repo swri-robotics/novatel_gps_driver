@@ -27,6 +27,8 @@ set(MSG_FILES
   msg/NovatelHeading2.msg
   msg/NovatelMessageHeader.msg
   msg/NovatelPosition.msg
+  msg/NovatelPsrdop2.msg
+  msg/NovatelPsrdop2System.msg
   msg/NovatelReceiverStatus.msg
   msg/NovatelSignalMask.msg
   msg/NovatelUtmPosition.msg

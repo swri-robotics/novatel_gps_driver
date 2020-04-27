@@ -14,9 +14,9 @@ Features:
 - Supports a variety of common NovAtel logs
 - Easy to add support for more log types
 - Supports ASCII and binary-format NovAtel logs
-- Can synchronize `GPGGA`, `GPRMC`, and `BESTPOS` logs together in order to produce 
+- Can synchronize `BESTPOS`, `BESTVEL`, and `PSRDOP2` logs together in order to produce 
 [gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html) messages
-- Compatible with OEM4, OEM6, and OEM7 receivers
+- Tested with OEM4, OEM6, and OEM7 receivers
 - Can produce IMU data from receives with SPAN support
 
 It has been tested primarily on NovAtel OEM628 receivers, but it has been used with
@@ -70,6 +70,8 @@ def generate_launch_description():
                     'device': '/dev/ttyUSB0',
                     'verbose': True,
                     'publish_novatel_positions': True,
+                    'publish_novatel_velocity': True,
+                    'publish_novatel_psrdop2': True,
                     'frame_id': '/gps'
                 }]
             )
@@ -116,10 +118,6 @@ Nodelets
             - Default: Empty
         - `frame_id`: ROS TF frame to place in the header of published messages.
             - Default: Empty
-        - `gpgga_gprmc_sync_tol`: Tolerance (in seconds) for synchronizing GPGGA and GPRMC logs.
-            - Default: `0.01`
-        - `gpgga_position_sync_tol`: Tolerance (in seconds) for synchronizing GPGGA and BESTPOS logs.
-            - Default `0.01`
         - `imu_frame_id`: TF frame id to use in IMU messages.
             - Default: Empty
         - `imu_rate`: Desired logging rate in Hz for IMU messages.
@@ -149,11 +147,18 @@ Nodelets
             - Default: `false`
         - `publish_novatel_heading2`: `true` to publish novatel_gps_msgs/Heading2 messages.
             - Default: `false`
-        - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.
+        - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.  Note that even if
+        this is false, these logs will always be requested from the receiver in order to generate `gps_msgs/GPSFix`
+        messages.
+            - Default: `false`
+        - `publish_novatel_psrdop2`: `true` to publish novatel_gps_msgs/NovatelPsrdop2 messages.  If set, the data from
+        these messages will be used to fill in the DoP values in `gps_msgs/GPSFix` messages.  Note that these messages
+        are only published when the values change, not at the standard polling rate.
             - Default: `false`
         - `publish_novatel_utm_positions`: `true` to publish novatel_gps_msgs/NovatelUtmPosition messages.
             - Default: `false`
-        - `publish_novatel_velocity`: `true` to publish novatel_gps_msgs/NovatelVelocity messages.
+        - `publish_novatel_velocity`: `true` to publish novatel_gps_msgs/NovatelVelocity messages.  If set, the data
+        from these messages will be used to fill in the speed and track values in `gps_msgs/GPSFix` messages.
             - Default: `false`
         - `publish_novatel_xyz_positions`: `true` to publish novatel_gps_msgs/NovatelXYZ messages.
             - Default: `false`
@@ -176,8 +181,11 @@ Nodelets
             - Binary logs are much more efficient and effectively required for IMU data,
             but ASCII logs are easier to parse for a human.
             - Default: `false`
-        - `wait_for_position`: `true` in order to wait for BESTPOS logs before publishing GPSFix messages.
-            - Default: `false`
+        - `wait_for_sync`: `true` in order to wait for both BESTPOS and BESTVEL messages to arrive before publishing
+        `gps_msgs/GPSFix` messages.  If this is `false`, GPSFix messages will be published immediately when BESTPOS
+        messages are received, but a side effect is that the driver will often be unable to fill in the speed & track
+        fields.  This has no effect if `publish_novatel_velocity` is `false`.
+            - Default: `true`
     2. **ROS Topic Subscriptions**
         - `/gps_sync` *(std_msgs/Time)*: *(optional)* Timestamped sync pulses from a DIO module. 
     These are used to improve the accuracy of the time stamps of the messages published.
@@ -195,13 +203,14 @@ Nodelets
         - `/gpgsa` *(novatel_gps_msgs/Gpgsa)*: [GPGSA](http://docs.novatel.com/OEM7/Content/Logs/GPGSA.htm) logs
         - `/gpgsv` *(novatel_gps_msgs/Gpgsv)*: [GPGSV](http://docs.novatel.com/OEM7/Content/Logs/GPGSV.htm) logs
         - `/gprmc` *(novatel_gps_msgs/Gprmc)*: [GPRMC](http://docs.novatel.com/OEM7/Content/Logs/GPRMC.htm) logs
-        - `/gps` *([gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining GPGGA, GPRMC, and BESTPOS messages together
+        - `/gps` *([gps_msgs/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining GPGGA, GPRMC, and BESTPOS messages together
             - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.        
         - `/heading2` *(novatel_gps_msgs/NovatelHeadin2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
         - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
         - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
         - `/insstdev` *(novatel_gps_msgs/Insstdev)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
+        - `/psrdop2` *(novatel_gps_msgs/Psrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
         - `/time` *(novatel_gps_msgs/Time)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs

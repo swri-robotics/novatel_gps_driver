@@ -27,104 +27,6 @@
 //
 // *****************************************************************************
 
-/**
- * \file
- *
- * This nodelet is a driver for Novatel OEM6 and FlexPack6 GPS receivers. It
- * publishes standard ROS gps_msgs/GPSFix messages, as well as custom
- * NovatelPosition, GPGGA, and GPRMC messages.
- *
- * <b>Topics Subscribed:</b>
- *
- * \e gps_sync <tt>std_msgs/Time<tt> - Timestamped sync pulses
- *    from a DIO module (optional). These are used to improve the accuracy of
- *    the time stamps of the messages published.
- *
- * <b>Topics Published:</b>
- *
- * \e gps <tt>gps_msgs/GPSFix</tt> - GPS data for navigation
- * \e corrimudata <tt>novatel_gps_message/NovatelCorrectedImuData</tt> - Raw
- *    Novatel IMU data. (only published if `publish_imu_messages` is set `true`)
- * \e gppga <tt>novatel_gps_driver/Gpgga</tt> - Raw GPGGA data for debugging (only
- *    published if `publish_nmea_messages` is set `true`)
- * \e gpgsa <tt>novatel_gps_msgs/Gpgsa</tt> - Raw GPGSA data for debugging (only
- *    published if `publish_gpgsa` is set `true`)
- * \e gprmc <tt>novatel_gps_msgs/Gprmc</tt> - Raw GPRMC data for debugging (only
- *    published if `publish_nmea_messages` is set `true`)
- * \e bestpos <tt>novatel_gps_msgs/NovatelPosition</tt> - High fidelity Novatel-
- *    specific position and receiver status data. (only published if
- *    `publish_novatel_positions` is set `true`)
- * \e bestutm <tt>novatel_gps_msgs/NovatelUtmPosition</tt> - High fidelity Novatel-
- *    specific position in UTM coordinates and receiver status data. (only published
- *    if `publish_novatel_utm_positions` is set `true`)
- * \e bestvel <tt>novatel_gps_msgs/NovatelVelocity</tt> - High fidelity Novatel-
- *    specific velocity and receiver status data. (only published if
- *    `publish_novatel_velocity` is set `true`)
- * \e range <tt>novatel_gps_msgs/Range</tt> - Satellite ranging information
- *    (only published if `publish_range_messages` is set `true`)
- * \e time <tt>novatel_gps_msgs/Time</tt> - Novatel-specific time data. (Only
- *    published if `publish_time` is set `true`.)
- * \e trackstat <tt>novatel_gps_msgs/Trackstat</tt> - Novatel-specific trackstat
- *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
- *
- * <b>Services:</b>
- *
- * \e freset <tt>novatel_gps_msgs/NovatelFRESET</tt> - Sends a freset message to the
- *    device with the specified target string to reset. By default does
- *    FRESET standard
- *
- * <b>Parameters:</b>
- *
- * \e connection_type <tt>str</tt> - "serial", "udp", or "tcp" as appropriate
- *    for the Novatel device connected. ["serial"]
- * \e device <tt>str</tt> - The path to the device, e.g. /dev/ttyUSB0 for
- *    serial connections or "192.168.1.10:3001" for IP.
- *    [""]
- * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
- *    headers. [""]
- * \e gpgga_gprmc_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for syncing
- *    GPGGA messages with GPRMC messages. [0.01]
- * \e gpgga_position_sync_tol <tt>dbl</tt> - Sync tolarance (seconds) for
- *    syncing GPGGA messages with BESTPOS messages. [0.01]
- * \e imu_rate <tt>dbl</tt> - Rate at which to publish sensor_msgs/Imu messages.
- *    [100.0]
- * \e imu_sample_rate <tt>dbl</tt> - Rate at which the device internally samples
- *    its IMU. [200.0]
- * \e polling_period <tt>dbl</tt> - The number of seconds in between messages
- *    requested from the GPS. (Does not affect time messages) [0.05]
- * \e publish_diagnostics <tt>bool</tt> - If set true, the driver publishes
- *    ROS diagnostics [true]
- * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
- *    Novatel ClockSteering messages [false]
- * \e publish_imu_messages <tt>boot</tt> - If set true, the driver publishes
- *    Novatel CorrImuData, InsPva, InsPvax, InsStdev, and sensor_msgs/Imu messages [false]
- * \e publish_gpgsa <tt>bool</tt> - If set true, the driver requests GPGSA
- *    messages from the device at 20 Hz and publishes them on `gpgsa`
- * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
- *    GPGGA and GPRMC messages (see Topics Published) [false]
- * \e publish_novatel_messages <tt>bool</tt> - If set true, the driver
- *    publishes Novatel Bestpos messages (see Topics Published) [false]
- * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
- *    publishes Novatel Bestvel messages (see Topics Published) [false]
- * \e publish_range_messages <tt>bool</tt> - If set true, the driver
- *    publishes Novatel RANGE messages [false]
- * \e publish_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic.
- *    This is ignored if publish_diagnostics is false. [true]
- * \e publish_time_messages <tt>bool</tt> - If set true, the driver publishes Novatel
- *    Time messages (see Topics Published) [false]
- * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
- *    Novatel Trackstat messages (see Topics Published) [false]
- * \e reconnect_delay_s <tt>bool</t> - If the driver is disconnected from the
- *    device, how long (in seconds) to wait between reconnect attempts. [0.5]
- * \e use_binary_message <tt>bool</tt> - If set true, the driver requests
- *    binary NovAtel messages from the device; if false, it requests ASCII
- *    messages.  [false]
- * \e wait_for_position <tt>bool</tt> - Wait for BESTPOS messages to arrive
- *    before publishing GPSFix messages. [false]
- * \e span_frame_to_ros_frame <tt>bool</tt> - Translate the SPAN coordinate
- *    frame to a ROS coordinate frame using the VEHICLEBODYROTATION and
- *    APPLYVEHICLEBODYROTATION commands. [false]
- */
 #include <novatel_gps_driver/nodes/novatel_gps_node.h>
 
 #include <swri_math_util/math_util.h>
@@ -157,6 +59,7 @@ namespace novatel_gps_driver
       publish_novatel_velocity_(false),
       publish_novatel_heading2_(false),
       publish_novatel_dual_antenna_heading_(false),
+      publish_novatel_psrdop2_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
@@ -201,6 +104,7 @@ namespace novatel_gps_driver
     publish_novatel_velocity_ = this->declare_parameter("publish_novatel_velocity", publish_novatel_velocity_);
     publish_novatel_heading2_ = this->declare_parameter("publish_novatel_heading2", publish_novatel_heading2_);
     publish_novatel_dual_antenna_heading_ = this->declare_parameter("publish_novatel_dual_antenna_heading", publish_novatel_dual_antenna_heading_);
+    publish_novatel_psrdop2_ = this->declare_parameter("publish_novatel_psrdop2", publish_novatel_psrdop2_);
     publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
     publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
     publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
@@ -220,9 +124,8 @@ namespace novatel_gps_driver
     frame_id_ = this->declare_parameter("frame_id", std::string(""));
 
     //set NovatelGps parameters
-    gps_.gpgga_gprmc_sync_tol_ = this->declare_parameter("gpgga_gprmc_sync_tol", 0.01);
-    gps_.gpgga_position_sync_tol_ = this->declare_parameter("gpgga_position_sync_tol", 0.01);
-    gps_.wait_for_position_ = this->declare_parameter("wait_for_position", false);
+    gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
+    gps_.wait_for_sync_ = this->declare_parameter("wait_for_sync", true);
 
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
@@ -294,6 +197,10 @@ namespace novatel_gps_driver
     {
       novatel_velocity_pub_ = swri::advertise<novatel_gps_msgs::msg::NovatelVelocity>(*this, "bestvel", 100);
     }
+    else
+    {
+      gps_.wait_for_sync_ = false;
+    }
 
     if (publish_novatel_heading2_)
     {
@@ -305,6 +212,14 @@ namespace novatel_gps_driver
       novatel_dual_antenna_heading_pub_ = swri::advertise<novatel_gps_msgs::msg::NovatelDualAntennaHeading>(*this,
                                                                                                             "dual_antenna_heading",
                                                                                                             100);
+    }
+
+    if (publish_novatel_psrdop2_)
+    {
+      novatel_psrdop2_pub_ = swri::advertise<novatel_gps_msgs::msg::NovatelPsrdop2>(*this,
+          "psrdop2",
+          100,
+          true);
     }
 
     if (publish_range_messages_)
@@ -406,6 +321,10 @@ namespace novatel_gps_driver
     {
       opts["dualantennaheading" + format_suffix] = polling_period_;
     }
+    if (publish_novatel_psrdop2_)
+    {
+      opts["psrdop2" + format_suffix] = -1.0;
+    }
     if (publish_gpgsa_)
     {
       opts["gpgsa"] = polling_period_;
@@ -505,14 +424,6 @@ namespace novatel_gps_driver
         // If ROS is still OK but we got disconnected, we're going to try
         // to reconnect, but wait just a bit so we don't spam the device.
         rclcpp::sleep_for(std::chrono::milliseconds(static_cast<long>(reconnect_delay_s_ * 1000.0)));
-      }
-
-      // Poke the diagnostic updater. It will only fire diagnostics if
-      // its internal timer (1 Hz) has elapsed. Otherwise, this is a
-      // noop
-      if (publish_diagnostics_)
-      {
-        //diagnostic_updater_.force_update();
       }
 
       // Sleep for a microsecond to prevent CPU hogging
@@ -773,6 +684,18 @@ namespace novatel_gps_driver
       }
     }
 
+    if (publish_novatel_psrdop2_)
+    {
+      std::vector<novatel_gps_driver::Psrdop2Parser::MessageType> psrdop2_msgs;
+      gps_.GetNovatelPsrdop2Messages(psrdop2_msgs);
+      for (auto& msg : psrdop2_msgs)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = frame_id_;
+        novatel_psrdop2_pub_->publish(*msg);
+      }
+    }
+
     if (publish_clock_steering_)
     {
       std::vector<novatel_gps_driver::ClockSteeringParser::MessageType> msgs;
@@ -782,7 +705,6 @@ namespace novatel_gps_driver
         clocksteering_pub_->publish(std::move(msg));
       }
     }
-
     if (publish_novatel_velocity_)
     {
       std::vector<novatel_gps_driver::BestvelParser::MessageType> velocity_msgs;
@@ -791,7 +713,7 @@ namespace novatel_gps_driver
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
-        novatel_velocity_pub_->publish(std::move(msg));
+        novatel_velocity_pub_->publish(*msg);
       }
     }
     if (publish_time_messages_)

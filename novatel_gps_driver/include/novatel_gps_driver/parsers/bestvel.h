@@ -36,7 +36,7 @@
 
 namespace novatel_gps_driver
 {
-  class BestvelParser : public MessageParser<novatel_gps_msgs::msg::NovatelVelocity::UniquePtr>
+  class BestvelParser : public MessageParser<novatel_gps_msgs::msg::NovatelVelocity::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
