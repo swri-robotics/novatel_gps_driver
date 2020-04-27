@@ -378,7 +378,7 @@ namespace novatel_gps_driver
     {
       gps_.SetSerialBaud(serial_baud_);
     }
-    ros::WallRate rate(1000.0);
+    rclcpp::WallRate rate(1000.0);
     while (rclcpp::ok())
     {
       if (gps_.Connect(device_, connection_, opts))
