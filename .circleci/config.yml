@@ -28,7 +28,7 @@ jobs:
     # Pull docker image from docker hub
     # XTERM used for better catkin_make output
     docker:
-      - image: usdotfhwastol/carma-base:3.6.0
+      - image: usdotfhwastol/carma-base:3.7.1
         user: carma
         environment:
           TERM: xterm # use xterm to get full display output from build
