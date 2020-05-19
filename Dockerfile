@@ -18,7 +18,7 @@ FROM deps as setup
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
-RUN ~/src/docker/checkout.sh
+RUN ~/src/docker/checkout.bash
 RUN ~/src/docker/install.sh
 
 FROM deps
