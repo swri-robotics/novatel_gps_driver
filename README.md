@@ -188,7 +188,7 @@ Nodelets
         - `/gpgsa` *(novatel_gps_msgs/Gpgsa)*: [GPGSA](http://docs.novatel.com/OEM7/Content/Logs/GPGSA.htm) logs
         - `/gpgsv` *(novatel_gps_msgs/Gpgsv)*: [GPGSV](http://docs.novatel.com/OEM7/Content/Logs/GPGSV.htm) logs
         - `/gprmc` *(novatel_gps_msgs/Gprmc)*: [GPRMC](http://docs.novatel.com/OEM7/Content/Logs/GPRMC.htm) logs
-        - `/gps` *([gps_msgs/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining GPGGA, GPRMC, and BESTPOS messages together
+        - `/gps` *([gps_msgs/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining BESTVEL, PSRDOP2 and BESTPOS messages together
             - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.        
         - `/heading2` *(novatel_gps_msgs/NovatelHeadin2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
