@@ -1,6 +1,5 @@
 NovAtel GPS Driver
-[![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=master)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
-[![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=dashing-devel)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
+![CI](https://github.com/swri-robotics/novatel_gps_driver/workflows/CI/badge.svg)
 ==================
 
 Overview
