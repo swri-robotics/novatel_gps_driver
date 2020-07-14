@@ -56,7 +56,7 @@ namespace novatel_gps_driver
       publish_novatel_positions_(false),
       publish_novatel_xyz_positions_(false),
       publish_novatel_utm_positions_(false),
-      publish_novatel_velocity_(false),
+      publish_novatel_velocity_(true),
       publish_novatel_heading2_(false),
       publish_novatel_dual_antenna_heading_(false),
       publish_novatel_psrdop2_(false),
@@ -66,6 +66,7 @@ namespace novatel_gps_driver
       publish_trackstat_(false),
       publish_diagnostics_(true),
       publish_sync_diagnostic_(true),
+      publish_invalid_gpsfix_(false),
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
       connection_(NovatelGps::SERIAL),
@@ -126,6 +127,7 @@ namespace novatel_gps_driver
     //set NovatelGps parameters
     gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
     gps_.wait_for_sync_ = this->declare_parameter("wait_for_sync", true);
+    gps_.publish_invalid_gpsfix_ = this->declare_parameter("publish_invalid_gpsfix", false);
 
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
@@ -302,9 +304,13 @@ namespace novatel_gps_driver
 
     NovatelMessageOpts opts;
     opts["gpgga"] = polling_period_;
-    opts["gprmc"] = polling_period_;
     opts["bestpos" + format_suffix] = polling_period_;  // Best position
+    opts["bestvel" + format_suffix] = polling_period_;  // Best velocity
     opts["time" + format_suffix] = 1.0;  // Time
+    if (publish_nmea_messages_)
+    {
+      opts["gprmc"] = polling_period_;
+    }
     if (publish_novatel_xyz_positions_)
     {
       opts["bestxyz" + format_suffix] = polling_period_;
@@ -360,10 +366,6 @@ namespace novatel_gps_driver
       {
         gps_.SetImuRate(imu_sample_rate_, true);
       }
-    }
-    if (publish_novatel_velocity_)
-    {
-      opts["bestvel" + format_suffix] = polling_period_;  // Best velocity
     }
     if (publish_range_messages_)
     {
@@ -523,7 +525,7 @@ namespace novatel_gps_driver
 
     // Increment the measurement count by the number of messages we just
     // read
-    measurement_count_ += gpgga_msgs.size();
+    measurement_count_ += position_msgs.size();
 
     // If there are new position messages, store the most recent
     if (!position_msgs.empty())
@@ -824,7 +826,10 @@ namespace novatel_gps_driver
       rclcpp::Time msgTime = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
 
       // Publish it; note that after this point, we no longer own the object
-      gps_pub_->publish(std::move(msg));
+      if (publish_invalid_gpsfix_ || msg->status.status != gps_common::GPSStatus::STATUS_NO_FIX)
+      {
+        gps_pub_->publish(std::move(msg));
+      }
 
       try
       {
