@@ -99,6 +99,7 @@ namespace novatel_gps_driver
     publish_gpgsv_ = this->declare_parameter("publish_gpgsv", publish_gpgsv_);
     publish_gphdt_ = this->declare_parameter("publish_gphdt", publish_gphdt_);
     publish_imu_messages_ = this->declare_parameter("publish_imu_messages", publish_imu_messages_);
+    publish_invalid_gpsfix_ = this->declare_parameter("publish_invalid_gpsfix", false);
     publish_novatel_positions_ = this->declare_parameter("publish_novatel_positions", publish_novatel_positions_);
     publish_novatel_xyz_positions_ = this->declare_parameter("publish_novatel_xyz_positions", publish_novatel_xyz_positions_);
     publish_novatel_utm_positions_ = this->declare_parameter("publish_novatel_utm_positions", publish_novatel_utm_positions_);
@@ -127,7 +128,6 @@ namespace novatel_gps_driver
     //set NovatelGps parameters
     gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
     gps_.wait_for_sync_ = this->declare_parameter("wait_for_sync", true);
-    gps_.publish_invalid_gpsfix_ = this->declare_parameter("publish_invalid_gpsfix", false);
 
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
