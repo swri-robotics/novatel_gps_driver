@@ -380,6 +380,7 @@ namespace novatel_gps_driver
     {
       gps_.SetSerialBaud(serial_baud_);
     }
+    rclcpp::WallRate rate(1000.0);
     while (rclcpp::ok())
     {
       if (gps_.Connect(device_, connection_, opts))
@@ -406,8 +407,7 @@ namespace novatel_gps_driver
             //diagnostic_updater_.force_update();
           }
 
-          // Sleep for a microsecond to prevent CPU hogging
-          boost::this_thread::sleep(boost::posix_time::microseconds(1));
+          rate.sleep();
         }  // While (gps_.IsConnected() && ros::ok()) (inner loop to process data from device)
       }
       else  // Could not connect to the device
@@ -428,8 +428,7 @@ namespace novatel_gps_driver
         rclcpp::sleep_for(std::chrono::milliseconds(static_cast<long>(reconnect_delay_s_ * 1000.0)));
       }
 
-      // Sleep for a microsecond to prevent CPU hogging
-      boost::this_thread::sleep(boost::posix_time::microseconds(1));
+      rate.sleep();
 
       if (connection_ == NovatelGps::PCAP)
       {
