@@ -825,7 +825,7 @@ namespace novatel_gps_driver
       rclcpp::Time msgTime = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type());
 
       // Publish it; note that after this point, we no longer own the object
-      if (publish_invalid_gpsfix_ || msg->status.status != gps_common::GPSStatus::STATUS_NO_FIX)
+      if (publish_invalid_gpsfix_ || msg->status.status != gps_msgs::msg::GPSStatus::STATUS_NO_FIX)
       {
         gps_pub_->publish(std::move(msg));
       }
