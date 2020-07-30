@@ -17,7 +17,7 @@
 USERNAME=usdotfhwastol
 
 cd "$(dirname "$0")"
-IMAGE=$(basename `git rev-parse --show-toplevel`)
+IMAGE=carma-novatel-gps-driver
 
 echo ""
 echo "##### $IMAGE Docker Image Build Script #####"
