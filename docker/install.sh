@@ -17,4 +17,4 @@
 sudo chmod -R +x /opt/carma/install
 source /opt/ros/kinetic/setup.bash
 cd ~/
-catkin_make install
+colcon build --cmake-target install
