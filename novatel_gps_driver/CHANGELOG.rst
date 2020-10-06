@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.1.0 (2020-10-06)
+------------------
 * Add param to disable invalid GPSFixes, replace GPRMC with BESTVEL (ROS2) (`#94 <https://github.com/swri-robotics/novatel_gps_driver/issues/94>`_)
 * Use rclcpp::WallRate to sleep instead of boost (ROS2) (`#86 <https://github.com/swri-robotics/novatel_gps_driver/issues/86>`_)
 * Refactor GPSFix generation (ROS2) (`#73 <https://github.com/swri-robotics/novatel_gps_driver/issues/73>`_)
