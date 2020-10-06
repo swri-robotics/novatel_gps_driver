@@ -110,7 +110,7 @@
  * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
  *    publishes Novatel Bestvel messages (see Topics Published); data from
  *    these messages will be used to fill in track/speed fields in
- *    gps_msgs/GPSFix messages [false]
+ *    gps_msgs/GPSFix messages [true]
  * \e publish_range_messages <tt>bool</tt> - If set true, the driver
  *    publishes Novatel RANGE messages [false]
  * \e publish_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic.
@@ -208,6 +208,7 @@ namespace novatel_gps_driver
     bool publish_trackstat_;
     bool publish_diagnostics_;
     bool publish_sync_diagnostic_;
+    bool publish_invalid_gpsfix_;
     double reconnect_delay_s_;
     bool use_binary_messages_;
 
