@@ -2,6 +2,15 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+3.9.0 (2019-09-04)
+------------------
+* Use GPGGA quality to set GPSFix status (`#55 <https://github.com/swri-robotics/novatel_gps_driver/issues/55>`_)
+* Add GPHDT message (`#51 <https://github.com/swri-robotics/novatel_gps_driver/issues/51>`_)
+* Add DUALANTENNAHEADING msg (`#46 <https://github.com/swri-robotics/novatel_gps_driver/issues/46>`_)
+* Add HEADER2 msg (`#43 <https://github.com/swri-robotics/novatel_gps_driver/issues/43>`_)
+* Add BESTXYZ msg (`#42 <https://github.com/swri-robotics/novatel_gps_driver/issues/42>`_)
+* Contributors: Marcel Zeilinger, Michael McConnell, P. J. Reed
+
 3.8.0 (2019-06-04)
 ------------------
 * Add clocksteering parsing (`#40 <https://github.com/swri-robotics/novatel_gps_driver/issues/40>`_)

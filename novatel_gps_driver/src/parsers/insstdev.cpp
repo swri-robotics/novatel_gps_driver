@@ -44,7 +44,7 @@ const std::string novatel_gps_driver::InsstdevParser::GetMessageName() const
 }
 
 novatel_gps_msgs::InsstdevPtr
-novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) throw(ParseException)
+novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
   if (bin_msg.data_.size() != BINARY_LENGTH)
   {
@@ -73,7 +73,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
 }
 
 novatel_gps_msgs::InsstdevPtr
-novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) throw(ParseException)
+novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   if (sentence.body.size() != ASCII_FIELDS)
   {

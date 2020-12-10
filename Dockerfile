@@ -12,13 +12,13 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:3.6.0 as deps
+FROM usdotfhwastol/carma-base:carma-system-3.4.0 as deps
 
 FROM deps as setup
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
-RUN ~/src/docker/checkout.sh
+RUN ~/src/docker/checkout.bash
 RUN ~/src/docker/install.sh
 
 FROM deps
@@ -33,7 +33,7 @@ LABEL org.label-schema.description="carma novatel gps driver for the CARMA Platf
 LABEL org.label-schema.vendor="Leidos"
 LABEL org.label-schema.version=${VERSION}
 LABEL org.label-schema.url="https://highways.dot.gov/research/research-programs/operations/CARMA"
-LABEL org.label-schema.vcs-url="https://github.com/usdot-fhwa-stol/CARMANovatelGpsDriver/"
+LABEL org.label-schema.vcs-url="https://github.com/usdot-fhwa-stol/novatel_gps_driver/"
 LABEL org.label-schema.vcs-ref=${VCS_REF}
 LABEL org.label-schema.build-date=${BUILD_DATE}
 

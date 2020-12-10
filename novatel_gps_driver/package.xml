@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<package format="2">
+<package format="3">
   <name>novatel_gps_driver</name>
   <version>3.9.0</version>
   <description>
@@ -7,9 +7,10 @@
   </description>
 
   <maintainer email="preed@swri.org">P. J. Reed</maintainer>
-  <maintainer email="kkozak@swri.org">Kris Kozak</maintainer>
 
   <license>BSD</license>
+
+  <url type="repository">https://github.com/swri-robotics/novatel_gps_driver</url>
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>boost</depend>
@@ -32,6 +33,8 @@
   <depend>cav_msgs</depend>
   <depend>carma_utils</depend>
   <depend>uncertainty_tools</depend>
+  <test_depend>rostest</test_depend>
+  <test_depend>rosunit</test_depend>
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>

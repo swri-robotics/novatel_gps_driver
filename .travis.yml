@@ -34,7 +34,7 @@ matrix:
       - pip install -q catkin-lint rosdep
       - sudo $(which rosdep) init
       - rosdep update
-      script: catkin_lint -W2 --explain .
+      script: catkin_lint -W2 --explain --ignore UNSORTED_LIST --ignore UNDEFINED_INSTALL_TARGET --ignore UNCONFIGURED_SYSTEM_DEPEND --ignore undefined_target .
       env: JOB="catkin_lint" ROS_DISTRO="kinetic"
   allow_failures:
     - env: ROS_DISTRO="kinetic"

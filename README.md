@@ -1,34 +1,31 @@
 # CARMANovatelGpsDriver
 This is a CARMA-specific fork of the ROS driver for NovAtel GPS/GNSS receivers.  The next six sections provide standard CARMA contextual information, after which appears the original readme content from the master NovAtel repo.
 
+NOTE: This repo contains a modification to the IMU output frame. If novatel hardware is configured such that the novatel USER and VEHICLE frames have the same rotation then the sensor_msgs/Imu data output by this driver will be in the ROS standard base_link frame with +X forward, +Y to the righte, and +Z up. The orientation will be relative to an East North Up frame located on the vehicle.
+
 # CARMAPlatform
-The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/CARMAPlatform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
+The primary CARMAPlatform repository can be found [here](https://github.com/usdot-fhwa-stol/carma-platform) and is part of the [USDOT FHWA STOL](https://github.com/usdot-fhwa-stol/)
 github organization. Documentation on how the CARMAPlatform functions, how it will evolve over time, and how you can contribute can be found at the above links as well
 
 ## Contribution
-Welcome to the CARMA contributing guide. Please read this guide to learn about our development process, how to propose pull requests and improvements, and how to build and test your changes to this project. [CARMA Contributing Guide](https://github.com/usdot-fhwa-stol/CARMAPlatform/blob/develop/Contributing.md) 
+Welcome to the CARMA contributing guide. Please read this guide to learn about our development process, how to propose pull requests and improvements, and how to build and test your changes to this project. [CARMA Contributing Guide](https://github.com/usdot-fhwa-stol/carma-platform/blob/develop/Contributing.md) 
 
 ## Code of Conduct 
-Please read our [CARMA Code of Conduct](https://github.com/usdot-fhwa-stol/CARMAPlatform/blob/develop/Code_of_Conduct.md) which outlines our expectations for participants within the CARMA community, as well as steps to reporting unacceptable behavior. We are committed to providing a welcoming and inspiring community for all and expect our code of conduct to be honored. Anyone who violates this code of conduct may be banned from the community.
+Please read our [CARMA Code of Conduct](https://github.com/usdot-fhwa-stol/carma-platform/blob/develop/Code_of_Conduct.md) which outlines our expectations for participants within the CARMA community, as well as steps to reporting unacceptable behavior. We are committed to providing a welcoming and inspiring community for all and expect our code of conduct to be honored. Anyone who violates this code of conduct may be banned from the community.
 
 ## Attribution
-The development team would like to acknowledge the people who have made direct contributions to the design and code in this repository. [CARMA Attribution](https://github.com/usdot-fhwa-stol/CARMAPlatform/blob/develop/ATTRIBUTION.txt) 
+The development team would like to acknowledge the people who have made direct contributions to the design and code in this repository. [CARMA Attribution](https://github.com/usdot-fhwa-stol/carma-platform/blob/develop/ATTRIBUTION.txt) 
 
 ## License
-By contributing to the Federal Highway Administration (FHWA) Connected Automated Research Mobility Applications (CARMA), you agree that your contributions will be licensed under its Apache License 2.0 license. [CARMA License](https://github.com/usdot-fhwa-stol/CARMAPlatform/blob/develop/docs/License.md) 
+By contributing to the Federal Highway Administration (FHWA) Connected Automated Research Mobility Applications (CARMA), you agree that your contributions will be licensed under its Apache License 2.0 license. [CARMA License](https://github.com/usdot-fhwa-stol/carma-platform/blob/develop/docs/License.md) 
 
 ## Contact
 Please click on the CARMA logo below to visit the Federal Highway Adminstration(FHWA) CARMA website.
 
-[![CARMA Image](https://raw.githubusercontent.com/usdot-fhwa-stol/CARMAPlatform/develop/docs/image/CARMA_icon.png)](https://highways.dot.gov/research/research-programs/operations/CARMA)
+[![CARMA Image](https://raw.githubusercontent.com/usdot-fhwa-stol/carma-platform/develop/docs/image/CARMA_icon.png)](https://highways.dot.gov/research/research-programs/operations/CARMA)
 
-
-
-NovAtel GPS Driver [![Build Status](https://travis-ci.org/swri-robotics/novatel_gps_driver.svg?branch=master)](https://travis-ci.org/swri-robotics/novatel_gps_driver)
-==================
-
-1. Overview
------------
+Overview
+--------
 
 This is a C++ [ROS](http://www.ros.org/) driver for [NovAtel](https://www.novatel.com/) GPS / GNSS Receivers.  
 
@@ -50,14 +47,15 @@ various OEM4, OEM6, and OEM7 devices. Please let
 [the maintainers](mailto:preed@swri.org,kkozak@swri.org) know of your success
 or failure in using this with other devices so we can update this page appropriately.
 
-2. Usage
---------
+Usage
+-----
 
-The driver should function on ROS Kinetic and Melodic, and binary packages are available
-for both of them.  To install them, first install ROS, then just run:
+The `master` branch for this driver functions on ROS Kinetic and Melodic;
+`dashing-devel` supports ROS 2 Dashing.  To install the binary packages, first install ROS,
+then just run:
 
 ```bash
-sudo apt-get install ros-${ROSDISTRO}-novatel-gps-driver
+sudo apt-get install ros-${ROS_DISTRO}-novatel-gps-driver
 ```
 
 If you'd like to build it from source using [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html):
@@ -94,8 +92,8 @@ Then create a `.launch` file and configure it as desired:
 types are not.  See the config parameters for a list of which other message types can be
 enabled.
 
-3. Packages
------------
+Packages
+--------
 1. ### `novatel_gps_msgs`
 
     ROS messages that represent NovAtel message logs.  Each supported log
@@ -107,8 +105,8 @@ enabled.
     a NovAtel device over a serial, TCP, or UDP connection and translate NovAtel
     logs into ROS messages.
 
-4. Nodelets
------------
+Nodelets
+--------
 
 1. ### `novatel_gps_driver/novatel_gps_nodelet`
     1. **ROS Parameters**
@@ -146,6 +144,8 @@ enabled.
         - `publish_gpgsa`: `true` to publish novatel_gps_msgs/Gpgsa messages.
             - Default: `false`
         - `publish_gpgsv`: `true` to publish novatel_gps_msgs/Gpgsv messages.
+            - Default: `false`
+        - `publish_gphdt`: `true` to publish novatel_gps_msgs/Gphdt messages.
             - Default: `false`
         - `publish_imu_messages`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
         novatel_gps_msgs/Inspvax, novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
@@ -190,18 +190,19 @@ enabled.
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
         - `/bestutm` *(novatel_gps_msgs/NovatelUtmPosition)*: [BESTUTM](http://docs.novatel.com/OEM7/Content/Logs/BESTUTM.htm) logs
         - `/bestvel` *(novatel_gps_msgs/NovatelVelocity)*: [BESTVEL](http://docs.novatel.com/OEM7/Content/Logs/BESTVEL.htm) logs
-        - `/clocksteering` *(novatel_gps_msgs/ClockSteering)*: [CLOCKSTEERING](http://docs.novatel.com/OEM7/Content/Logs/CLOCKSTEERING.htm) logs
         - `/bestxyz` *(novatel_gps_msgs/NovatelXYZ)*: [BESTXYZ](http://docs.novatel.com/OEM7/Content/Logs/BESTXYZ.htm) logs
-        - `/heading2` *(novatel_gps_msgs/NovatelHeadin2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
-        - `/dual_antenna_heading` *(novatel_gps_msgs/NovatelDualAntennaHeading)*: [DUALANTENNAHEADING](http://docs.novatel.com/OEM7/Content/Logs/DUALANTENNAHEADING.htm) logs
+        - `/clocksteering` *(novatel_gps_msgs/ClockSteering)*: [CLOCKSTEERING](http://docs.novatel.com/OEM7/Content/Logs/CLOCKSTEERING.htm) logs
         - `/corrimudata` *(novatel_gps_msgs/NovatelCorrectedImuData)*: [CORRIMUDATA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/CORRIMUDATA.htm) logs
         - `/diagnostics` *(diagnostic_msgs/DiagnosticArray)*: ROS diagnostics
+        - `/dual_antenna_heading` *(novatel_gps_msgs/NovatelDualAntennaHeading)*: [DUALANTENNAHEADING](http://docs.novatel.com/OEM7/Content/Logs/DUALANTENNAHEADING.htm) logs
+        - `/fix` *([sensor_msgs/NavSatFix](https://docs.ros.org/kinetic/api/sensor_msgs/html/msg/NavSatFix.html))*: GPSFix messages converted to NavSatFix messages
         - `/gpgga` *(novatel_gps_msgs/Gpgga)*: [GPGGA](http://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm) logs
         - `/gpgsa` *(novatel_gps_msgs/Gpgsa)*: [GPGSA](http://docs.novatel.com/OEM7/Content/Logs/GPGSA.htm) logs
         - `/gpgsv` *(novatel_gps_msgs/Gpgsv)*: [GPGSV](http://docs.novatel.com/OEM7/Content/Logs/GPGSV.htm) logs
         - `/gprmc` *(novatel_gps_msgs/Gprmc)*: [GPRMC](http://docs.novatel.com/OEM7/Content/Logs/GPRMC.htm) logs
         - `/gps` *([gps_common/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining GPGGA, GPRMC, and BESTPOS messages together
-            - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.
+            - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.        
+        - `/heading2` *(novatel_gps_msgs/NovatelHeadin2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
         - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
         - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
@@ -211,8 +212,8 @@ enabled.
         - `/time` *(novatel_gps_msgs/Time)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
         - `/trackstat` *(novatel_gps_msgs/Trackstat)*: [TRACKSTAT](http://docs.novatel.com/OEM7/Content/Logs/TRACKSTAT.htm) logs
 
-5. Adding New Logs
-------------------
+Adding New Logs
+---------------
 
 Do you need support for a new log type?  Follow these steps:
 

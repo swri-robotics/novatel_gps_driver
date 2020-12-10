@@ -17,4 +17,5 @@
 sudo chmod -R +x /opt/carma/install
 source /opt/ros/kinetic/setup.bash
 cd ~/
-catkin_make install
+export ROS_LANG_DISABLE=genjava
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release

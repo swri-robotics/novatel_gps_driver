@@ -42,7 +42,7 @@ const std::string novatel_gps_driver::ClockSteeringParser::GetMessageName() cons
   return MESSAGE_NAME;
 }
 
-novatel_gps_msgs::ClockSteeringPtr novatel_gps_driver::ClockSteeringParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) throw(ParseException)
+novatel_gps_msgs::ClockSteeringPtr novatel_gps_driver::ClockSteeringParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
   const size_t MIN_LENGTH = 8;
   // Check that the message is at least as long as a a ClockSteering with no satellites
