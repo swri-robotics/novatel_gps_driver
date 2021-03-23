@@ -12,7 +12,7 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:carma-system-3.5.0 as deps
+FROM usdotfhwastoldev/carma-base:develop as deps
 
 FROM deps as setup
 
