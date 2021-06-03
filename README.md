@@ -79,7 +79,7 @@ Packages
 
     ROS messages that represent NovAtel message logs.  Each supported log
     should have its own message type.  A list of official log types can be found
-    at http://docs.novatel.com/OEM7/Content/Logs/Log_Reference.htm .
+    at https://docs.novatel.com/OEM7/Content/Commands/CommandsLogs.htm .
 2. ### `novatel_gps_driver`
 
     A C++ library with an accompanying ROS nodelet and node that can connect to 
