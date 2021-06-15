@@ -79,6 +79,7 @@
 #include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
+#include <novatel_gps_driver/parsers/psrdop2.h>
 #include <novatel_gps_driver/parsers/time.h>
 #include <novatel_gps_driver/parsers/trackstat.h>
 
@@ -88,6 +89,7 @@
 namespace novatel_gps_driver
 {
   /// Define NovatelMessageOpts as a map from message name to log period (seconds)
+  /// A negative period will be logged as "onchanged" rather than "ontime"
   typedef std::map<std::string, double> NovatelMessageOpts;
 
   class NovatelGps
@@ -187,6 +189,12 @@ namespace novatel_gps_driver
        * @param[out] headings New DUALANTENNAHEADING messages.
        */
       void GetNovatelDualAntennaHeadingMessages(std::vector<novatel_gps_msgs::NovatelDualAntennaHeadingPtr>& headings);
+      /**
+       * @brief Provides any PSRDOP2 messages that have been received since the last time this
+       * was called.
+       * @param[out] psrdop2_messages New PSRDOP2 messages.
+       */
+       void GetNovatelPsrdop2Messages(std::vector<novatel_gps_msgs::NovatelPsrdop2Ptr>& psrdop2_messages);
       /**
        * @brief Provides any Imu messages that have been generated since the
        * last time this was called.
@@ -319,11 +327,8 @@ namespace novatel_gps_driver
        */
       bool Write(const std::string& command);
 
-      //parameters
-      double gpgga_gprmc_sync_tol_; //seconds
-      double gpgga_position_sync_tol_; //seconds
-      bool wait_for_position_; //if false, do not require position message to make gps fix message
-      //added this because position message is sometimes > 1 s late.
+      double gpsfix_sync_tol_; //seconds
+      bool wait_for_sync_; // wait until a bestvel has arrived before publishing bestpos
 
     private:
       /**
@@ -486,6 +491,7 @@ namespace novatel_gps_driver
       InspvaParser inspva_parser_;
       InspvaxParser inspvax_parser_;
       InsstdevParser insstdev_parser_;
+      Psrdop2Parser psrdop2_parser_;
       RangeParser range_parser_;
       TimeParser time_parser_;
       TrackstatParser trackstat_parser_;
@@ -494,12 +500,10 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::ClockSteeringPtr> clocksteering_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpggaPtr> gpgga_msgs_;
-      boost::circular_buffer<novatel_gps_msgs::Gpgga> gpgga_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::GpgsaPtr> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GpgsvPtr> gpgsv_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GphdtPtr> gphdt_msgs_;
       boost::circular_buffer<novatel_gps_msgs::GprmcPtr> gprmc_msgs_;
-      boost::circular_buffer<novatel_gps_msgs::Gprmc> gprmc_sync_buffer_;
       boost::circular_buffer<sensor_msgs::ImuPtr> imu_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InscovPtr> inscov_msgs_;
       boost::circular_buffer<novatel_gps_msgs::InspvaPtr> inspva_msgs_;
@@ -510,11 +514,15 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_msgs::NovatelUtmPositionPtr> novatel_utm_positions_;
       boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> novatel_velocities_;
       boost::circular_buffer<novatel_gps_msgs::NovatelPositionPtr> bestpos_sync_buffer_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelVelocityPtr> bestvel_sync_buffer_;
       boost::circular_buffer<novatel_gps_msgs::NovatelHeading2Ptr> heading2_msgs_;
       boost::circular_buffer<novatel_gps_msgs::NovatelDualAntennaHeadingPtr> dual_antenna_heading_msgs_;
+      boost::circular_buffer<novatel_gps_msgs::NovatelPsrdop2Ptr> psrdop2_msgs_;
       boost::circular_buffer<novatel_gps_msgs::RangePtr> range_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TimePtr> time_msgs_;
       boost::circular_buffer<novatel_gps_msgs::TrackstatPtr> trackstat_msgs_;
+
+      novatel_gps_msgs::NovatelPsrdop2Ptr latest_psrdop2_;
 
       // IMU data synchronization queues
       std::queue<novatel_gps_msgs::NovatelCorrectedImuDataPtr> corrimudata_queue_;
