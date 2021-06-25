@@ -86,7 +86,7 @@ target_link_libraries(${PROJECT_NAME}
   ${Boost_LIBRARIES}
   ${libpcap_LIBRARIES}
 )
-set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++11")
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "-std=c++14")
 
 add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS})
 
@@ -101,7 +101,7 @@ target_link_libraries(${PROJECT_NAME}_nodelets
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
-set_target_properties(${PROJECT_NAME}_nodelets PROPERTIES COMPILE_FLAGS "-std=c++11")
+set_target_properties(${PROJECT_NAME}_nodelets PROPERTIES COMPILE_FLAGS "-std=c++14")
 
 ### Nodes ###
 swri_nodelet_add_node(novatel_gps_node ${PROJECT_NAME} NovatelGpsNodelet)
@@ -109,7 +109,7 @@ target_link_libraries(novatel_gps_node
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}_nodelets
 )
-set_target_properties(novatel_gps_node PROPERTIES COMPILE_FLAGS "-std=c++11")
+set_target_properties(novatel_gps_node PROPERTIES COMPILE_FLAGS "-std=c++14")
 
 ### Build unit tests
 if(CATKIN_ENABLE_TESTING)
@@ -117,19 +117,19 @@ if(CATKIN_ENABLE_TESTING)
 
   catkin_add_gtest(parser_tests test/parser_tests.cpp)
   target_link_libraries(parser_tests ${PROJECT_NAME})
-  set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+  set_target_properties(parser_tests PROPERTIES COMPILE_FLAGS "-std=c++14")
 
   catkin_add_gmock(wrapper_tests test/wrapper/gps_nodelet_wrapper_worker_test.cpp)
   target_link_libraries(wrapper_tests ${PROJECT_NAME}_nodelets )
-  set_target_properties(wrapper_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+  set_target_properties(wrapper_tests PROPERTIES COMPILE_FLAGS "-std=c++14")
 
   #  target_link_libraries(novatel_DriverDiscovery_gtest ${PROJECT_NAME} ${catkin_LIBRARIES})
   # add_dependencies( novatel_DriverDiscovery_gtest ${catkin_EXPORTED_TARGETS})
-  # set_target_properties(novatel_DriverDiscovery_gtest PROPERTIES COMPILE_FLAGS "-std=c++11")
+  # set_target_properties(novatel_DriverDiscovery_gtest PROPERTIES COMPILE_FLAGS "-std=c++14")
 
   add_rostest_gtest(novatel_gps_tests test/novatel_gps_tests.test test/novatel_gps_tests.cpp)
   target_link_libraries(novatel_gps_tests ${PROJECT_NAME})
-  set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++11")
+  set_target_properties(novatel_gps_tests PROPERTIES COMPILE_FLAGS "-std=c++14")
 endif()
 
 ### Install Libraries and Headers ###
