@@ -39,7 +39,10 @@ TEST(NovatelGpsTestSuite, testGpsFixParsing)
   novatel_gps_driver::NovatelGps gps;
 
   std::string path = ros::package::getPath("novatel_gps_driver");
-  ASSERT_TRUE(gps.Connect(path + "/test/gpgga-gprmc-bestpos.pcap", novatel_gps_driver::NovatelGps::PCAP));
+  gps.wait_for_sync_ = true;
+
+  ASSERT_TRUE(gps.Connect(path + "/test/bestpos-bestvel-psrdop2-sync.pcap",
+      novatel_gps_driver::NovatelGps::PCAP));
 
   std::vector<gps_common::GPSFixPtr> fix_messages;
 
@@ -50,7 +53,13 @@ TEST(NovatelGpsTestSuite, testGpsFixParsing)
     fix_messages.insert(fix_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
-  ASSERT_EQ(40, fix_messages.size());
+  ASSERT_EQ(22, fix_messages.size());
+
+  EXPECT_DOUBLE_EQ(fix_messages.front()->latitude, 29.443917634921949);
+  EXPECT_DOUBLE_EQ(fix_messages.front()->longitude, -98.614755510637181);
+  EXPECT_DOUBLE_EQ(fix_messages.front()->speed, 0.041456376659522925);
+  EXPECT_DOUBLE_EQ(fix_messages.front()->track, 135.51629763185957);
+  EXPECT_DOUBLE_EQ(fix_messages.front()->gdop, 1.9980000257492065);
 }
 
 TEST(NovatelGpsTestSuite, testCorrImuDataParsing)
