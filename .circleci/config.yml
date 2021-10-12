@@ -28,7 +28,7 @@ jobs:
     # Pull docker image from docker hub
     # XTERM used for better catkin_make output
     docker:
-      - image: usdotfhwastoldev/carma-base:noetic-develop
+      - image: usdotfhwastolcandidate/carma-base:elise
         user: carma
         environment:
           TERM: xterm # use xterm to get full display output from build
