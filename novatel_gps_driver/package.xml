@@ -35,6 +35,7 @@
   <depend>uncertainty_tools</depend>
   <test_depend>rostest</test_depend>
   <test_depend>rosunit</test_depend>
+  <build_depend>carma_cmake_common</build_depend>
   <export>
     <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>
