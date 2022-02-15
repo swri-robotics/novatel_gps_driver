@@ -557,7 +557,7 @@ namespace novatel_gps_driver
     // If TimeSync messages are available, CalculateTimeSync keeps
     // an acculumator of their offset, which is used to
     // calculate a rolling mean of the offset to apply to all messages
-    rclcpp::Duration sync_offset(0); // If no TimeSyncs, assume 0 offset
+    rclcpp::Duration sync_offset(std::chrono::nanoseconds(0)); // If no TimeSyncs, assume 0 offset
     try
     {
       if (last_sync_ != rclcpp::Time(this->get_clock()->get_clock_type()))
