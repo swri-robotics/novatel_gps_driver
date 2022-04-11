@@ -28,11 +28,12 @@ jobs:
     # Pull docker image from docker hub
     # XTERM used for better catkin_make output
     docker:
-      - image: usdotfhwastol/carma-base:carma-system-3.11.0
+      - image: usdotfhwastol/carma-base:carma-system-4.0.0
         user: carma
         environment:
           TERM: xterm # use xterm to get full display output from build
           INIT_ENV: /home/carma/.base-image/init-env.sh
+    resource_class: large      
     working_directory: "/opt/carma/"
     # Execution steps
     steps:
@@ -54,13 +55,13 @@ jobs:
           name: Build Driver
           command: |
             source ${INIT_ENV}
-            export ROS_PARALLEL_JOBS='-j1 -l1' # Try to reduce memory consumption on build
+            export ROS_PARALLEL_JOBS='-j3 -l3' # Try to reduce memory consumption on build
             build-wrapper-linux-x86-64 --out-dir /opt/carma/bw-output bash make_with_coverage.bash -m -e /opt/carma/ -o ./coverage_reports/gcov
       - run:
           name: Run C++ Tests
           command: |
             source ${INIT_ENV}
-            export ROS_PARALLEL_JOBS='-j1 -l1' # Try to reduce memory consumption on build
+            export ROS_PARALLEL_JOBS='-j3 -l3' # Try to reduce memory consumption on build
             bash make_with_coverage.bash -t -e /opt/carma/ -o ./coverage_reports/gcov
       # Run SonarCloud analysis
       # PR Branchs and number extracted from Circle variables and github api
