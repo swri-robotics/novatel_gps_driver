@@ -15,6 +15,17 @@
 #  the License.
 
 sudo chmod -R +x /opt/carma/install
-source /opt/ros/noetic/setup.bash
+if [[ ! -z "$ROS1_PACKAGES" ]]; then
+    echo "Sourcing previous build for incremental build start point..."
+    source /opt/carma/install/setup.bash
+else
+    echo "Sourcing base image for full build..."
+    source /opt/ros/noetic/setup.bash
+fi
+
 cd ~/
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+if [[ ! -z "$ROS1_PACKAGES" ]]; then
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-above $ROS1_PACKAGES
+else
+    colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+fi
