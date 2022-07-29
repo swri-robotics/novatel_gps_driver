@@ -12,10 +12,15 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastol/carma-base:carma-system-4.1.0 as deps
+FROM usdotfhwastol/carma-base:carma-system-4.2.0 as deps
 
 
 FROM deps as setup
+
+ARG ROS1_PACKAGES=""
+ENV ROS1_PACKAGES=${ROS1_PACKAGES}
+ARG ROS2_PACKAGES=""
+ENV ROS2_PACKAGES=${ROS2_PACKAGES}
 
 RUN mkdir ~/src
 COPY --chown=carma . /home/carma/src/
