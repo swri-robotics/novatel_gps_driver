@@ -6,15 +6,15 @@ import launch_ros.actions
 
 def generate_launch_description():
     container = launch_ros.actions.ComposableNodeContainer(
-        node_name='novatel_gps_container',
-        node_namespace='',
+        name='novatel_gps_container',
+        namespace='',
         package='rclcpp_components',
-        node_executable='component_container',
+        executable='component_container',
         composable_node_descriptions=[
             launch_ros.descriptions.ComposableNode(
                 package='novatel_gps_driver',
-                node_plugin='novatel_gps_driver::NovatelGpsNode',
-                node_name='novatel_gps',
+                plugin='novatel_gps_driver::NovatelGpsNode',
+                name='novatel_gps',
                 parameters=[{
                     'connection_type': 'tcp',
                     'device': '192.168.50.11:3001',
