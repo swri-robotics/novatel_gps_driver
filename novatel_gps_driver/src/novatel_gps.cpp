@@ -40,7 +40,7 @@
 #include <rclcpp/node.hpp>
 
 // TODO: Remove once support is dropped.
-#if __has_include(<tf2_geometry_msgs/tf2_geometry_msgs.hpp>)
+#ifdef USE_TF2_GEOMETRY_MSGS_HPP
 #  include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #else
 #  include <tf2_geometry_msgs/tf2_geometry_msgs.h>
