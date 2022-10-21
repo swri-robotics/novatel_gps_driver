@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.1.1 (2022-10-21)
+------------------
 * Merge pull request `#116 <https://github.com/swri-robotics/novatel_gps_driver/issues/116>`_ from devrite/115-fix-humble-build-errors-tf2-and-rclcpp-components
   Fix humble build errors tf2 and rclcpp_components
 * Include tf2 to geometry_msgs header
