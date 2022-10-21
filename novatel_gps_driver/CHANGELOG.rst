@@ -2,6 +2,22 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#116 <https://github.com/swri-robotics/novatel_gps_driver/issues/116>`_ from devrite/115-fix-humble-build-errors-tf2-and-rclcpp-components
+  Fix humble build errors tf2 and rclcpp_components
+* Include tf2 to geometry_msgs header
+  Fixes `#115 <https://github.com/swri-robotics/novatel_gps_driver/issues/115>`_
+* cmake: add rclcpp_components to deps
+* Merge pull request `#109 <https://github.com/swri-robotics/novatel_gps_driver/issues/109>`_ from Smiffe/dashing-devel
+  expected_rate based on polling_period parameter
+* Merge pull request `#113 <https://github.com/swri-robotics/novatel_gps_driver/issues/113>`_ from ksuszka/galactic-launch-fix
+  Fix example launch files to work under Galactic
+* expected_rate based on polling_period parameter
+* Merge pull request `#108 <https://github.com/swri-robotics/novatel_gps_driver/issues/108>`_ from ksuszka/dashing-devel
+  Fix compilation warning on Galactic
+* Contributors: David Anthony, Krzysztof Suszka, Markus Hofstaetter, PBed
+
 4.1.0 (2020-10-06)
 ------------------
 * Add param to disable invalid GPSFixes, replace GPRMC with BESTVEL (ROS2) (`#94 <https://github.com/swri-robotics/novatel_gps_driver/issues/94>`_)
