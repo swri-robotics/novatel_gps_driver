@@ -74,6 +74,7 @@ ament_target_dependencies(${PROJECT_NAME}
   nav_msgs
   novatel_gps_msgs
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
   swri_math_util
