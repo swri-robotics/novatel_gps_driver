@@ -39,6 +39,12 @@
 #include <boost/make_shared.hpp>
 #include <rclcpp/node.hpp>
 
+// TODO: Remove once support is dropped.
+#ifdef USE_TF2_GEOMETRY_MSGS_HPP
+#  include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#else
+#  include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#endif
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/utils.h>
 

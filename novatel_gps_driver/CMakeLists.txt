@@ -67,6 +67,16 @@ target_link_libraries(${PROJECT_NAME}
   Boost::boost
   ${libpcap_LIBRARIES}
 )
+
+# TODO: Remove once support is dropped
+if(tf2_geometry_msgs_VERSION VERSION_GREATER_EQUAL "0.18.0")
+  set(USE_TF2_GEOMETRY_MSGS_HPP USE_TF2_GEOMETRY_MSGS_HPP)
+endif()
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+  ${USE_TF2_GEOMETRY_MSGS_HPP}
+)
+
 ament_target_dependencies(${PROJECT_NAME}
   diagnostic_msgs
   diagnostic_updater
@@ -74,6 +84,7 @@ ament_target_dependencies(${PROJECT_NAME}
   nav_msgs
   novatel_gps_msgs
   rclcpp
+  rclcpp_components
   sensor_msgs
   std_msgs
   swri_math_util
