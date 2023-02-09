@@ -12,7 +12,7 @@
 #  License for the specific language governing permissions and limitations under
 #  the License.
 
-FROM usdotfhwastolcandidate/carma-base:isetta as deps
+FROM usdotfhwastol/carma-base:carma-system-4.3.0 as deps
 
 
 FROM deps as setup
