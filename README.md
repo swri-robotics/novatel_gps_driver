@@ -1,3 +1,7 @@
+| CicleCI Build Status | Sonar Code Quality | DockerHub Release | DockerHub Release Candidate | DockerHub Develop |
+|------|-----|-----|-----|------|
+[![CircleCI](https://img.shields.io/circleci/build/gh/usdot-fhwa-stol/novatel_gps_driver/develop?label=CircleCI)](https://app.circleci.com/pipelines/github/usdot-fhwa-stol/novatel_gps_driver?branch=develop) | [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=usdot-fhwa-stol_CARMANovatelGpsDriver&metric=alert_status)](https://sonarcloud.io/dashboard?id=usdot-fhwa-stol_CARMANovatelGpsDriver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastol/carma-novatel-gps-driver?label=novatel-gps-driver)](https://hub.docker.com/repository/docker/usdotfhwastol/carma-novatel-gps-driver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastolcandidate/carma-novatel-gps-driver?label=novatel-gps-driver)](https://hub.docker.com/repository/docker/usdotfhwastolcandidate/carma-novatel-gps-driver) | [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/usdotfhwastoldev/carma-novatel-gps-driver?label=novatel-gps-driver)](https://hub.docker.com/repository/docker/usdotfhwastoldev/carma-novatel-gps-driver)
+
 
 # CARMANovatelGpsDriver
 This is a CARMA-specific fork of the ROS driver for NovAtel GPS/GNSS receivers.  The next six sections provide standard CARMA contextual information, after which appears the original readme content from the master NovAtel repo.
