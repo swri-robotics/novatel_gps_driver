@@ -66,6 +66,9 @@
  *    (only published if `publish_range_messages` is set `true`)
  * \e time <tt>novatel_gps_msgs/Time</tt> - Novatel-specific time data. (Only
  *    published if `publish_time` is set `true`.)
+ * \e time_reference <tt>sensor_msgs/TimeReference</tt> - Generic time reference
+ *    messages for time syncrhonization. (Only published if `publish_time_reference`
+ *    is set `true`.)
  * \e trackstat <tt>novatel_gps_msgs/Trackstat</tt> - Novatel-specific trackstat
  *    data at 1 Hz. (Only published if `publish_trackstat` is set `true`.)
  *
@@ -117,6 +120,8 @@
  *    This is ignored if publish_diagnostics is false. [true]
  * \e publish_time_messages <tt>bool</tt> - If set true, the driver publishes Novatel
  *    Time messages (see Topics Published) [false]
+ * \e publish_time_reference <tt>bool</tt> - If set true, the driver publishes
+ *    sensor_msgs/msg/TimeReference messages (see Topics Published) [false]
  * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
  *    Novatel Trackstat messages (see Topics Published) [false]
  * \e reconnect_delay_s <tt>bool</t> - If the driver is disconnected from the
@@ -154,10 +159,16 @@
 #include <novatel_gps_msgs/srv/novatel_freset.hpp>
 
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
+#include <sensor_msgs/msg/time_reference.hpp>
 
 #include <swri_roscpp/subscriber.h>
 
 #include <rclcpp/rclcpp.hpp>
+
+#include <chrono>
+#include <string>
+
+using TimeParserMsgT = novatel_gps_driver::TimeParser::MessageType;
 
 namespace novatel_gps_driver
 {
@@ -205,6 +216,7 @@ namespace novatel_gps_driver
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
+    bool publish_time_reference_;
     bool publish_trackstat_;
     bool publish_diagnostics_;
     bool publish_sync_diagnostic_;
@@ -235,6 +247,7 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::Gprmc>::SharedPtr gprmc_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Range>::SharedPtr range_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Time>::SharedPtr time_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::TimeReference>::SharedPtr time_ref_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Trackstat>::SharedPtr trackstat_pub_;
 
     rclcpp::Service<novatel_gps_msgs::srv::NovatelFRESET>::SharedPtr reset_service_;
@@ -313,6 +326,8 @@ namespace novatel_gps_driver
     void DataDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status);
 
     void RateDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status);
+
+    rclcpp::Time NovatelTimeToLocalTime(const TimeParserMsgT & utc_time);
   };
 }
 
