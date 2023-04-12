@@ -1176,7 +1176,7 @@ namespace novatel_gps_driver
     utc_tm.tm_min = time_msg->utc_minute;
     utc_tm.tm_hour = time_msg->utc_hour;
     utc_tm.tm_mday = time_msg->utc_day;
-    utc_tm.tm_mon = time_msg->utc_month;
+    utc_tm.tm_mon = time_msg->utc_month - 1;
     utc_tm.tm_year = (time_msg->utc_year - 1900);
     // Convert from tm struct to time_t
     // Unfortunately, there is no cross-platform way to indicate that a tm
