@@ -1193,7 +1193,7 @@ namespace novatel_gps_driver
     // the number of seconds elapsed since the epoch
     const std::time_t local_time = std::mktime(local_tm);
     // Calculate nanoseconds from utc_milliseconds which is (sec * 1000) + msec
-    uint32_t nsec = static_cast<uint32_t>((time_msg->utc_millisecond % 1000) * 1000.0);
+    uint32_t nsec = (time_msg->utc_millisecond % 1000) * 1000;
     // Return rclcpp::Time which is seconds and nanoseconds since epoch
     return rclcpp::Time{static_cast<int32_t>(local_time), nsec};
   }
