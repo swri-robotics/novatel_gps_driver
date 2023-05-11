@@ -35,7 +35,10 @@
 
 #include <rcl/time.h>
 
+#include <ctime>
+
 namespace stats = boost::accumulators;
+using TimeParserMsgT = novatel_gps_driver::TimeParser::MessageType;
 
 namespace novatel_gps_driver
 {
@@ -63,6 +66,7 @@ namespace novatel_gps_driver
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
+      publish_time_reference_(false),
       publish_trackstat_(false),
       publish_diagnostics_(true),
       publish_sync_diagnostic_(true),
@@ -110,6 +114,7 @@ namespace novatel_gps_driver
     publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
     publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
     publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
+    publish_time_reference_ = this->declare_parameter("publish_time_reference", publish_time_reference_);
     publish_trackstat_ = this->declare_parameter("publish_trackstat", publish_trackstat_);
     publish_diagnostics_ = this->declare_parameter("publish_diagnostics", publish_diagnostics_);
     publish_sync_diagnostic_ = this->declare_parameter("publish_sync_diagnostic", publish_sync_diagnostic_);
@@ -233,6 +238,11 @@ namespace novatel_gps_driver
     if (publish_time_messages_)
     {
       time_pub_ = swri::advertise<novatel_gps_msgs::msg::Time>(*this, "time", 100);
+    }
+
+    if (publish_time_reference_)
+    {
+      time_ref_pub_ = swri::advertise<sensor_msgs::msg::TimeReference>(*this, "time_reference", 100);
     }
 
     if (publish_trackstat_)
@@ -718,15 +728,31 @@ namespace novatel_gps_driver
         novatel_velocity_pub_->publish(*msg);
       }
     }
-    if (publish_time_messages_)
+    if (publish_time_messages_ || publish_time_reference_)
     {
-      std::vector<novatel_gps_driver::TimeParser::MessageType> time_msgs;
+      std::vector<TimeParserMsgT> time_msgs;
       gps_.GetTimeMessages(time_msgs);
       for (auto& msg : time_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
-        msg->header.frame_id = frame_id_;
-        time_pub_->publish(std::move(msg));
+
+        if (publish_time_messages_)
+        {
+          msg->header.frame_id = frame_id_;
+          time_pub_->publish(std::move(msg));
+        }
+        else if (publish_time_reference_)
+        {
+          // Only publish TimeReference if the clock and UTC statuses are valid
+          if (msg->clock_status == "VALID" && msg->utc_status == "Valid")
+          {
+            auto time_ref_msg = std::make_unique<sensor_msgs::msg::TimeReference>();
+            time_ref_msg->header = msg->header;
+            time_ref_msg->time_ref = NovatelTimeToLocalTime(msg);
+            time_ref_msg->source = "UTC from Novatel GNSS";
+            time_ref_pub_->publish(std::move(time_ref_msg));
+          }
+        }
       }
     }
     if (publish_range_messages_)
@@ -1140,6 +1166,36 @@ namespace novatel_gps_driver
     status.add("Warnings", publish_rate_warnings_);
 
     publish_rate_warnings_ = 0;
+  }
+
+  rclcpp::Time NovatelGpsNode::NovatelTimeToLocalTime(const TimeParserMsgT & time_msg)
+  {
+    // Build tm struct from NovatelTime
+    struct tm utc_tm;
+    utc_tm.tm_sec = static_cast<int32_t>(time_msg->utc_millisecond / 1000.0);
+    utc_tm.tm_min = time_msg->utc_minute;
+    utc_tm.tm_hour = time_msg->utc_hour;
+    utc_tm.tm_mday = time_msg->utc_day;
+    utc_tm.tm_mon = time_msg->utc_month - 1;
+    utc_tm.tm_year = (time_msg->utc_year - 1900);
+    // Convert from tm struct to time_t
+    // Unfortunately, there is no cross-platform way to indicate that a tm
+    // struct is already in UTC and convert it to a time_t so this BS is necessary
+    const std::time_t utc_time =
+    #if defined(_WIN32)
+        _mkgmtime(&utc_tm);
+    #else // Assume POSIX
+        timegm(&utc_tm);
+    #endif
+    // Generate a local time tm struct from the UTC time_t
+    struct tm * local_tm = std::localtime(&utc_time);
+    // Convert from local time tm struct back to a time_t which *USUALLY* represents
+    // the number of seconds elapsed since the epoch
+    const std::time_t local_time = std::mktime(local_tm);
+    // Calculate nanoseconds from utc_milliseconds which is (sec * 1000) + msec
+    uint32_t nsec = (time_msg->utc_millisecond % 1000) * 1000;
+    // Return rclcpp::Time which is seconds and nanoseconds since epoch
+    return rclcpp::Time{static_cast<int32_t>(local_time), nsec};
   }
 }
 
