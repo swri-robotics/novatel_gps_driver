@@ -2,6 +2,15 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge pull request `#117 <https://github.com/danthony06/novatel_gps_driver/issues/117>`_ from JWhitleyWork/add-time-reference
+  Add the ability to publish TimeReference messages.
+* Fix month.
+* Try to fix nanoseconds in time reference.
+* Add the ability to publish TimeReference messages.
+* Contributors: David Anthony, Joshua Whitley
+
 4.1.1 (2022-10-21)
 ------------------
 * Merge pull request `#116 <https://github.com/swri-robotics/novatel_gps_driver/issues/116>`_ from devrite/115-fix-humble-build-errors-tf2-and-rclcpp-components
