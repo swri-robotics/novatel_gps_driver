@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.1.2 (2024-03-18)
+------------------
 * Merge pull request `#117 <https://github.com/danthony06/novatel_gps_driver/issues/117>`_ from JWhitleyWork/add-time-reference
   Add the ability to publish TimeReference messages.
 * Fix month.
