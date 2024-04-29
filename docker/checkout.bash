@@ -20,6 +20,7 @@
 set -exo pipefail
 
 dir=~
+BRANCH=develop
 while [[ $# -gt 0 ]]; do
       arg="$1"
       case $arg in
