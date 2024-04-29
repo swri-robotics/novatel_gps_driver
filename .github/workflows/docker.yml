@@ -1,0 +1,9 @@
+name: Docker build
+
+on:
+  pull_request:
+      types: [opened, synchronize, reopened]
+
+jobs:
+  docker:
+    uses: usdot-fhwa-stol/actions/.github/workflows/docker.yml@main
