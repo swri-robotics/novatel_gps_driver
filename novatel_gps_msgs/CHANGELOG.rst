@@ -2,6 +2,9 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+
 4.1.2 (2024-03-18)
 ------------------
 
