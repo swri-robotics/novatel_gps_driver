@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.1.3 (2024-10-11)
+------------------
 * Updated cmake to generate both composable node plugin library and standalone executable for NovatelGpsNode. (`#122 <https://github.com/swri-robotics/novatel_gps_driver/issues/122>`_)
 * Contributors: Robert Brothers
 
