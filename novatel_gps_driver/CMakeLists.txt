@@ -100,7 +100,10 @@ add_library(${PROJECT_NAME}_nodes SHARED
 )
 target_compile_definitions(${PROJECT_NAME}_nodes
   PRIVATE "COMPOSITION_BUILDING_DLL")
-rclcpp_components_register_nodes(${PROJECT_NAME}_nodes "novatel_gps_driver::NovatelGpsNode")
+rclcpp_components_register_node(${PROJECT_NAME}_nodes 
+  PLUGIN "novatel_gps_driver::NovatelGpsNode"
+  EXECUTABLE "novatel_gps_node"
+)
 target_link_libraries(${PROJECT_NAME}_nodes
   Boost::boost
   Boost::thread
