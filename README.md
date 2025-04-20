@@ -72,7 +72,8 @@ def generate_launch_description():
                     'publish_novatel_positions': True,
                     'publish_novatel_velocity': True,
                     'publish_novatel_psrdop2': True,
-                    'frame_id': '/gps'
+                    'frame_id': '/gps',
+                    'loop': True,   
                 }]
             )
         ],
@@ -194,6 +195,8 @@ Nodelets
         messages are received, but a side effect is that the driver will often be unable to fill in the speed & track
         fields.  This has no effect if `publish_novatel_velocity` is `false`.
             - Default: `true`
+        - `loop` : `true` to keep replaying PCAP reply. Only effective when device is `pcap`.
+            - Default: `false`
     2. **ROS Topic Subscriptions**
         - `/gps_sync` *(std_msgs/Time)*: *(optional)* Timestamped sync pulses from a DIO module. 
     These are used to improve the accuracy of the time stamps of the messages published.
