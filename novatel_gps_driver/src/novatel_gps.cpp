@@ -65,6 +65,7 @@ namespace novatel_gps_driver
       extractor_(node_.get_logger()),
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
+      corrimus_msgs_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
@@ -73,6 +74,7 @@ namespace novatel_gps_driver
       imu_msgs_(MAX_BUFFER_SIZE),
       inscov_msgs_(MAX_BUFFER_SIZE),
       inspva_msgs_(MAX_BUFFER_SIZE),
+      inspvas_msgs_(MAX_BUFFER_SIZE),
       inspvax_msgs_(MAX_BUFFER_SIZE),
       insstdev_msgs_(MAX_BUFFER_SIZE),
       novatel_positions_(MAX_BUFFER_SIZE),
@@ -458,6 +460,11 @@ namespace novatel_gps_driver
     DrainQueue(corrimudata_msgs_, imu_messages);
   }
 
+  void NovatelGps::GetNovatelCorrectedImus(std::vector<novatel_gps_driver::CorrImusParser::MessageType>& imu_messages)
+  {
+    DrainQueue(corrimus_msgs_, imu_messages);
+  }
+
   void NovatelGps::GetNovatelPsrdop2Messages(std::vector<novatel_gps_driver::Psrdop2Parser::MessageType>& psrdop2_messages)
   {
     psrdop2_messages.clear();
@@ -500,6 +507,11 @@ namespace novatel_gps_driver
   void NovatelGps::GetInspvaMessages(std::vector<novatel_gps_driver::InspvaParser::MessageType>& inspva_messages)
   {
     DrainQueue(inspva_msgs_, inspva_messages);
+  }
+
+  void NovatelGps::GetInspvasMessages(std::vector<novatel_gps_driver::InspvasParser::MessageType>& inspvas_messages)
+  {
+    DrainQueue(inspvas_msgs_, inspvas_messages);
   }
 
   void NovatelGps::GetInspvaxMessages(std::vector<novatel_gps_driver::InspvaxParser::MessageType>& inspvax_messages)
@@ -918,11 +930,12 @@ namespace novatel_gps_driver
 
     size_t previous_size = imu_msgs_.size();
     // Only do anything if we have both CORRIMUDATA and INSPVA messages.
-    while (!corrimudata_queue_.empty() && !inspva_queue_.empty())
+    while ((!corrimudata_queue_.empty() || !corrimus_queue_.empty()) && (!inspva_queue_.empty() || !inspvas_queue_.empty()))
     {
-      const auto& corrimudata = corrimudata_queue_.front();
-      const auto& inspva = inspva_queue_.front();
-
+      
+      const auto& corrimudata = !corrimudata_queue_.empty() ? corrimudata_queue_.front() : corrimus_queue_.front();
+      const auto& inspva = !inspva_queue_.empty() ? inspva_queue_.front() : inspvas_queue_.front();
+      
       double corrimudata_time = corrimudata->gps_week_num * SECONDS_PER_WEEK + corrimudata->gps_seconds;
       double inspva_time = inspva->novatel_msg_header.gps_week_num *
                                SECONDS_PER_WEEK + inspva->novatel_msg_header.gps_seconds;
@@ -946,7 +959,9 @@ namespace novatel_gps_driver
       }
       // If we've successfully matched up two messages, remove them from their queues.
       inspva_queue_.pop();
+      inspvas_queue_.pop();
       corrimudata_queue_.pop();
+      corrimus_queue_.pop();
 
       // Now we can combine them together to make an Imu message.
       auto imu = std::make_shared<sensor_msgs::msg::Imu>();
@@ -1077,6 +1092,21 @@ namespace novatel_gps_driver
         GenerateImuMessages();
         break;
       }
+      case CorrImusParser::MESSAGE_ID:
+      {
+        auto imu = corrimus_parser_.ParseBinary(msg);
+        imu->header.stamp = stamp;
+        corrimus_msgs_.push_back(imu);
+        corrimus_queue_.push(imu);
+        if (corrimus_queue_.size() > MAX_BUFFER_SIZE)
+        {
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "CORRIMUS queue overflow.");
+          corrimus_queue_.pop();
+        }
+        GenerateImuMessages();
+        break;
+      }
       case InscovParser::MESSAGE_ID:
       {
         auto inscov = inscov_parser_.ParseBinary(msg);
@@ -1096,6 +1126,21 @@ namespace novatel_gps_driver
           // TODO pjr Make this a _THROTTLE log when it's available
           RCLCPP_WARN(node_.get_logger(), "INSPVA queue overflow.");
           inspva_queue_.pop();
+        }
+        GenerateImuMessages();
+        break;
+      }
+      case InspvasParser::MESSAGE_ID:
+      {
+        auto inspvas = inspvas_parser_.ParseBinary(msg);
+        inspvas->header.stamp = stamp;
+        inspvas_msgs_.push_back(inspvas);
+        inspvas_queue_.push(inspvas);
+        if (inspvas_queue_.size() > MAX_BUFFER_SIZE)
+        {
+          // TODO pjr Make this a _THROTTLE log when it's available
+          RCLCPP_WARN(node_.get_logger(), "INSPVAS queue overflow.");
+          inspvas_queue_.pop();
         }
         GenerateImuMessages();
         break;

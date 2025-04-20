@@ -297,6 +297,7 @@ namespace novatel_gps_driver
 
     std::string imu_frame_id_;
     std::string frame_id_;
+    bool on_loop_;
 
     /**
      * @brief Service request to reset the gps through FRESET

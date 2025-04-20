@@ -51,6 +51,7 @@ namespace novatel_gps_driver
   const std::string NovatelMessageExtractor::NOVATEL_SENTENCE_FLAG = "#";
   const std::string NovatelMessageExtractor::NOVATEL_ASCII_FLAGS = "$#";
   const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
+  const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES2 = "\xAA\x44\x13";
   const std::string NovatelMessageExtractor::NOVATEL_ENDLINE = "\r\n";
   
   NovatelMessageExtractor::NovatelMessageExtractor(rclcpp::Logger logger) :
@@ -158,23 +159,38 @@ namespace novatel_gps_driver
     }
 
     RCLCPP_DEBUG(this->logger_, "Reading binary header.");
-    msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
+    if (str[start_idx+2] == static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2])){
+      msg.header_.ParseHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
+    }
+    else if (str[start_idx+2] == static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES2[2]))
+    {
+      msg.header_.ParseShortHeader(reinterpret_cast<const uint8_t*>(&str[start_idx]));
+    }
+    else  {
+      RCLCPP_ERROR(this->logger_, "Sync bytes were incorrect; this should never happen and is definitely a bug: %x",
+        str[start_idx+2]);
+      return -2;
+    }
     auto data_start = static_cast<uint16_t>(msg.header_.header_length_ + start_idx);
     uint16_t data_length = msg.header_.message_length_;
 
     if (msg.header_.sync0_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[0]) ||
         msg.header_.sync1_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[1]) ||
-        msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]))
+        (msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES[2]) &&
+        msg.header_.sync2_ != static_cast<uint8_t>(NOVATEL_BINARY_SYNC_BYTES2[2]))
+      )
     {
       RCLCPP_ERROR(this->logger_, "Sync bytes were incorrect; this should never happen and is definitely a bug: %x %x %x",
                msg.header_.sync0_, msg.header_.sync1_, msg.header_.sync2_);
       return -2;
     }
 
-    if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH)
+    if (msg.header_.header_length_ != HeaderParser::BINARY_HEADER_LENGTH        ||
+        msg.header_.header_length_ != HeaderParser::BINARY_SHORT_HEADER_LENGTH
+    )
     {
-      RCLCPP_WARN(this->logger_, "Binary header length was unexpected: %u (expected %u)",
-               msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH);
+      RCLCPP_DEBUG(this->logger_, "Binary header length was unexpected: %u (expected %u, or %u)",
+               msg.header_.header_length_, HeaderParser::BINARY_HEADER_LENGTH, HeaderParser::BINARY_SHORT_HEADER_LENGTH);
     }
 
     RCLCPP_DEBUG(this->logger_, "Msg ID: %u    Data start / length: %u / %u",
@@ -376,7 +392,7 @@ namespace novatel_gps_driver
       size_t ascii_start_idx;
       size_t ascii_end_idx;
       size_t invalid_ascii_idx;
-      size_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES, sentence_start);
+      size_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES.substr(0, 2), sentence_start);
 
       FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 

@@ -66,6 +66,7 @@
 #include <novatel_gps_driver/parsers/bestvel.h>
 #include <novatel_gps_driver/parsers/clocksteering.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
+#include <novatel_gps_driver/parsers/corrimus.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsa.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
@@ -75,6 +76,7 @@
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 #include <novatel_gps_driver/parsers/inscov.h>
 #include <novatel_gps_driver/parsers/inspva.h>
+#include <novatel_gps_driver/parsers/inspvas.h>
 #include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/range.h>
@@ -211,6 +213,11 @@ namespace novatel_gps_driver
        */
       void GetInspvaMessages(std::vector<novatel_gps_driver::InspvaParser::MessageType>& inspva_messages);
       /**
+       * @brief Provides any INSPVAS messages that have been received since the last
+       * time this was called.
+       * @param[out] inspvas_messages New INSPVAS messages.
+       */
+      void GetInspvasMessages(std::vector<novatel_gps_driver::InspvasParser::MessageType>& inspvas_messages);      /**
        * @brief Provides any INSPVAX messages that have been received since the last
        * time this was called.
        * @param[out] inspvax_messages New INSPVAX messages.
@@ -228,6 +235,12 @@ namespace novatel_gps_driver
        * @param[out] imu_messages New CORRIMUDATA messages.
        */
       void GetNovatelCorrectedImuData(std::vector<novatel_gps_driver::CorrImuDataParser::MessageType>& imu_messages);
+      /**
+       * @brief Provides any CORRIMUS messages that have been received since the
+       * last time this was called.
+       * @param[out] imu_messages New CORRIMUS messages.
+       */
+      void GetNovatelCorrectedImus(std::vector<novatel_gps_driver::CorrImusParser::MessageType>& imu_messages);
       /**
        * @brief Provides any BESTPOS messages that have been received since the
        * last time this was called.
@@ -498,6 +511,7 @@ namespace novatel_gps_driver
       DualAntennaHeadingParser dual_antenna_heading_parser_;
       ClockSteeringParser clocksteering_parser_;
       CorrImuDataParser corrimudata_parser_;
+      CorrImusParser corrimus_parser_;
       GpggaParser gpgga_parser_;
       GpgsaParser gpgsa_parser_;
       GpgsvParser gpgsv_parser_;
@@ -505,6 +519,7 @@ namespace novatel_gps_driver
       GprmcParser gprmc_parser_;
       InscovParser inscov_parser_;
       InspvaParser inspva_parser_;
+      InspvasParser inspvas_parser_;
       InspvaxParser inspvax_parser_;
       InsstdevParser insstdev_parser_;
       Psrdop2Parser psrdop2_parser_;
@@ -516,6 +531,7 @@ namespace novatel_gps_driver
       // Message buffers
       boost::circular_buffer<novatel_gps_driver::ClockSteeringParser::MessageType> clocksteering_msgs_;
       boost::circular_buffer<novatel_gps_driver::CorrImuDataParser::MessageType> corrimudata_msgs_;
+      boost::circular_buffer<novatel_gps_driver::CorrImusParser::MessageType> corrimus_msgs_;
       boost::circular_buffer<novatel_gps_driver::GpggaParser::MessageType> gpgga_msgs_;
       boost::circular_buffer<novatel_gps_driver::GpgsaParser::MessageType> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_driver::GpgsvParser::MessageType> gpgsv_msgs_;
@@ -524,6 +540,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<sensor_msgs::msg::Imu::SharedPtr> imu_msgs_;
       boost::circular_buffer<novatel_gps_driver::InscovParser::MessageType> inscov_msgs_;
       boost::circular_buffer<novatel_gps_driver::InspvaParser::MessageType> inspva_msgs_;
+      boost::circular_buffer<novatel_gps_driver::InspvasParser::MessageType> inspvas_msgs_;
       boost::circular_buffer<novatel_gps_driver::InspvaxParser::MessageType> inspvax_msgs_;
       boost::circular_buffer<novatel_gps_driver::InsstdevParser::MessageType> insstdev_msgs_;
       boost::circular_buffer<novatel_gps_driver::BestposParser::MessageType> novatel_positions_;
@@ -544,7 +561,9 @@ namespace novatel_gps_driver
 
       // IMU data synchronization queues
       std::queue<novatel_gps_driver::CorrImuDataParser::MessageType> corrimudata_queue_;
+      std::queue<novatel_gps_driver::CorrImusParser::MessageType> corrimus_queue_;
       std::queue<novatel_gps_driver::InspvaParser::MessageType> inspva_queue_;
+      std::queue<novatel_gps_driver::InspvasParser::MessageType> inspvas_queue_;
       novatel_gps_driver::InsstdevParser::MessageType latest_insstdev_;
       novatel_gps_driver::InscovParser::MessageType latest_inscov_;
       double imu_rate_;

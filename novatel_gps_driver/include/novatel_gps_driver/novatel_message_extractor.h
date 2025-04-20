@@ -124,6 +124,7 @@ namespace novatel_gps_driver
     static const std::string NOVATEL_ASCII_FLAGS;
     /// Indicates the beginning of a binary NovAtel message
     static const std::string NOVATEL_BINARY_SYNC_BYTES;
+    static const std::string NOVATEL_BINARY_SYNC_BYTES2;
     /// Indicates the end of an ASCII message
     static const std::string NOVATEL_ENDLINE;
 

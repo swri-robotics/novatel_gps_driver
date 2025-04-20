@@ -95,6 +95,18 @@ namespace novatel_gps_driver
       receiver_status_ = ParseUInt32(&data[20]);
       receiver_sw_version_ = ParseUInt16(&data[26]);
     }
+
+    void ParseShortHeader(const uint8_t* data)
+    {
+      sync0_ = data[0];
+      sync1_ = data[1];
+      sync2_ = data[2];
+      message_length_ = data[3];
+      message_id_ = ParseUInt16(&data[4]);
+      week_ = ParseUInt16(&data[6]);
+      gps_ms_ = ParseUInt32(&data[8]);
+      header_length_ = 12;  // TODO: HardCoding for now
+    }
   };
 }
 #endif //NOVATEL_GPS_DRIVER_BINARY_HEADER_H

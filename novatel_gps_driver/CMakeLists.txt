@@ -43,6 +43,7 @@ add_library(${PROJECT_NAME}
   src/parsers/bestxyz.cpp
   src/parsers/clocksteering.cpp
   src/parsers/corrimudata.cpp
+  src/parsers/corrimus.cpp
   src/parsers/dual_antenna_heading.cpp
   src/parsers/gpgga.cpp
   src/parsers/gpgsa.cpp
@@ -53,6 +54,7 @@ add_library(${PROJECT_NAME}
   src/parsers/heading2.cpp
   src/parsers/inscov.cpp
   src/parsers/inspva.cpp
+  src/parsers/inspvas.cpp
   src/parsers/inspvax.cpp
   src/parsers/insstdev.cpp
   src/parsers/parsing_utils.cpp

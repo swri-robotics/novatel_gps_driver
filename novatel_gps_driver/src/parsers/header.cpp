@@ -100,6 +100,17 @@ novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::
   return msg;
 }
 
+novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::ParseShortBinary(
+  const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
+{
+// Only keeping valida data we're getting from Short header
+novatel_gps_msgs::msg::NovatelMessageHeader msg;
+msg.gps_time_status = "UNKNOWN";       // GPS Ref time unknown.
+msg.gps_week_num = bin_msg.header_.week_;
+msg.gps_seconds = static_cast<double>(bin_msg.header_.gps_ms_) / 1000.0;
+return msg;
+}
+
 novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::ParseAscii(
     const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {

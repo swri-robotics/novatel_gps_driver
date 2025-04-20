@@ -94,7 +94,8 @@ namespace novatel_gps_driver
       aux4stat_(-1),
       last_published_(get_clock()->get_clock_type()),
       imu_frame_id_(""),
-      frame_id_("")
+      frame_id_(""),
+      on_loop_(false)
   {
     /**
      * Init method reads parameters and sets up publishers and subscribers.
@@ -137,6 +138,7 @@ namespace novatel_gps_driver
 
     imu_frame_id_ = this->declare_parameter("imu_frame_id", std::string(""));
     frame_id_ = this->declare_parameter("frame_id", std::string(""));
+    on_loop_ = this->declare_parameter("loop", on_loop_);
 
     //set NovatelGps parameters
     gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
@@ -459,7 +461,7 @@ namespace novatel_gps_driver
 
       rate.sleep();
 
-      if (connection_ == NovatelGps::PCAP)
+      if (connection_ == NovatelGps::PCAP && !on_loop_)
       {
         // If we're playing a PCAP file, we only want to play it once.
         rclcpp::shutdown();
@@ -817,6 +819,15 @@ namespace novatel_gps_driver
         msg->header.frame_id = imu_frame_id_;
         novatel_imu_pub_->publish(*msg);
       }
+      
+      std::vector<novatel_gps_driver::CorrImusParser::MessageType> novatel_imus_msgs;
+      gps_.GetNovatelCorrectedImus(novatel_imus_msgs);
+      for (auto& msg : novatel_imus_msgs)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = imu_frame_id_;
+        novatel_imu_pub_->publish(*msg);
+      }
 
       std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_msgs;
       gps_.GetImuMessages(imu_msgs);
@@ -839,6 +850,15 @@ namespace novatel_gps_driver
       std::vector<novatel_gps_driver::InspvaParser::MessageType> inspva_msgs;
       gps_.GetInspvaMessages(inspva_msgs);
       for (auto& msg : inspva_msgs)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = imu_frame_id_;
+        inspva_pub_->publish(*msg);
+      }
+      
+      std::vector<novatel_gps_driver::InspvasParser::MessageType> inspvas_msgs;
+      gps_.GetInspvasMessages(inspvas_msgs);
+      for (auto& msg : inspvas_msgs)
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;

@@ -3,6 +3,7 @@ std_msgs/Header header
 
 NovatelMessageHeader novatel_msg_header
 
+uint32 imu_data_count
 uint32 gps_week_num
 float64 gps_seconds
 
