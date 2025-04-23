@@ -116,39 +116,3 @@ novatel_gps_driver::InspvasParser::ParseBinary(const novatel_gps_driver::BinaryM
 
   return ros_msg;
 }
-
-// novatel_gps_driver::InspvasParser::MessageType
-// novatel_gps_driver::InspvasParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
-// {
-//   if (sentence.body.size() != ASCII_FIELDS)
-//   {
-//     std::stringstream error;
-//     error << "Unexpected number of fields in INSPVA log: " << sentence.body.size();
-//     throw ParseException(error.str());
-//   }
-//   auto msg = std::make_shared<novatel_gps_msgs::msg::Inspva>();
-//   HeaderParser h_parser;
-//   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
-
-//   bool valid = true;
-
-//   valid &= ParseUInt32(sentence.body[0], msg->week);
-//   valid &= ParseDouble(sentence.body[1], msg->seconds);
-//   valid &= ParseDouble(sentence.body[2], msg->latitude);
-//   valid &= ParseDouble(sentence.body[3], msg->longitude);
-//   valid &= ParseDouble(sentence.body[4], msg->height);
-//   valid &= ParseDouble(sentence.body[5], msg->north_velocity);
-//   valid &= ParseDouble(sentence.body[6], msg->east_velocity);
-//   valid &= ParseDouble(sentence.body[7], msg->up_velocity);
-//   valid &= ParseDouble(sentence.body[8], msg->roll);
-//   valid &= ParseDouble(sentence.body[9], msg->pitch);
-//   valid &= ParseDouble(sentence.body[10], msg->azimuth);
-//   msg->status = sentence.body[11];
-
-//   if (!valid)
-//   {
-//     throw ParseException("Error parsing INSPVA log.");
-//   }
-
-//   return msg;
-// }

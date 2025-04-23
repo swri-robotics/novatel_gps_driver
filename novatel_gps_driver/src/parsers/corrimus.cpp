@@ -68,34 +68,3 @@ novatel_gps_driver::CorrImusParser::ParseBinary(const novatel_gps_driver::Binary
 
   return ros_msg;
 }
-
-// novatel_gps_driver::CorrImusParser::MessageType
-// novatel_gps_driver::CorrImusParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
-// {
-//   if (sentence.body.size() != ASCII_FIELDS)
-//   {
-//     std::stringstream error;
-//     error << "Unexpected number of fields in CORRIMUDATA log: " << sentence.body.size();
-//     throw ParseException(error.str());
-//   }
-//   auto msg = std::make_shared<novatel_gps_msgs::msg::NovatelCorrectedImuData>();
-//   HeaderParser h_parser;
-//   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
-//   msg->novatel_msg_header.message_name = "CORRIMUS";
-//   bool valid = true;
-
-//   valid &= ParseUInt32(sentence.body[0], msg->imu_data_count);
-//   valid &= ParseDouble(sentence.body[1], msg->pitch_rate);
-//   valid &= ParseDouble(sentence.body[2], msg->roll_rate);
-//   valid &= ParseDouble(sentence.body[3], msg->yaw_rate);
-//   valid &= ParseDouble(sentence.body[4], msg->lateral_acceleration);
-//   valid &= ParseDouble(sentence.body[5], msg->longitudinal_acceleration);
-//   valid &= ParseDouble(sentence.body[6], msg->vertical_acceleration);
-
-//   if (!valid)
-//   {
-//     throw ParseException("Error parsing CORRIMUDATA log.");
-//   }
-
-//   return msg;
-// }
