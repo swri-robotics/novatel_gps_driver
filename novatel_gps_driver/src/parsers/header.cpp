@@ -103,7 +103,7 @@ novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::
 novatel_gps_driver::HeaderParser::MessageType novatel_gps_driver::HeaderParser::ParseShortBinary(
   const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
-// Only keeping valida data we're getting from Short header
+// Only keeping valid data we're getting from Short header
 novatel_gps_msgs::msg::NovatelMessageHeader msg;
 msg.gps_time_status = "UNKNOWN";       // GPS Ref time unknown.
 msg.gps_week_num = bin_msg.header_.week_;
