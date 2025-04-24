@@ -217,7 +217,8 @@ namespace novatel_gps_driver
        * time this was called.
        * @param[out] inspvas_messages New INSPVAS messages.
        */
-      void GetInspvasMessages(std::vector<novatel_gps_driver::InspvasParser::MessageType>& inspvas_messages);      /**
+      void GetInspvasMessages(std::vector<novatel_gps_driver::InspvasParser::MessageType>& inspvas_messages);      
+      /**
        * @brief Provides any INSPVAX messages that have been received since the last
        * time this was called.
        * @param[out] inspvax_messages New INSPVAX messages.
