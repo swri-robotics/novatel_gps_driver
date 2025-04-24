@@ -44,8 +44,6 @@ namespace novatel_gps_driver
 
     MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
 
-    // MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
-
     static constexpr uint32_t MESSAGE_ID = 508;
     static const std::string MESSAGE_NAME;
     static constexpr size_t BINARY_LENGTH = 88;
