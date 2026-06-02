@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 project(novatel_gps_driver)
 
 # Ament packages
+find_package(Threads REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(gps_msgs REQUIRED)
@@ -19,9 +20,15 @@ find_package(swri_roscpp REQUIRED)
 find_package(swri_serial_util REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(Boost REQUIRED CONFIG)
 
-# Boost
-find_package(Boost REQUIRED COMPONENTS system thread)
+if(TARGET Boost::headers)
+  set(BOOST_HEADERS_TARGET Boost::headers)
+elseif(TARGET Boost::boost)
+  set(BOOST_HEADERS_TARGET Boost::boost)
+else()
+  message(FATAL_ERROR "Boost headers target not found. Expected Boost::headers or Boost::boost.")
+endif()
 
 # libpcap; it doesn't provide PkgConfig or CMake modules
 find_library(libpcap_LIBRARIES pcap)
@@ -67,34 +74,22 @@ add_library(${PROJECT_NAME}
 set_property(TARGET ${PROJECT_NAME}
   PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(${PROJECT_NAME}
-  Boost::boost
+  ${BOOST_HEADERS_TARGET}
   ${libpcap_LIBRARIES}
-)
-
-# TODO: Remove once support is dropped
-if(tf2_geometry_msgs_VERSION VERSION_GREATER_EQUAL "0.18.0")
-  set(USE_TF2_GEOMETRY_MSGS_HPP USE_TF2_GEOMETRY_MSGS_HPP)
-endif()
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-  ${USE_TF2_GEOMETRY_MSGS_HPP}
-)
-
-ament_target_dependencies(${PROJECT_NAME}
-  diagnostic_msgs
-  diagnostic_updater
-  gps_msgs
-  nav_msgs
-  novatel_gps_msgs
-  rclcpp
-  rclcpp_components
-  sensor_msgs
-  std_msgs
-  swri_math_util
-  swri_roscpp
-  swri_serial_util
-  tf2
-  tf2_geometry_msgs
+  ${diagnostic_msgs_TARGETS}
+  ${diagnostic_updater_TARGETS}
+  ${gps_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${novatel_gps_msgs_TARGETS}
+  rclcpp::rclcpp
+  ${rclcpp_components_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  swri_math_util::swri_math_util
+  ${swri_roscpp_TARGETS}
+  swri_serial_util::swri_serial_util
+  tf2::tf2
+  tf2_geometry_msgs::tf2_geometry_msgs
 )
 
 ### ROS Node ###
@@ -108,8 +103,7 @@ rclcpp_components_register_node(${PROJECT_NAME}_nodes
   EXECUTABLE "novatel_gps_node"
 )
 target_link_libraries(${PROJECT_NAME}_nodes
-  Boost::boost
-  Boost::thread
+  Threads::Threads
   ${PROJECT_NAME}
 )
 
@@ -124,17 +118,20 @@ if(BUILD_TESTING)
 
   ament_add_gtest(parser_tests test/parser_tests.cpp)
   target_link_libraries(parser_tests
-    Boost::system
     ${PROJECT_NAME}
+    ament_index_cpp::ament_index_cpp
   )
-  ament_target_dependencies(parser_tests ament_index_cpp)
 
   ament_add_gtest(novatel_gps_tests test/novatel_gps_tests.cpp)
   target_link_libraries(novatel_gps_tests
-    Boost::system
     ${PROJECT_NAME}
+    ament_index_cpp::ament_index_cpp
   )
-  ament_target_dependencies(novatel_gps_tests ament_index_cpp)
+
+  install(DIRECTORY test/
+    DESTINATION test
+    FILES_MATCHING PATTERN "*.pcap"
+  )
 endif()
 
 ### Install Libraries and Headers ###
@@ -147,12 +144,6 @@ install(TARGETS
 )
 install(DIRECTORY include/
   DESTINATION include
-)
-# I'd rather not install the sample .pcap data, but it seems that it needs to be
-# installed for the tests to be able to find it...
-install(DIRECTORY test/
-  DESTINATION test
-  FILES_MATCHING PATTERN "*.pcap"
 )
 
 ### Install Launch Files ###

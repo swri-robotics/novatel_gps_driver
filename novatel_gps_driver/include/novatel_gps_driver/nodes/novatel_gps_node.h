@@ -140,9 +140,6 @@
 #ifndef NOVATEL_GPS_DRIVER_NOVATEL_GPS_NODE_H
 #define NOVATEL_GPS_DRIVER_NOVATEL_GPS_NODE_H
 
-#include <boost/thread.hpp>
-#include <boost/thread/mutex.hpp>
-
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/max.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
@@ -166,7 +163,9 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include <chrono>
+#include <mutex>
 #include <string>
+#include <thread>
 
 using TimeParserMsgT = novatel_gps_driver::TimeParser::MessageType;
 
@@ -256,8 +255,8 @@ namespace novatel_gps_driver
     NovatelGps::ConnectionType connection_;
     NovatelGps gps_;
 
-    boost::thread thread_;
-    boost::mutex mutex_;
+    std::thread thread_;
+    std::mutex mutex_;
 
     /// Subscriber to listen for sync times from a DIO
     swri::Subscriber sync_sub_;

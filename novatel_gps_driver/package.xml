@@ -6,13 +6,15 @@
   Driver for NovAtel receivers
   </description>
 
-  <maintainer email="preed@swri.org">P. J. Reed</maintainer>
+  <author email="preed@swri.org">P. J. Reed</author>
+  <maintainer email="swri-robotics@swri.org">Southwest Research Institute</maintainer>
 
   <license>BSD</license>
 
   <url type="repository">https://github.com/swri-robotics/novatel_gps_driver</url>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
   <depend>boost</depend>
   <depend>diagnostic_msgs</depend>
   <depend>diagnostic_updater</depend>
@@ -29,6 +31,7 @@
   <depend>swri_serial_util</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
+
   <test_depend>ament_cmake_gtest</test_depend>
   <test_depend>ament_index_cpp</test_depend>
   <test_depend>ament_lint_auto</test_depend>

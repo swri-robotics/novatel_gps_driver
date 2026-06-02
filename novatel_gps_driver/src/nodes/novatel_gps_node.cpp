@@ -296,18 +296,23 @@ namespace novatel_gps_driver
 
     gps_.ApplyVehicleBodyRotation(span_frame_to_ros_frame_);
 
-    thread_ = boost::thread(&NovatelGpsNode::Spin, this);
+    thread_ = std::thread(&NovatelGpsNode::Spin, this);
     RCLCPP_INFO(this->get_logger(), "%s initialized", hw_id_.c_str());
   }
 
   NovatelGpsNode::~NovatelGpsNode()
   {
     gps_.Disconnect();
+
+    if (thread_.joinable())
+    {
+      thread_.join();
+    }
   }
 
   void NovatelGpsNode::SyncCallback(const builtin_interfaces::msg::Time::ConstSharedPtr& sync)
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     sync_times_.push_back(rclcpp::Time(*sync, this->get_clock()->get_clock_type()));
   }
 
@@ -986,7 +991,7 @@ namespace novatel_gps_driver
    */
   void NovatelGpsNode::CalculateTimeSync()
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(mutex_);
     int32_t synced_i = -1;  /// Index of last synced timesync msg
     int32_t synced_j = -1;  /// Index of last synced gps msg
     // Loop over sync times buffer

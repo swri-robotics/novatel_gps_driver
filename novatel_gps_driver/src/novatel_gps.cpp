@@ -1,6 +1,6 @@
 // *****************************************************************************
 //
-// Copyright (c) 2019, Southwest Research Institute® (SwRI®)
+// Copyright (c) 2026, Southwest Research Institute® (SwRI®)
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -40,14 +40,9 @@
 #include <boost/make_shared.hpp>
 #include <rclcpp/node.hpp>
 
-// TODO: Remove once support is dropped.
-#ifdef USE_TF2_GEOMETRY_MSGS_HPP
-#  include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#else
-#  include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#endif
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/utils.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/utils.hpp>
 
 namespace novatel_gps_driver
 {
@@ -639,17 +634,19 @@ namespace novatel_gps_driver
         if (connection_ == TCP)
         {
           boost::asio::ip::tcp::resolver resolver(io_service_);
-          boost::asio::ip::tcp::resolver::query query(ip, port);
-          boost::asio::ip::tcp::resolver::iterator iter = resolver.resolve(query);
-
-          boost::asio::connect(tcp_socket_, iter);
+          auto endpoints = resolver.resolve(ip, port);
+          boost::asio::connect(tcp_socket_, endpoints);
           RCLCPP_INFO(node_.get_logger(), "Connecting via TCP to %s:%s", ip.c_str(), port.c_str());
         }
         else
         {
           boost::asio::ip::udp::resolver resolver(io_service_);
-          boost::asio::ip::udp::resolver::query query(ip, port);
-          udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>(*resolver.resolve(query));
+          auto endpoints = resolver.resolve(ip, port);
+          if (endpoints.begin() == endpoints.end())
+          {
+            throw std::runtime_error("Unable to resolve UDP endpoint for " + ip + ":" + port);
+          }
+          udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>(*endpoints.begin());
           udp_socket_.reset(new boost::asio::ip::udp::socket(io_service_));
           udp_socket_->open(boost::asio::ip::udp::v4());
           RCLCPP_INFO(node_.get_logger(), "Connecting via UDP to %s:%s", ip.c_str(), port.c_str());

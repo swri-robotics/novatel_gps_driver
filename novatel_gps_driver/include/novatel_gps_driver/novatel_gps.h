@@ -480,7 +480,7 @@ namespace novatel_gps_driver
       swri_serial_util::SerialPort serial_;
 
       // TCP / UDP connections
-      boost::asio::io_service io_service_;
+      boost::asio::io_context io_service_;
       boost::asio::ip::tcp::socket tcp_socket_;
       std::shared_ptr<boost::asio::ip::udp::socket> udp_socket_;
       std::shared_ptr<boost::asio::ip::udp::endpoint> udp_endpoint_;
