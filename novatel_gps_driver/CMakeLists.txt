@@ -4,8 +4,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 project(novatel_gps_driver)
 
-# Ament packages
-find_package(Threads REQUIRED)
+# System dependencies
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(gps_msgs REQUIRED)
@@ -103,7 +102,6 @@ rclcpp_components_register_node(${PROJECT_NAME}_nodes
   EXECUTABLE "novatel_gps_node"
 )
 target_link_libraries(${PROJECT_NAME}_nodes
-  Threads::Threads
   ${PROJECT_NAME}
 )
 
