@@ -32,8 +32,28 @@
 #include <gtest/gtest.h>
 
 #include <ament_index_cpp/get_package_prefix.hpp>
+// ament_index_cpp::get_package_prefix changed from returning std::string to
+// taking an output std::filesystem::path& parameter in ament_index_cpp 1.13.0.
+#include <ament_index_cpp/version.h>
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
+#include <filesystem>
+#endif
 
 #include <rclcpp/rclcpp.hpp>
+
+namespace
+{
+std::string GetPackagePrefix(const std::string & package_name)
+{
+#if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
+  std::filesystem::path path;
+  ament_index_cpp::get_package_prefix(package_name, path);
+  return path.string();
+#else
+  return ament_index_cpp::get_package_prefix(package_name);
+#endif
+}
+}  // namespace
 
 class NovatelGpsTestSuite : public ::testing::Test, public rclcpp::Node
 {
@@ -50,7 +70,7 @@ TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
   novatel_gps_driver::NovatelGps gps(*this);
   gps.wait_for_sync_ = true;
 
-  std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
+  std::string path = GetPackagePrefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/bestpos-bestvel-psrdop2-sync.pcap",
       novatel_gps_driver::NovatelGps::PCAP));
 
@@ -79,7 +99,7 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 {
   novatel_gps_driver::NovatelGps gps(*this);
 
-  std::string path = ament_index_cpp::get_package_prefix("novatel_gps_driver");
+  std::string path = GetPackagePrefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/corrimudata.pcap", novatel_gps_driver::NovatelGps::PCAP));
 
   std::vector<novatel_gps_driver::CorrImuDataParser::MessageType> imu_messages;
