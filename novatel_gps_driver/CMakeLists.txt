@@ -15,7 +15,6 @@ find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(swri_math_util  REQUIRED)
-find_package(swri_roscpp REQUIRED)
 find_package(swri_serial_util REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -85,7 +84,6 @@ target_link_libraries(${PROJECT_NAME}
   ${sensor_msgs_TARGETS}
   ${std_msgs_TARGETS}
   swri_math_util::swri_math_util
-  ${swri_roscpp_TARGETS}
   swri_serial_util::swri_serial_util
   tf2::tf2
   tf2_geometry_msgs::tf2_geometry_msgs

@@ -45,8 +45,8 @@
 #include <novatel_gps_msgs/msg/novatel_message_header.hpp>
 #include <novatel_gps_msgs/msg/novatel_receiver_status.hpp>
 #include <novatel_gps_msgs/msg/novatel_velocity.hpp>
+#include <novatel_gps_msgs/msg/novatel_time.hpp>
 #include <novatel_gps_msgs/msg/range.hpp>
-#include <novatel_gps_msgs/msg/time.hpp>
 #include <novatel_gps_msgs/msg/trackstat.hpp>
 
 #include <novatel_gps_driver/binary_message.h>

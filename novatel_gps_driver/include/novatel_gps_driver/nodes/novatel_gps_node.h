@@ -64,7 +64,7 @@
  *    measurements. (only published if `publish_novatel_psrdop2` is set `true`)
  * \e range <tt>novatel_gps_msgs/Range</tt> - Satellite ranging information
  *    (only published if `publish_range_messages` is set `true`)
- * \e time <tt>novatel_gps_msgs/Time</tt> - Novatel-specific time data. (Only
+ * \e time <tt>novatel_gps_msgs/NovatelTime</tt> - Novatel-specific time data. (Only
  *    published if `publish_time` is set `true`.)
  * \e time_reference <tt>sensor_msgs/TimeReference</tt> - Generic time reference
  *    messages for time syncrhonization. (Only published if `publish_time_reference`
@@ -158,8 +158,6 @@
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <sensor_msgs/msg/time_reference.hpp>
 
-#include <swri_roscpp/subscriber.h>
-
 #include <rclcpp/rclcpp.hpp>
 
 #include <chrono>
@@ -246,7 +244,7 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::Gphdt>::SharedPtr gphdt_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gprmc>::SharedPtr gprmc_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Range>::SharedPtr range_pub_;
-    rclcpp::Publisher<novatel_gps_msgs::msg::Time>::SharedPtr time_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::NovatelTime>::SharedPtr time_pub_;
     rclcpp::Publisher<sensor_msgs::msg::TimeReference>::SharedPtr time_ref_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Trackstat>::SharedPtr trackstat_pub_;
 
@@ -259,7 +257,7 @@ namespace novatel_gps_driver
     std::mutex mutex_;
 
     /// Subscriber to listen for sync times from a DIO
-    swri::Subscriber sync_sub_;
+    rclcpp::Subscription<builtin_interfaces::msg::Time>::SharedPtr sync_sub_;
     rclcpp::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<rclcpp::Time> sync_times_;

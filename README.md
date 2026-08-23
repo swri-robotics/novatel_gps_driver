@@ -184,7 +184,7 @@ Nodelets
         - `publish_dual_antenna_diagnostic`: If true, publish diagnostics for the second antenna.
             - Ignored if `publish_diagnostics` is false.
             - Default: same as `publish_novatel_dual_antenna_heading`
-        - `publish_time_messages`: `true` to publish novatel_gps_msgs/Time messages.
+        - `publish_time_messages`: `true` to publish novatel_gps_msgs/NovatelTime messages.
             - Default: `false`
         - `publish_trackstat`: `true` to publish novatel_gps_msgs/Trackstat messages.
             - Default: `false`
@@ -234,7 +234,7 @@ Nodelets
         - `/psrdop2` *(novatel_gps_msgs/Psrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
-        - `/time` *(novatel_gps_msgs/Time)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
+        - `/time` *(novatel_gps_msgs/NovatelTime)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
         - `/trackstat` *(novatel_gps_msgs/Trackstat)*: [TRACKSTAT](http://docs.novatel.com/OEM7/Content/Logs/TRACKSTAT.htm) logs
 
 Adding New Logs

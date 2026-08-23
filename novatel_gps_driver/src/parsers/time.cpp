@@ -53,7 +53,7 @@ novatel_gps_driver::TimeParser::MessageType novatel_gps_driver::TimeParser::Pars
     throw ParseException(error.str());
   }
 
-  novatel_gps_msgs::msg::Time::UniquePtr ros_msg = std::make_unique<novatel_gps_msgs::msg::Time>();
+  novatel_gps_msgs::msg::NovatelTime::UniquePtr ros_msg = std::make_unique<novatel_gps_msgs::msg::NovatelTime>();
 
   uint32_t clock_status = ParseUInt32(&msg.data_[0]);
   switch (clock_status)
@@ -112,7 +112,7 @@ novatel_gps_driver::TimeParser::MessageType novatel_gps_driver::TimeParser::Pars
 novatel_gps_driver::TimeParser::MessageType
 novatel_gps_driver::TimeParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
 {
-  novatel_gps_msgs::msg::Time::UniquePtr msg = std::make_unique<novatel_gps_msgs::msg::Time>();
+  novatel_gps_msgs::msg::NovatelTime::UniquePtr msg = std::make_unique<novatel_gps_msgs::msg::NovatelTime>();
   if (sentence.body.size() != ASCII_FIELD)
   {
     std::stringstream error;

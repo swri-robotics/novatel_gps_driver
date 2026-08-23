@@ -30,11 +30,11 @@
 #define NOVATEL_GPS_DRIVER_TIME_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/msg/time.hpp>
+#include <novatel_gps_msgs/msg/novatel_time.hpp>
 
 namespace novatel_gps_driver
 {
-  class TimeParser : public MessageParser<novatel_gps_msgs::msg::Time::UniquePtr>
+  class TimeParser : public MessageParser<novatel_gps_msgs::msg::NovatelTime::UniquePtr>
   {
   public:
     uint32_t GetMessageId() const override;

@@ -31,13 +31,13 @@ set(MSG_FILES
   msg/NovatelPsrdop2System.msg
   msg/NovatelReceiverStatus.msg
   msg/NovatelSignalMask.msg
+  msg/NovatelTime.msg
   msg/NovatelUtmPosition.msg
   msg/NovatelVelocity.msg
   msg/NovatelXYZ.msg
   msg/Range.msg
   msg/RangeInformation.msg
   msg/Satellite.msg
-  msg/Time.msg
   msg/Trackstat.msg
   msg/TrackstatChannel.msg
   msg/NovatelRxStatus.msg
