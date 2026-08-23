@@ -158,8 +158,6 @@
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <sensor_msgs/msg/time_reference.hpp>
 
-#include <swri_roscpp/subscriber.h>
-
 #include <rclcpp/rclcpp.hpp>
 
 #include <chrono>
@@ -259,7 +257,7 @@ namespace novatel_gps_driver
     std::mutex mutex_;
 
     /// Subscriber to listen for sync times from a DIO
-    swri::Subscriber sync_sub_;
+    rclcpp::Subscription<builtin_interfaces::msg::Time>::SharedPtr sync_sub_;
     rclcpp::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<rclcpp::Time> sync_times_;
