@@ -265,7 +265,7 @@ Nodelets
         - `/psrdop2` *(novatel_gps_msgs/Psrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
-        - `/time` *(novatel_gps_msgs/NovatelTime)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
+        - `/time` *(novatel_gps_msgs/Time, pre v5.0.0, novatel_gps_msgs/NovatelTime v5.0.0 and newer)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
         - `/trackstat` *(novatel_gps_msgs/Trackstat)*: [TRACKSTAT](http://docs.novatel.com/OEM7/Content/Logs/TRACKSTAT.htm) logs
 
 Adding New Logs
