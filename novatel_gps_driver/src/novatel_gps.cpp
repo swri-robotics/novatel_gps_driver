@@ -929,10 +929,18 @@ namespace novatel_gps_driver
     // Only do anything if we have both CORRIMUDATA and INSPVA messages.
     while ((!corrimudata_queue_.empty() || !corrimus_queue_.empty()) && (!inspva_queue_.empty() || !inspvas_queue_.empty()))
     {
-      
-      const auto& corrimudata = !corrimudata_queue_.empty() ? corrimudata_queue_.front() : corrimus_queue_.front();
-      const auto& inspva = !inspva_queue_.empty() ? inspva_queue_.front() : inspvas_queue_.front();
-      
+      // A receiver may be logging either CORRIMUDATA or CORRIMUS, and either INSPVA
+      // or INSPVAS, so pair up whichever variant we actually have. Only the queues
+      // selected here may be popped below; popping an empty queue is undefined
+      // behavior.
+      auto& corrimudata_queue = !corrimudata_queue_.empty() ? corrimudata_queue_ : corrimus_queue_;
+      auto& inspva_queue = !inspva_queue_.empty() ? inspva_queue_ : inspvas_queue_;
+
+      // These are copies rather than references because the messages are used after
+      // they have been popped off of their queues.
+      const auto corrimudata = corrimudata_queue.front();
+      const auto inspva = inspva_queue.front();
+
       double corrimudata_time = corrimudata->gps_week_num * SECONDS_PER_WEEK + corrimudata->gps_seconds;
       double inspva_time = inspva->novatel_msg_header.gps_week_num *
                                SECONDS_PER_WEEK + inspva->novatel_msg_header.gps_seconds;
@@ -944,21 +952,19 @@ namespace novatel_gps_driver
         if (corrimudata_time < inspva_time)
         {
           RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest CORRIMUDATA.");
-          corrimudata_queue_.pop();
+          corrimudata_queue.pop();
           continue;
         }
         else
         {
           RCLCPP_DEBUG(node_.get_logger(), "Discarding oldest INSPVA.");
-          inspva_queue_.pop();
+          inspva_queue.pop();
           continue;
         }
       }
       // If we've successfully matched up two messages, remove them from their queues.
-      inspva_queue_.pop();
-      inspvas_queue_.pop();
-      corrimudata_queue_.pop();
-      corrimus_queue_.pop();
+      inspva_queue.pop();
+      corrimudata_queue.pop();
 
       // Now we can combine them together to make an Imu message.
       auto imu = std::make_shared<sensor_msgs::msg::Imu>();
