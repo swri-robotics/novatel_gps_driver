@@ -124,6 +124,68 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
   EXPECT_DOUBLE_EQ(-0.0000051257464089797534, msg->vertical_acceleration);
 }
 
+// Replays a capture containing paired corrected-IMU and INS position/velocity/attitude
+// logs and checks that the two are combined into sensor_msgs/Imu messages.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/127,
+// where NovatelGps::GenerateImuMessages popped all four of its synchronization queues
+// even though only two of them had supplied the messages being paired, so a receiver
+// logging one variant crashed as soon as an IMU rate was known.
+static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string& capture)
+{
+  novatel_gps_driver::NovatelGps gps(node);
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/" + capture, novatel_gps_driver::NovatelGps::PCAP));
+
+  // The IMU rate is normally learned from the receiver's configuration; without it
+  // GenerateImuMessages returns before it pairs anything up.
+  gps.SetImuRate(100.0, true);
+
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<sensor_msgs::msg::Imu::SharedPtr> tmp_messages;
+    gps.GetImuMessages(tmp_messages);
+    imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
+  }
+
+  // The capture holds ten IMU/INS pairs, all within IMU_TOLERANCE_S of each other.
+  ASSERT_EQ(10u, imu_messages.size());
+
+  sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
+
+  // Attitude comes from the INS log, rotated into the ROS frame.
+  EXPECT_NEAR(0.0082653831487511844, msg->orientation.x, 1e-12);
+  EXPECT_NEAR(-0.017674160904072977, msg->orientation.y, 1e-12);
+  EXPECT_NEAR(-0.026019717990453804, msg->orientation.z, 1e-12);
+  EXPECT_NEAR(0.99947100095672536, msg->orientation.w, 1e-12);
+
+  // Rates and accelerations come from the corrected IMU log, scaled by the IMU rate.
+  EXPECT_NEAR(0.1, msg->angular_velocity.x, 1e-12);
+  EXPECT_NEAR(0.2, msg->angular_velocity.y, 1e-12);
+  EXPECT_NEAR(0.3, msg->angular_velocity.z, 1e-12);
+  EXPECT_NEAR(1.0, msg->linear_acceleration.x, 1e-12);
+  EXPECT_NEAR(2.0, msg->linear_acceleration.y, 1e-12);
+  EXPECT_NEAR(3.0, msg->linear_acceleration.z, 1e-12);
+
+  // Orientation covariance comes from the INSSTDEV log at the head of the capture.
+  EXPECT_DOUBLE_EQ(4.0, msg->orientation_covariance[0]);
+  EXPECT_DOUBLE_EQ(2.0, msg->orientation_covariance[4]);
+  EXPECT_DOUBLE_EQ(8.0, msg->orientation_covariance[8]);
+}
+
+TEST_F(NovatelGpsTestSuite, testImuFromCorrImuDataAndInspva)
+{
+  ExpectSynchronizedImuMessages(*this, "corrimudata-inspva-sync.pcap");
+}
+
+TEST_F(NovatelGpsTestSuite, testImuFromCorrImusAndInspvas)
+{
+  ExpectSynchronizedImuMessages(*this, "corrimus-inspvas-sync.pcap");
+}
+
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);

@@ -58,6 +58,12 @@ novatel_gps_driver::CorrImusParser::ParseBinary(const novatel_gps_driver::Binary
   ros_msg->novatel_msg_header = h_parser.ParseShortBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
 
+  // The short header is the only place a CORRIMUS log carries its time, but the
+  // IMU/INS pairing in NovatelGps::GenerateImuMessages reads these fields, so
+  // copy the time out of the header the way CORRIMUDATA populates them.
+  ros_msg->gps_week_num = ros_msg->novatel_msg_header.gps_week_num;
+  ros_msg->gps_seconds = ros_msg->novatel_msg_header.gps_seconds;
+
   ros_msg->imu_data_count = ParseUInt32(&bin_msg.data_[0]);
   ros_msg->pitch_rate = ParseDouble(&bin_msg.data_[4]);
   ros_msg->roll_rate = ParseDouble(&bin_msg.data_[12]);
