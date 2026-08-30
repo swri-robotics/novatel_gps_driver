@@ -247,6 +247,10 @@ namespace novatel_gps_driver
 #if NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG
       time_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelTime>("time", rclcpp::QoS(100));
 #else
+#pragma message("novatel_gps_msgs::msg::Time is deprecated; this message is named NovatelTime on Rolling and newer.")
+      RCLCPP_WARN_ONCE(this->get_logger(),
+        "novatel_gps_msgs::msg::Time is deprecated; this message is named "
+        "novatel_gps_msgs::msg::NovatelTime on Rolling and newer.");
       time_pub_ = this->create_publisher<novatel_gps_msgs::msg::Time>("time", rclcpp::QoS(100));
 #endif
     }

@@ -9,6 +9,9 @@ Changelog for package novatel_gps_msgs
   * Updating for API changes to ament_index_cpp
 * Contributors: David Anthony
 
+4.3.1 (2026-08-23)
+------------------
+
 4.3.0 (2026-06-03)
 ------------------
 

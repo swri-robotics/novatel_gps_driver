@@ -9,6 +9,12 @@ Changelog for package novatel_oem628
   * Updating for API changes to ament_index_cpp
 * Contributors: David Anthony
 
+4.3.1 (2026-08-23)
+------------------
+* Add deprecation warning (`#135 <https://github.com/swri-robotics/novatel_gps_driver/issues/135>`_)
+* Removing swri_roscpp and API updates (`#134 <https://github.com/swri-robotics/novatel_gps_driver/issues/134>`_)
+* Contributors: David Anthony
+
 4.3.0 (2026-06-03)
 ------------------
 * Updating for Lyrical (`#130 <https://github.com/swri-robotics/novatel_gps_driver/issues/130>`_)
