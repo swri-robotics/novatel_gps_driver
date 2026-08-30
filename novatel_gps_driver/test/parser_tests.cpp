@@ -37,6 +37,7 @@
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 
 #include <gtest/gtest.h>
+#include <cstring>
 #include <utility>
 #include <novatel_gps_driver/parsers/inspva.h>
 #include <novatel_gps_driver/parsers/inspvax.h>
@@ -441,6 +442,52 @@ TEST(ParserTestSuite, testInsstdevAsciiParsing)
   ASSERT_FLOAT_EQ(3.7534, msg->pitch_dev);
   ASSERT_FLOAT_EQ(5.1857, msg->azimuth_dev);
   ASSERT_EQ(26000005, msg->extended_solution_status.original_mask);
+}
+
+// InsstdevParser::ParseBinary assigns latitude_dev twice -- once from the first
+// field on the wire and again from the second -- and never assigns
+// longitude_dev.  A receiver logging INSSTDEVB therefore reports its longitude
+// deviation as its latitude deviation and its longitude deviation as zero.  The
+// ASCII path above gets this right, so the two formats disagree.
+//
+// Reported in https://github.com/swri-robotics/novatel_gps_driver/issues/114.
+TEST(ParserTestSuite, testInsstdevBinaryParsing)
+{
+  novatel_gps_driver::InsstdevParser parser;
+
+  // The same values testInsstdevAsciiParsing checks, laid out the way INSSTDEV
+  // puts them on the wire: nine floats, a status word and a uint16.
+  const float deviations[9] = {0.4372f, 0.3139f, 0.7547f, 0.0015f, 0.0016f,
+                               0.0014f, 3.7503f, 3.7534f, 5.1857f};
+  const uint32_t extended_status = 26000005;
+  const uint16_t time_since_update = 3;
+
+  novatel_gps_driver::BinaryMessage bin_msg;
+  bin_msg.header_.message_id_ = novatel_gps_driver::InsstdevParser::MESSAGE_ID;
+  bin_msg.header_.message_length_ = novatel_gps_driver::InsstdevParser::BINARY_LENGTH;
+  bin_msg.header_.time_status_ = 180;  // FINESTEERING; HeaderParser rejects 0.
+  bin_msg.header_.week_ = 1907;
+  bin_msg.header_.gps_ms_ = 233990000;
+  bin_msg.data_.resize(novatel_gps_driver::InsstdevParser::BINARY_LENGTH, 0);
+  std::memcpy(&bin_msg.data_[0], deviations, sizeof(deviations));
+  std::memcpy(&bin_msg.data_[36], &extended_status, sizeof(extended_status));
+  std::memcpy(&bin_msg.data_[40], &time_since_update, sizeof(time_since_update));
+
+  novatel_gps_msgs::msg::Insstdev::SharedPtr msg = parser.ParseBinary(bin_msg);
+
+  ASSERT_NE(msg.get(), nullptr);
+
+  EXPECT_FLOAT_EQ(0.4372, msg->latitude_dev);
+  EXPECT_FLOAT_EQ(0.3139, msg->longitude_dev);
+  EXPECT_FLOAT_EQ(0.7547, msg->height_dev);
+  EXPECT_FLOAT_EQ(0.0015, msg->north_velocity_dev);
+  EXPECT_FLOAT_EQ(0.0016, msg->east_velocity_dev);
+  EXPECT_FLOAT_EQ(0.0014, msg->up_velocity_dev);
+  EXPECT_FLOAT_EQ(3.7503, msg->roll_dev);
+  EXPECT_FLOAT_EQ(3.7534, msg->pitch_dev);
+  EXPECT_FLOAT_EQ(5.1857, msg->azimuth_dev);
+  EXPECT_EQ(26000005u, msg->extended_solution_status.original_mask);
+  EXPECT_EQ(3, msg->time_since_update);
 }
 
 TEST(ParserTestSuite, testBestxyzAsciiParsing)

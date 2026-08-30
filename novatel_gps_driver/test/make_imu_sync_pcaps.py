@@ -27,6 +27,7 @@ CORRIMUS_ID = 2264
 INSPVA_ID = 507
 INSPVAS_ID = 508
 INSSTDEV_ID = 2051
+INSCOV_ID = 264
 
 TIME_STATUS_FINESTEERING = 180
 INS_SOLUTION_GOOD = 3
@@ -36,6 +37,8 @@ PITCH_RATE, ROLL_RATE, YAW_RATE = 0.001, 0.002, 0.003
 LATERAL_ACC, LONGITUDINAL_ACC, VERTICAL_ACC = 0.01, 0.02, 0.03
 ROLL_DEG, PITCH_DEG, AZIMUTH_DEG = 1.0, 2.0, 3.0
 ROLL_DEV, PITCH_DEV, AZIMUTH_DEV = 1.0, 2.0, 3.0
+# INSCOV reports variances rather than standard deviations, in deg^2.
+ROLL_VAR, PITCH_VAR, AZIMUTH_VAR = 0.25, 1.0, 2.25
 
 
 # --- NovAtel framing -------------------------------------------------------
@@ -108,6 +111,17 @@ def insstdev_payload():
     return payload.ljust(52, b'\x00')   # InsstdevParser expects 52 bytes
 
 
+def inscov_payload(seconds):
+    def diagonal(x, y, z):
+        return [x, 0.0, 0.0, 0.0, y, 0.0, 0.0, 0.0, z]
+
+    covariances = (diagonal(1.0, 1.0, 1.0) +
+                   diagonal(ROLL_VAR, PITCH_VAR, AZIMUTH_VAR) +
+                   diagonal(0.01, 0.01, 0.01))
+    # 4 + 8 + 27 * 8 = 228 bytes, the length InscovParser expects.
+    return struct.pack('<Id27d', WEEK, seconds, *covariances)
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -154,9 +168,12 @@ def write_pcap(path, messages):
 
 
 def main():
-    long_msgs = [long_message(INSSTDEV_ID, int(round(START_SECONDS * 1000)),
-                              insstdev_payload())]
+    start_ms = int(round(START_SECONDS * 1000))
+    long_msgs = [long_message(INSSTDEV_ID, start_ms, insstdev_payload())]
     short_msgs = list(long_msgs)
+    # A receiver logging INSCOV as well as INSSTDEV; GenerateImuMessages prefers
+    # INSCOV, so this capture exercises the other covariance branch.
+    cov_msgs = [long_message(INSCOV_ID, start_ms, inscov_payload(START_SECONDS))]
 
     for i in range(PAIR_COUNT):
         seconds = START_SECONDS + i * IMU_PERIOD_S
@@ -165,9 +182,11 @@ def main():
         long_msgs.append(long_message(INSPVA_ID, gps_ms, inspva_payload(seconds)))
         short_msgs.append(short_message(CORRIMUS_ID, gps_ms, corrimus_payload()))
         short_msgs.append(short_message(INSPVAS_ID, gps_ms, inspva_payload(seconds)))
+    cov_msgs.extend(long_msgs[1:])
 
     write_pcap('corrimudata-inspva-sync.pcap', long_msgs)
     write_pcap('corrimus-inspvas-sync.pcap', short_msgs)
+    write_pcap('corrimudata-inspva-inscov.pcap', cov_msgs)
 
 
 if __name__ == '__main__':

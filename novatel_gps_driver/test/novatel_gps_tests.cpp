@@ -31,6 +31,8 @@
 
 #include <gtest/gtest.h>
 
+#include <cmath>
+
 #include <ament_index_cpp/get_package_prefix.hpp>
 // ament_index_cpp::get_package_prefix changed from returning std::string to
 // taking an output std::filesystem::path& parameter in ament_index_cpp 1.13.0.
@@ -43,6 +45,26 @@
 
 namespace
 {
+// The values test/make_imu_sync_pcaps.py writes into the synthetic captures.
+// The rate and acceleration fields of CORRIMUDATA are increments over one IMU
+// sample period (rad/sample and m/s/sample), so the driver scales them by the
+// sample rate.
+constexpr double IMU_SAMPLE_RATE_HZ = 100.0;
+constexpr double PITCH_RATE = 0.001;          // about the SPAN x axis
+constexpr double ROLL_RATE = 0.002;           // about the SPAN y axis
+constexpr double YAW_RATE = 0.003;            // about the SPAN z axis
+constexpr double LATERAL_ACC = 0.01;          // along the SPAN x axis
+constexpr double LONGITUDINAL_ACC = 0.02;     // along the SPAN y axis
+constexpr double VERTICAL_ACC = 0.03;         // along the SPAN z axis
+constexpr double ROLL_DEV_DEG = 1.0;          // INSSTDEV standard deviations
+constexpr double PITCH_DEV_DEG = 2.0;
+constexpr double AZIMUTH_DEV_DEG = 3.0;
+constexpr double ROLL_VAR_DEG2 = 0.25;        // INSCOV variances
+constexpr double PITCH_VAR_DEG2 = 1.0;
+constexpr double AZIMUTH_VAR_DEG2 = 2.25;
+
+constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
+
 std::string GetPackagePrefix(const std::string & package_name)
 {
 #if AMENT_INDEX_CPP_VERSION_GTE(1, 13, 0)
@@ -131,7 +153,9 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 // where NovatelGps::GenerateImuMessages popped all four of its synchronization queues
 // even though only two of them had supplied the messages being paired, so a receiver
 // logging one variant crashed as soon as an IMU rate was known.
-static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string& capture)
+static void ReplayImuCapture(rclcpp::Node& node,
+                             const std::string& capture,
+                             std::vector<sensor_msgs::msg::Imu::SharedPtr>& imu_messages)
 {
   novatel_gps_driver::NovatelGps gps(node);
 
@@ -139,11 +163,12 @@ static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string&
   ASSERT_TRUE(gps.Connect(path + "/test/" + capture, novatel_gps_driver::NovatelGps::PCAP));
 
   // The IMU rate is normally learned from the receiver's configuration; without it
-  // GenerateImuMessages returns before it pairs anything up.
-  gps.SetImuRate(100.0, true);
+  // GenerateImuMessages returns before it pairs anything up.  The captures carry
+  // increments sampled at IMU_SAMPLE_RATE_HZ, which is what the driver multiplies
+  // by to turn them into rates and accelerations.
+  gps.SetImuRate(IMU_SAMPLE_RATE_HZ, true);
 
-  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
-
+  imu_messages.clear();
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
     std::vector<sensor_msgs::msg::Imu::SharedPtr> tmp_messages;
@@ -151,8 +176,15 @@ static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string&
     imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
-  // The capture holds ten IMU/INS pairs, all within IMU_TOLERANCE_S of each other.
+  // The captures hold ten IMU/INS pairs, all within IMU_TOLERANCE_S of each other.
   ASSERT_EQ(10u, imu_messages.size());
+}
+
+static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string& capture)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  ReplayImuCapture(node, capture, imu_messages);
+  ASSERT_FALSE(imu_messages.empty());
 
   sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
 
@@ -184,6 +216,89 @@ TEST_F(NovatelGpsTestSuite, testImuFromCorrImuDataAndInspva)
 TEST_F(NovatelGpsTestSuite, testImuFromCorrImusAndInspvas)
 {
   ExpectSynchronizedImuMessages(*this, "corrimus-inspvas-sync.pcap");
+}
+
+// sensor_msgs/Imu is defined in the ROS body frame (REP 103: x forward, y left,
+// z up), and NovatelGps::GenerateImuMessages already rotates the INS attitude
+// into it -- it negates the SPAN pitch and azimuth when building the quaternion.
+// The angular rates and accelerations it copies out of CORRIMUDATA get no such
+// treatment, so a single sensor_msgs/Imu describes its orientation in one frame
+// and its rates and accelerations in another.
+//
+// Per NovAtel's CORRIMUDATA documentation, PitchRate is "about x axis rotation",
+// RollRate is "about y axis rotation", LateralAcc is "along x axis" and
+// LongitudinalAcc is "along y axis" -- the SPAN vehicle frame is x right,
+// y forward, z up.  Converting that to the ROS body frame is x_ros = y_span,
+// y_ros = -x_span, z_ros = z_span.
+//
+// Reported in https://github.com/swri-robotics/novatel_gps_driver/issues/114.
+TEST_F(NovatelGpsTestSuite, testImuVectorsUseTheRosBodyFrame)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  ReplayImuCapture(*this, "corrimudata-inspva-sync.pcap", imu_messages);
+  ASSERT_FALSE(imu_messages.empty());
+
+  sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
+
+  // Roll is about the ROS x axis, so the SPAN roll rate belongs there.
+  EXPECT_NEAR(ROLL_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.x, 1e-12);
+  EXPECT_NEAR(-PITCH_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.y, 1e-12);
+  EXPECT_NEAR(YAW_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.z, 1e-12);
+
+  // ROS x points forward, which is where the longitudinal acceleration acts.
+  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.x, 1e-12);
+  EXPECT_NEAR(-LATERAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.y, 1e-12);
+  EXPECT_NEAR(VERTICAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.z, 1e-12);
+}
+
+// The INSSTDEV branch of GenerateImuMessages fills orientation_covariance with
+// std::pow(2, dev), which raises two to the standard deviation instead of
+// squaring it, and it does so without converting NovAtel's degrees to the
+// radians sensor_msgs/Imu is specified in.  It also puts the pitch deviation on
+// the x axis and the roll deviation on the y axis, the opposite of the mapping
+// the INSCOV branch below uses.
+//
+// Reported in https://github.com/swri-robotics/novatel_gps_driver/issues/114.
+TEST_F(NovatelGpsTestSuite, testImuOrientationCovarianceFromInsstdev)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  ReplayImuCapture(*this, "corrimudata-inspva-sync.pcap", imu_messages);
+  ASSERT_FALSE(imu_messages.empty());
+
+  sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
+
+  EXPECT_NEAR(std::pow(ROLL_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[0], 1e-12);
+  EXPECT_NEAR(std::pow(PITCH_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[4], 1e-12);
+  EXPECT_NEAR(std::pow(AZIMUTH_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[8], 1e-12);
+}
+
+// GenerateImuMessages prefers INSCOV over INSSTDEV when both are logged, and the
+// driver requests both, so this is the branch most receivers actually take.  It
+// copies NovAtel's attitude covariance across verbatim; INSCOV reports it in
+// deg^2, sensor_msgs/Imu wants rad^2.
+//
+// Reported in https://github.com/swri-robotics/novatel_gps_driver/issues/114.
+TEST_F(NovatelGpsTestSuite, testImuOrientationCovarianceFromInscov)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  ReplayImuCapture(*this, "corrimudata-inspva-inscov.pcap", imu_messages);
+  ASSERT_FALSE(imu_messages.empty());
+
+  sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
+
+  const double degrees2_to_radians2 = DEGREES_TO_RADIANS * DEGREES_TO_RADIANS;
+  EXPECT_NEAR(ROLL_VAR_DEG2 * degrees2_to_radians2, msg->orientation_covariance[0], 1e-12);
+  EXPECT_NEAR(PITCH_VAR_DEG2 * degrees2_to_radians2, msg->orientation_covariance[4], 1e-12);
+  EXPECT_NEAR(AZIMUTH_VAR_DEG2 * degrees2_to_radians2, msg->orientation_covariance[8], 1e-12);
+
+  // The off-diagonal terms of the covariance must survive the copy too.
+  for (size_t i : {1u, 2u, 3u, 5u, 6u, 7u})
+  {
+    EXPECT_NEAR(0.0, msg->orientation_covariance[i], 1e-12) << "at index " << i;
+  }
 }
 
 int main(int argc, char **argv)
