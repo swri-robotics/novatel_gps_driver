@@ -30,11 +30,26 @@
 #define NOVATEL_GPS_DRIVER_TIME_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
+// novatel_gps_msgs generates the TIME log's message as NovatelTime on Rolling and
+// newer and as Time on Lyrical and older; see the rosidl version check in
+// novatel_gps_msgs/CMakeLists.txt for why. Key off the header that was actually
+// generated rather than repeating that version check, so the driver stays correct
+// even when built against a novatel_gps_msgs from a different distro.
+#if __has_include(<novatel_gps_msgs/msg/novatel_time.hpp>)
+#define NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG 1
 #include <novatel_gps_msgs/msg/novatel_time.hpp>
+#else
+#define NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG 0
+#include <novatel_gps_msgs/msg/time.hpp>
+#endif
 
 namespace novatel_gps_driver
 {
+#if NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG
   class TimeParser : public MessageParser<novatel_gps_msgs::msg::NovatelTime::UniquePtr>
+#else
+  class TimeParser : public MessageParser<novatel_gps_msgs::msg::Time::UniquePtr>
+#endif
   {
   public:
     uint32_t GetMessageId() const override;

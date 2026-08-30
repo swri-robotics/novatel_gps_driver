@@ -160,6 +160,9 @@ Nodelets
             - Default: Empty
         - `frame_id`: ROS TF frame to place in the header of published messages.
             - Default: Empty
+        - `gpsfix_sync_tol`: Maximum difference, in seconds, between the timestamps of a BESTPOS and a BESTVEL
+        log for them to be treated as synchronized when building a `gps_msgs/GPSFix`.
+            - Default: `0.01`
         - `imu_frame_id`: TF frame id to use in IMU messages.
             - Default: Empty
         - `imu_rate`: Desired logging rate in Hz for IMU messages.
@@ -190,7 +193,7 @@ Nodelets
             - Default: `false`
         - `publish_novatel_dual_antenna_heading`: `true` to publish novatel_gps_msgs/NovatelDualAntennaHeading messages.
             - Default: `false`
-        - `publish_novatel_heading2`: `true` to publish novatel_gps_msgs/Heading2 messages.
+        - `publish_novatel_heading2`: `true` to publish novatel_gps_msgs/NovatelHeading2 messages.
             - Default: `false`
         - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.  Note that even if
         this is false, these logs will always be requested from the receiver in order to generate `gps_msgs/GPSFix`
@@ -215,7 +218,10 @@ Nodelets
         - `publish_dual_antenna_diagnostic`: If true, publish diagnostics for the second antenna.
             - Ignored if `publish_diagnostics` is false.
             - Default: same as `publish_novatel_dual_antenna_heading`
-        - `publish_time_messages`: `true` to publish novatel_gps_msgs/NovatelTime messages.
+        - `publish_time_messages`: `true` to publish novatel_gps_msgs/NovatelTime messages.  Note that this
+        message is named novatel_gps_msgs/Time on Lyrical and older.
+            - Default: `false`
+        - `publish_time_reference`: `true` to publish sensor_msgs/TimeReference messages.
             - Default: `false`
         - `publish_trackstat`: `true` to publish novatel_gps_msgs/Trackstat messages.
             - Default: `false`
@@ -225,7 +231,7 @@ Nodelets
             - Default: `0.5`
         - `serial_baud`: Select the serial baud rate to be used in a serial connection.
             - Default: `115200`
-        - `spam_frame_to_ros_frame`: Translate the SPAN coordinate frame to a ROS coordinate frame using the VEHICLEBODYROTATION and APPLYVEHICLEBODYROTATION commands.
+        - `span_frame_to_ros_frame`: Translate the SPAN coordinate frame to a ROS coordinate frame using the VEHICLEBODYROTATION and APPLYVEHICLEBODYROTATION commands.
             - Default: `false`
         - `use_binary_messages`: `true` to request binary NovAtel logs, `false` to request ASCII.
             - Binary logs are much more efficient and effectively required for IMU data,
@@ -239,7 +245,7 @@ Nodelets
         - `loop` : `true` to keep replaying PCAP reply. Only effective when device is `pcap`.
             - Default: `false`
     2. **ROS Topic Subscriptions**
-        - `/gps_sync` *(std_msgs/Time)*: *(optional)* Timestamped sync pulses from a DIO module. 
+        - `/gps_sync` *(builtin_interfaces/Time)*: *(optional)* Timestamped sync pulses from a DIO module. 
     These are used to improve the accuracy of the time stamps of the messages published.
     3. **ROS Topic Publications**
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
@@ -254,18 +260,22 @@ Nodelets
         - `/gpgga` *(novatel_gps_msgs/Gpgga)*: [GPGGA](http://docs.novatel.com/OEM7/Content/Logs/GPGGA.htm) logs
         - `/gpgsa` *(novatel_gps_msgs/Gpgsa)*: [GPGSA](http://docs.novatel.com/OEM7/Content/Logs/GPGSA.htm) logs
         - `/gpgsv` *(novatel_gps_msgs/Gpgsv)*: [GPGSV](http://docs.novatel.com/OEM7/Content/Logs/GPGSV.htm) logs
+        - `/gphdt` *(novatel_gps_msgs/Gphdt)*: [GPHDT](http://docs.novatel.com/OEM7/Content/Logs/GPHDT.htm) logs
         - `/gprmc` *(novatel_gps_msgs/Gprmc)*: [GPRMC](http://docs.novatel.com/OEM7/Content/Logs/GPRMC.htm) logs
         - `/gps` *([gps_msgs/GPSFix](http://docs.ros.org/kinetic/api/gps_common/html/msg/GPSFix.html))*: Fixes produced by combining BESTVEL, PSRDOP2 and BESTPOS messages together
             - **Note**:  GPSFix messages will always be published regardless of what other types are enabled.        
-        - `/heading2` *(novatel_gps_msgs/NovatelHeadin2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
+        - `/heading2` *(novatel_gps_msgs/NovatelHeading2)*: [HEADING2](http://docs.novatel.com/OEM7/Content/Logs/HEADING2.htm) logs
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
+        - `/inscov` *(novatel_gps_msgs/Inscov)*: [INSCOV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSCOV.htm) logs
         - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
         - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
         - `/insstdev` *(novatel_gps_msgs/Insstdev)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
-        - `/psrdop2` *(novatel_gps_msgs/Psrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
+        - `/psrdop2` *(novatel_gps_msgs/NovatelPsrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
         - `/time` *(novatel_gps_msgs/NovatelTime)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
+            - **Note**: This message is named novatel_gps_msgs/Time on Lyrical and older.
+        - `/time_reference` *([sensor_msgs/TimeReference](https://docs.ros.org/en/rolling/p/sensor_msgs/interfaces/msg/TimeReference.html))*: Generic time reference messages for time synchronization
         - `/trackstat` *(novatel_gps_msgs/Trackstat)*: [TRACKSTAT](http://docs.novatel.com/OEM7/Content/Logs/TRACKSTAT.htm) logs
 
 Adding New Logs

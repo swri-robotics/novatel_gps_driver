@@ -244,7 +244,11 @@ namespace novatel_gps_driver
 
     if (publish_time_messages_)
     {
+#if NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG
       time_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelTime>("time", rclcpp::QoS(100));
+#else
+      time_pub_ = this->create_publisher<novatel_gps_msgs::msg::Time>("time", rclcpp::QoS(100));
+#endif
     }
 
     if (publish_time_reference_)
