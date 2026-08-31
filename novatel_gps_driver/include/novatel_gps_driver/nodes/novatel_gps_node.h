@@ -184,9 +184,9 @@
  *    device, how long (in seconds) to wait between reconnect attempts. [0.5]
  * \e serial_baud <tt>int</tt> - Baud rate to use for a serial connection.
  *    [115200]
- * \e span_frame_to_ros_frame <tt>bool</tt> - Translate the SPAN coordinate
- *    frame to a ROS coordinate frame using the VEHICLEBODYROTATION and
- *    APPLYVEHICLEBODYROTATION commands. [false]
+ * \e span_frame_to_ros_frame <tt>bool</tt> - Deprecated and ignored; setting
+ *    it logs a warning.  sensor_msgs/Imu is always published in the ROS body
+ *    frame, converted from the SPAN frame by the driver. [false]
  * \e use_binary_messages <tt>bool</tt> - If set true, the driver requests
  *    binary NovAtel messages from the device; if false, it requests ASCII
  *    messages.  [false]

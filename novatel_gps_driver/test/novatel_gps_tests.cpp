@@ -56,6 +56,9 @@ constexpr double YAW_RATE = 0.003;            // about the SPAN z axis
 constexpr double LATERAL_ACC = 0.01;          // along the SPAN x axis
 constexpr double LONGITUDINAL_ACC = 0.02;     // along the SPAN y axis
 constexpr double VERTICAL_ACC = 0.03;         // along the SPAN z axis
+constexpr double ROLL_DEG = 1.0;              // INSPVA attitude
+constexpr double PITCH_DEG = 2.0;
+constexpr double AZIMUTH_DEG = 3.0;           // clockwise from North
 constexpr double ROLL_DEV_DEG = 1.0;          // INSSTDEV standard deviations
 constexpr double PITCH_DEV_DEG = 2.0;
 constexpr double AZIMUTH_DEV_DEG = 3.0;
@@ -155,9 +158,12 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 // logging one variant crashed as soon as an IMU rate was known.
 static void ReplayImuCapture(rclcpp::Node& node,
                              const std::string& capture,
-                             std::vector<sensor_msgs::msg::Imu::SharedPtr>& imu_messages)
+                             std::vector<sensor_msgs::msg::Imu::SharedPtr>& imu_messages,
+                             bool span_frame_to_ros_frame = false)
 {
   novatel_gps_driver::NovatelGps gps(node);
+  // Deprecated and ignored; passed through so a test can prove it changes nothing.
+  gps.ApplyVehicleBodyRotation(span_frame_to_ros_frame);
 
   std::string path = GetPackagePrefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/" + capture, novatel_gps_driver::NovatelGps::PCAP));
@@ -189,23 +195,27 @@ static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string&
   sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
 
   // Attitude comes from the INS log, rotated into the ROS frame.
-  EXPECT_NEAR(0.0082653831487511844, msg->orientation.x, 1e-12);
-  EXPECT_NEAR(-0.017674160904072977, msg->orientation.y, 1e-12);
-  EXPECT_NEAR(-0.026019717990453804, msg->orientation.z, 1e-12);
-  EXPECT_NEAR(0.99947100095672536, msg->orientation.w, 1e-12);
+  EXPECT_NEAR(0.018342027500639145, msg->orientation.x, 1e-12);
+  EXPECT_NEAR(-0.006653010553465184, msg->orientation.y, 1e-12);
+  EXPECT_NEAR(0.68833400334019520, msg->orientation.z, 1e-12);
+  EXPECT_NEAR(0.72513144141141830, msg->orientation.w, 1e-12);
 
-  // Rates and accelerations come from the corrected IMU log, scaled by the IMU rate.
-  EXPECT_NEAR(0.1, msg->angular_velocity.x, 1e-12);
-  EXPECT_NEAR(0.2, msg->angular_velocity.y, 1e-12);
-  EXPECT_NEAR(0.3, msg->angular_velocity.z, 1e-12);
-  EXPECT_NEAR(1.0, msg->linear_acceleration.x, 1e-12);
-  EXPECT_NEAR(2.0, msg->linear_acceleration.y, 1e-12);
-  EXPECT_NEAR(3.0, msg->linear_acceleration.z, 1e-12);
+  // Rates and accelerations come from the corrected IMU log, scaled by the IMU
+  // rate and rotated from the SPAN vehicle frame into the ROS body frame.
+  EXPECT_NEAR(ROLL_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.x, 1e-12);
+  EXPECT_NEAR(-PITCH_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.y, 1e-12);
+  EXPECT_NEAR(YAW_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.z, 1e-12);
+  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.x, 1e-12);
+  EXPECT_NEAR(-LATERAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.y, 1e-12);
+  EXPECT_NEAR(VERTICAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.z, 1e-12);
 
   // Orientation covariance comes from the INSSTDEV log at the head of the capture.
-  EXPECT_DOUBLE_EQ(4.0, msg->orientation_covariance[0]);
-  EXPECT_DOUBLE_EQ(2.0, msg->orientation_covariance[4]);
-  EXPECT_DOUBLE_EQ(8.0, msg->orientation_covariance[8]);
+  EXPECT_NEAR(std::pow(ROLL_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[0], 1e-12);
+  EXPECT_NEAR(std::pow(PITCH_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[4], 1e-12);
+  EXPECT_NEAR(std::pow(AZIMUTH_DEV_DEG * DEGREES_TO_RADIANS, 2),
+              msg->orientation_covariance[8], 1e-12);
 }
 
 TEST_F(NovatelGpsTestSuite, testImuFromCorrImuDataAndInspva)
@@ -299,6 +309,68 @@ TEST_F(NovatelGpsTestSuite, testImuOrientationCovarianceFromInscov)
   {
     EXPECT_NEAR(0.0, msg->orientation_covariance[i], 1e-12) << "at index " << i;
   }
+}
+
+// span_frame_to_ros_frame is deprecated: the driver converts to the ROS frame
+// itself and no longer sends VEHICLEBODYROTATION or APPLYVEHICLEBODYROTATION.
+// Those commands could never do the whole job -- per the SPAN firmware reference
+// they rotate only the INSPVA, INSPVAS, INSPVAX, INSATT, INSATTS and INSATTX
+// logs, leaving CORRIMUDATA in the SPAN frame -- so setting the option must now
+// make no difference at all to what comes out.
+TEST_F(NovatelGpsTestSuite, testDeprecatedSpanFrameOptionIsIgnored)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> without_option;
+  ReplayImuCapture(*this, "corrimudata-inspva-sync.pcap", without_option, false);
+  ASSERT_FALSE(without_option.empty());
+
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> with_option;
+  ReplayImuCapture(*this, "corrimudata-inspva-sync.pcap", with_option, true);
+  ASSERT_EQ(without_option.size(), with_option.size());
+
+  for (size_t i = 0; i < with_option.size(); i++)
+  {
+    const sensor_msgs::msg::Imu& a = *without_option[i];
+    const sensor_msgs::msg::Imu& b = *with_option[i];
+
+    EXPECT_DOUBLE_EQ(a.orientation.x, b.orientation.x) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.orientation.y, b.orientation.y) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.orientation.z, b.orientation.z) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.orientation.w, b.orientation.w) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.angular_velocity.x, b.angular_velocity.x) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.angular_velocity.y, b.angular_velocity.y) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.angular_velocity.z, b.angular_velocity.z) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.linear_acceleration.x, b.linear_acceleration.x) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.linear_acceleration.y, b.linear_acceleration.y) << "message " << i;
+    EXPECT_DOUBLE_EQ(a.linear_acceleration.z, b.linear_acceleration.z) << "message " << i;
+  }
+}
+
+// NovAtel measures azimuth clockwise from North; ROS measures yaw counter-clockwise
+// from East, and its body frame points x forward where the SPAN vehicle frame points
+// x right.  Both are the same quarter turn about z, and GenerateImuMessages used to
+// apply neither, leaving the published heading 90 degrees off.
+//
+// Rather than restate the conversion, this rotates the body frame's forward axis by
+// the published orientation and checks that the nose ends up pointing along the
+// azimuth the receiver actually reported.
+//
+// Reported in https://github.com/swri-robotics/novatel_gps_driver/issues/114.
+TEST_F(NovatelGpsTestSuite, testImuOrientationHeadingMatchesAzimuth)
+{
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  ReplayImuCapture(*this, "corrimudata-inspva-sync.pcap", imu_messages);
+  ASSERT_FALSE(imu_messages.empty());
+
+  const geometry_msgs::msg::Quaternion& q = imu_messages.front()->orientation;
+
+  // The body frame's x axis, expressed in the ENU world frame: the first column of
+  // the rotation matrix the quaternion stands for.
+  const double east = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
+  const double north = 2.0 * (q.x * q.y + q.w * q.z);
+
+  // A compass heading is measured clockwise from North, which is what azimuth is.
+  const double heading_degrees = std::atan2(east, north) / DEGREES_TO_RADIANS;
+  EXPECT_NEAR(AZIMUTH_DEG, heading_degrees, 1e-9);
 }
 
 int main(int argc, char **argv)

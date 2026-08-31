@@ -310,9 +310,13 @@ namespace novatel_gps_driver
       static ConnectionType ParseConnection(const std::string& connection);
 
       /**
-       * @brief Determines whether or not to apply a 90 degree counter-clockwise rotation about Z
-       * to the Novatel SPAN frame to match up with the ROS coordinate frame.
-       * @param apply_rotation A bool indicating whether or not to apply the rotation.
+       * @brief Deprecated; the rotation is always applied and this does nothing but warn.
+       *
+       * The driver converts IMU data from the SPAN frame to the ROS frame itself, so it no
+       * longer asks the receiver to do it.  APPLYVEHICLEBODYROTATION was never sufficient on
+       * its own: it rotates only the INSPVA, INSPVAS, INSPVAX, INSATT, INSATTS and INSATTX
+       * logs, leaving the CORRIMUDATA rates and accelerations in the SPAN frame.
+       * @param apply_rotation Logs a deprecation warning when true.
        */
       void ApplyVehicleBodyRotation(const bool& apply_rotation);
 
@@ -568,9 +572,6 @@ namespace novatel_gps_driver
       novatel_gps_driver::InsstdevParser::MessageType latest_insstdev_;
       novatel_gps_driver::InscovParser::MessageType latest_inscov_;
       double imu_rate_;
-
-      // Additional Options
-      bool apply_vehicle_body_rotation_;
   };
 }
 

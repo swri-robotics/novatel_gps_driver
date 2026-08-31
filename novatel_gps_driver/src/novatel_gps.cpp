@@ -85,8 +85,7 @@ namespace novatel_gps_driver
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       rxstatus_msgs_(MAX_BUFFER_SIZE),
-      imu_rate_(-1.0),
-      apply_vehicle_body_rotation_(false)
+      imu_rate_(-1.0)
   {
   }
 
@@ -193,7 +192,15 @@ namespace novatel_gps_driver
 
   void NovatelGps::ApplyVehicleBodyRotation(const bool& apply_rotation)
   {
-    apply_vehicle_body_rotation_ = apply_rotation;
+    if (apply_rotation)
+    {
+      RCLCPP_WARN(node_.get_logger(),
+                  "span_frame_to_ros_frame is deprecated and is now ignored.  The driver converts "
+                  "IMU data from the SPAN frame to the ROS frame itself, so the receiver no longer "
+                  "needs to be asked to do it.  APPLYVEHICLEBODYROTATION could never do the whole "
+                  "job anyway: it rotates only the INSPVA, INSPVAS, INSPVAX, INSATT, INSATTS and "
+                  "INSATTX logs, leaving CORRIMUDATA in the SPAN frame.");
+    }
   }
 
   NovatelGps::ReadResult NovatelGps::ProcessData()
@@ -920,9 +927,12 @@ namespace novatel_gps_driver
 
     if (!latest_insstdev_ && !latest_inscov_)
     {
-      // TODO pjr Make this a _THROTTLE log when it's available
-      // If we haven't received an INSSTDEV or an INSCOV message, don't do anything, just return.
-      RCLCPP_WARN(node_.get_logger(), "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
+      // A receiver logs neither INSSTDEV nor INSCOV until its INS has aligned, and
+      // this is reached once per CORRIMUDATA and once per INSPVA -- hundreds of
+      // times a second -- so throttle it rather than flooding the log while the
+      // alignment we are waiting on completes.
+      RCLCPP_WARN_THROTTLE(node_.get_logger(), *node_.get_clock(), 5000,
+                           "No INSSTDEV or INSCOV data yet; orientation covariance will be unavailable.");
     }
 
     size_t previous_size = imu_msgs_.size();
@@ -971,21 +981,38 @@ namespace novatel_gps_driver
 
       imu->header.stamp = corrimudata->header.stamp;
 
+      // INSPVA reports attitude as the rotation from the SPAN local level frame to
+      // the vehicle frame.  The local level frame is ENU, which is what ROS uses,
+      // but azimuth is a left-handed angle measured clockwise from North while ROS
+      // yaw is right-handed and measured counter-clockwise from East, and it tracks
+      // the vehicle frame's y axis, which points right of the ROS body frame's x.
+      // Both differences are the same quarter turn about z, so yaw = 90 - azimuth.
+      //
+      double yaw_degrees = 90.0 - inspva->azimuth;
+
       tf2::Quaternion q;
       q.setRPY(inspva->roll * DEGREES_TO_RADIANS,
                -(inspva->pitch) * DEGREES_TO_RADIANS,
-               -(inspva->azimuth) * DEGREES_TO_RADIANS);
+               yaw_degrees * DEGREES_TO_RADIANS);
       imu->orientation = tf2::toMsg(q);
 
+      // NovAtel reports attitude uncertainty in degrees, about the roll, pitch and
+      // azimuth axes in that order; sensor_msgs/Imu wants variances in rad^2.
       if (latest_inscov_)
       {
-        imu->orientation_covariance = latest_inscov_->attitude_covariance;
+        constexpr double DEGREES2_TO_RADIANS2 = DEGREES_TO_RADIANS * DEGREES_TO_RADIANS;
+        for (size_t i = 0; i < imu->orientation_covariance.size(); i++)
+        {
+          imu->orientation_covariance[i] = latest_inscov_->attitude_covariance[i] * DEGREES2_TO_RADIANS2;
+        }
       }
       else if (latest_insstdev_)
       {
-        imu->orientation_covariance[0] = std::pow(2, latest_insstdev_->pitch_dev);
-        imu->orientation_covariance[4] = std::pow(2, latest_insstdev_->roll_dev);
-        imu->orientation_covariance[8] = std::pow(2, latest_insstdev_->azimuth_dev);
+        // INSSTDEV carries standard deviations, so these have to be squared to
+        // become the variances the covariance matrix is made of.
+        imu->orientation_covariance[0] = std::pow(latest_insstdev_->roll_dev * DEGREES_TO_RADIANS, 2);
+        imu->orientation_covariance[4] = std::pow(latest_insstdev_->pitch_dev * DEGREES_TO_RADIANS, 2);
+        imu->orientation_covariance[8] = std::pow(latest_insstdev_->azimuth_dev * DEGREES_TO_RADIANS, 2);
       }
       else
       {
@@ -994,15 +1021,22 @@ namespace novatel_gps_driver
         imu->orientation_covariance[8] = 1e-3;
       }
 
-      imu->angular_velocity.x = corrimudata->pitch_rate * imu_rate_;
-      imu->angular_velocity.y = corrimudata->roll_rate * imu_rate_;
+      // CORRIMUDATA reports rotations about and accelerations along the axes of
+      // the SPAN frame, which is x right, y forward, z up: pitch rate is about x,
+      // roll rate about y, lateral acceleration along x and longitudinal
+      // acceleration along y.  sensor_msgs/Imu is defined in the ROS body frame
+      // (REP 103), which is x forward, y left, z up, so the two are related by
+      // x_ros = y_span, y_ros = -x_span, z_ros = z_span.
+      //
+      imu->angular_velocity.x = corrimudata->roll_rate * imu_rate_;
+      imu->angular_velocity.y = -corrimudata->pitch_rate * imu_rate_;
       imu->angular_velocity.z = corrimudata->yaw_rate * imu_rate_;
       imu->angular_velocity_covariance[0] =
       imu->angular_velocity_covariance[4] =
       imu->angular_velocity_covariance[8] = 1e-3;
 
-      imu->linear_acceleration.x = corrimudata->lateral_acceleration * imu_rate_;
-      imu->linear_acceleration.y = corrimudata->longitudinal_acceleration * imu_rate_;
+      imu->linear_acceleration.x = corrimudata->longitudinal_acceleration * imu_rate_;
+      imu->linear_acceleration.y = -corrimudata->lateral_acceleration * imu_rate_;
       imu->linear_acceleration.z = corrimudata->vertical_acceleration * imu_rate_;
       imu->linear_acceleration_covariance[0] =
       imu->linear_acceleration_covariance[4] =
@@ -1501,12 +1535,6 @@ namespace novatel_gps_driver
   {
     bool configured = true;
     configured = configured && Write("unlogall THISPORT_ALL\r\n");
-
-    if (apply_vehicle_body_rotation_)
-    {
-      configured = configured && Write("vehiclebodyrotation 0 0 90\r\n");
-      configured = configured && Write("applyvehiclebodyrotation\r\n");
-    }
 
     for(const auto& option : opts)
     {
