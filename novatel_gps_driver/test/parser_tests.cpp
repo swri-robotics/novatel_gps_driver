@@ -37,7 +37,9 @@
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 
 #include <gtest/gtest.h>
+#include <utility>
 #include <novatel_gps_driver/parsers/inspva.h>
+#include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
 #include <novatel_gps_driver/parsers/inscov.h>
@@ -45,6 +47,53 @@
 #include <rclcpp/rclcpp.hpp>
 
 rclcpp::Logger logger = rclcpp::get_logger("parser_tests");
+
+TEST(ParserTestSuite, testInspvaxBinarySolutionStatus)
+{
+  novatel_gps_driver::InspvaxParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InspvaxParser::BINARY_LENGTH, 0);
+
+  const std::vector<std::pair<uint8_t, std::string>> statuses = {
+    {0, "INS_INACTIVE"},
+    {1, "INS_ALIGNING"},
+    {2, "INS_HIGH_VARIANCE"},
+    {3, "INS_SOLUTION_GOOD"},
+    {6, "INS_SOLUTION_FREE"},
+    {7, "INS_ALIGNMENT_COMPLETE"},
+    {8, "DETERMINING_ORIENTATION"},
+    {9, "WAITING_INITIALPOS"},
+    {10, "WAITING_AZIMUTH"},
+    {11, "INITIALIZING_BIASES"},
+    {12, "MOTION_DETECT"},
+    {14, "WAITING_ALIGNMENTORIENTATION"}
+  };
+  for (const auto& status : statuses)
+  {
+    SCOPED_TRACE(static_cast<unsigned int>(status.first));
+    message.data_[0] = status.first;
+    EXPECT_EQ(status.second, parser.ParseBinary(message)->ins_status);
+  }
+}
+
+TEST(ParserTestSuite, testInspvaxBinaryInvalidSolutionStatus)
+{
+  novatel_gps_driver::InspvaxParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InspvaxParser::BINARY_LENGTH, 0);
+
+  for (uint32_t status : {4u, 5u, 13u, 15u, 65539u})
+  {
+    SCOPED_TRACE(status);
+    for (size_t byte = 0; byte < sizeof(status); ++byte)
+    {
+      message.data_[byte] = static_cast<uint8_t>(status >> (8 * byte));
+    }
+    EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+  }
+}
 
 TEST(ParserTestSuite, testBestposAsciiParsing)
 {

@@ -27,6 +27,7 @@
 //
 // *****************************************************************************
 
+#include <array>
 #include <sstream>
 
 #include <novatel_gps_driver/parsers/inspvax.h>
@@ -59,14 +60,22 @@ novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryM
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
 
-  uint16_t solution_status = ParseUInt16(&bin_msg.data_[0]);
-  if (solution_status > MAX_SOLUTION_STATUS)
+  // INSPVAX uses the inertial solution status codes, not the BESTPOS codes.
+  static const std::array<const char*, 15> INS_SOLUTION_STATUSES = {{
+    "INS_INACTIVE", "INS_ALIGNING", "INS_HIGH_VARIANCE", "INS_SOLUTION_GOOD",
+    nullptr, nullptr, "INS_SOLUTION_FREE", "INS_ALIGNMENT_COMPLETE",
+    "DETERMINING_ORIENTATION", "WAITING_INITIALPOS", "WAITING_AZIMUTH",
+    "INITIALIZING_BIASES", "MOTION_DETECT", nullptr, "WAITING_ALIGNMENTORIENTATION"
+  }};
+  uint32_t solution_status = ParseUInt32(&bin_msg.data_[0]);
+  if (solution_status >= INS_SOLUTION_STATUSES.size() ||
+      INS_SOLUTION_STATUSES[solution_status] == nullptr)
   {
     std::stringstream error;
-    error << "Unknown solution status: " << solution_status;
+    error << "Unknown inertial solution status: " << solution_status;
     throw ParseException(error.str());
   }
-  ros_msg->ins_status = SOLUTION_STATUSES[solution_status];
+  ros_msg->ins_status = INS_SOLUTION_STATUSES[solution_status];
   uint16_t pos_type = ParseUInt16(&bin_msg.data_[4]);
   if (pos_type > MAX_POSITION_TYPE)
   {
@@ -161,4 +170,3 @@ novatel_gps_driver::InspvaxParser::ParseAscii(const novatel_gps_driver::NovatelS
 
   return msg;
 }
-
