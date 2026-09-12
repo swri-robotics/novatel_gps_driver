@@ -1568,6 +1568,22 @@ namespace novatel_gps_driver
     return command.str();
   }
 
+  void AddImuMessageOpts(NovatelMessageOpts& opts, const std::string& format_suffix,
+                         double imu_rate, double imu_sample_rate)
+  {
+    double period = 1.0 / imu_rate;
+    opts["corrimudata" + format_suffix] = period;
+    opts["inscov" + format_suffix] = 1.0;
+    opts["inspva" + format_suffix] = period;
+    opts["inspvax" + format_suffix] = period;
+    opts["insstdev" + format_suffix] = 1.0;
+
+    if (imu_sample_rate <= 0.0)
+    {
+      opts["rawimuxa"] = 1.0;
+    }
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
@@ -1577,9 +1593,6 @@ namespace novatel_gps_driver
     {
       configured = configured && Write(BuildLogCommand(option.first, option.second));
     }
-
-    // Log the IMU data once to get the IMU type
-    configured = configured && Write("log rawimuxa\r\n");
 
     return configured;
   }

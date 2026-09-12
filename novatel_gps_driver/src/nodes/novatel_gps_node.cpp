@@ -387,19 +387,15 @@ namespace novatel_gps_driver
     }
     if (publish_imu_messages_)
     {
-      double period = 1.0 / imu_rate_;
-      opts["corrimudata" + format_suffix] = period;
-      opts["inscov" + format_suffix] = 1.0;
-      opts["inspva" + format_suffix] = period;
-      opts["inspvax" + format_suffix] = period;
-      opts["insstdev" + format_suffix] = 1.0;
+      AddImuMessageOpts(opts, format_suffix, imu_rate_, imu_sample_rate_);
       if (!use_binary_messages_)
       {
         RCLCPP_WARN(this->get_logger(), "Using the ASCII message format with CORRIMUDATA logs is not recommended.  "
                                         "A serial link will not be able to keep up with the data rate.");
       }
 
-      // Only configure the imu rate if we set the param
+      // Only configure the imu rate if we set the param; otherwise
+      // AddImuMessageOpts already arranged to auto-detect it from RAWIMUXA.
       if (imu_sample_rate_ > 0)
       {
         gps_.SetImuRate(imu_sample_rate_, true);

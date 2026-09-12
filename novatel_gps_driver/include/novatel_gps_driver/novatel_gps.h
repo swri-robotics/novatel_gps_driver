@@ -106,6 +106,31 @@ namespace novatel_gps_driver
    */
   std::string BuildLogCommand(const std::string& name, double period);
 
+  /**
+   * @brief Adds the log options needed to produce sensor_msgs/Imu: CORRIMUDATA,
+   * INSPVA, and INSPVAX at imu_rate, plus INSCOV and INSSTDEV at 1 Hz.
+   *
+   * Also adds RAWIMUXA, at 1 Hz, if imu_sample_rate is non-positive -- meaning
+   * the IMU's internal sample rate hasn't been set explicitly and has to be
+   * auto-detected from RAWIMUXA instead. That request is periodic rather than a
+   * one-shot: a single reply can be lost, or can arrive before the receiver has
+   * identified its IMU at cold boot, and there's nothing else to retry it,
+   * silently leaving the rate unset for the rest of the session with
+   * CORRIMUDATA/INSPVA piling up in their queues with nothing to drain them.
+   * See https://github.com/swri-robotics/novatel_gps_driver/issues/98.
+   *
+   * RAWIMUXA is requested unsuffixed ("rawimuxa") regardless of format_suffix:
+   * there is no binary RAWIMUX parser, so it must always be logged as ASCII.
+   *
+   * @param opts The options map to add entries to.
+   * @param format_suffix "a" or "b", appended to each rate-dependent log name.
+   * @param imu_rate The rate, in Hz, to request CORRIMUDATA/INSPVA/INSPVAX at.
+   * @param imu_sample_rate The IMU's internal sample rate if set explicitly, or
+   * a non-positive value to auto-detect it from RAWIMUXA.
+   */
+  void AddImuMessageOpts(NovatelMessageOpts& opts, const std::string& format_suffix,
+                         double imu_rate, double imu_sample_rate);
+
   class NovatelGps
   {
     public:
