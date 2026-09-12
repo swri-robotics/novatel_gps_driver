@@ -882,7 +882,7 @@ namespace novatel_gps_driver
       {
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = imu_frame_id_;
-        inspvax_pub_->publish(std::move(msg));
+        inspvax_pub_->publish(*msg);
       }
 
       std::vector<novatel_gps_driver::InsstdevParser::MessageType> insstdev_msgs;

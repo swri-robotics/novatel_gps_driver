@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Generates the synthetic pcap fixtures used by the IMU synchronization tests.
+"""Generates synthetic pcap fixtures for tests that need specific log combinations.
 
 The receivers that exposed https://github.com/swri-robotics/novatel_gps_driver/issues/127
 log a corrected-IMU message paired with an INS position/velocity/attitude message,
 which is the combination NovatelGps::GenerateImuMessages needs before it will emit a
 sensor_msgs/Imu. Neither of the recorded captures in this directory contains such a
 pair, so these files are synthesized instead of captured from hardware.
+
+This also covers https://github.com/swri-robotics/novatel_gps_driver/issues/101,
+which needs a capture with BESTPOS, BESTVEL, and INSPVAX all present so a test can
+check which one GetFixMessages() actually used for GPSFix::track.
 
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
@@ -122,6 +126,42 @@ def inscov_payload(seconds):
     return struct.pack('<Id27d', WEEK, seconds, *covariances)
 
 
+def ascii_message(log_name, seconds, body_fields, port='COM1', sequence=0,
+                   idle_time=50.0, receiver_status='00000000', reserved=0, sw_version=0):
+    """A NovAtel ASCII log: '#NAME,header;body*crc32\\r\\n'."""
+    header = '%s,%s,%d,%.1f,FINESTEERING,%d,%.3f,%s,%d,%d' % (
+        log_name, port, sequence, idle_time, WEEK, seconds, receiver_status, reserved, sw_version)
+    sentence = header + ';' + ','.join(body_fields)
+    checksum = block_crc32(sentence.encode('ascii'))
+    return ('#' + sentence + '*%08x\r\n' % checksum).encode('ascii')
+
+
+# BESTVEL's track_ground is Doppler-derived and gets noisy at low speed; INSPVAX's
+# azimuth is the SPAN filter's true direction of travel and doesn't have that
+# problem. These are deliberately different so the GPSFix track test can tell
+# which one GetFixMessages() actually used.
+BESTVEL_TRACK_DEG = 45.0
+INSPVAX_AZIMUTH_DEG = 270.0
+
+
+def bestpos_fields():
+    return ['SOL_COMPUTED', 'SINGLE', '29.443917634921949', '-98.614755510637181',
+            '250.0000', '-26.0000', 'WGS84', '0.0200', '0.0200', '0.0300', '""',
+            '0.000', '0.000', '8', '8', '8', '8', '0', '06', '00', '03']
+
+
+def bestvel_fields():
+    return ['SOL_COMPUTED', 'DOPPLER_VELOCITY', '0.250', '0.000', '0.0500',
+            '%.4f' % BESTVEL_TRACK_DEG, '0.0000', '00000000']
+
+
+def inspvax_fields():
+    return ['INS_SOLUTION_GOOD', 'INS_PSRSP', '29.443917634921949', '-98.614755510637181',
+            '250.0000', '-26.0000', '0.0300', '-0.0300', '0.0000', '1.0000', '2.0000',
+            '%.4f' % INSPVAX_AZIMUTH_DEG, '0.0200', '0.0200', '0.0300', '0.0100',
+            '0.0100', '0.0200', '0.0500', '0.0500', '0.1000', '00000000', '0']
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -187,6 +227,13 @@ def main():
     write_pcap('corrimudata-inspva-sync.pcap', long_msgs)
     write_pcap('corrimus-inspvas-sync.pcap', short_msgs)
     write_pcap('corrimudata-inspva-inscov.pcap', cov_msgs)
+
+    track_msgs = [
+        ascii_message('INSPVAXA', START_SECONDS, inspvax_fields()),
+        ascii_message('BESTVELA', START_SECONDS, bestvel_fields()),
+        ascii_message('BESTPOSA', START_SECONDS, bestpos_fields()),
+    ]
+    write_pcap('bestpos-bestvel-inspvax-sync.pcap', track_msgs)
 
 
 if __name__ == '__main__':

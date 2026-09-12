@@ -380,6 +380,21 @@ namespace novatel_gps_driver
         break;
       }
 
+      // BESTVEL's track_ground is derived from Doppler/carrier-phase velocity and
+      // gets noisy as ground speed approaches zero. INSPVAX's azimuth is the SPAN
+      // filter's true direction of travel and doesn't have that problem, so prefer
+      // it over track_ground once the INS solution is valid.
+      //
+      // HEADING2 and DUALANTENNAHEADING are deliberately not used here even though
+      // they're also heading sources: they report the antenna baseline's physical
+      // orientation, not direction of travel. Those coincide for a vehicle driving
+      // straight forward, but not on a boat or aircraft that can move sideways or
+      // slip, so using them for track would silently be wrong on those platforms.
+      if (latest_inspvax_ && latest_inspvax_->ins_status == "INS_SOLUTION_GOOD")
+      {
+        gpsFix->track = latest_inspvax_->azimuth;
+      }
+
       gpsFix->header.stamp = node_.get_clock()->now();
       gpsFix->altitude = bestpos->height;
       gpsFix->latitude = bestpos->lat;
@@ -1186,7 +1201,8 @@ namespace novatel_gps_driver
       {
         auto inspvax = inspvax_parser_.ParseBinary(msg);
         inspvax->header.stamp = stamp;
-        inspvax_msgs_.push_back(std::move(inspvax));
+        inspvax_msgs_.push_back(inspvax);
+        latest_inspvax_ = inspvax;
         break;
       }
       case InsstdevParser::MESSAGE_ID:
@@ -1380,7 +1396,8 @@ namespace novatel_gps_driver
     {
       auto inspvax = inspvax_parser_.ParseAscii(sentence);
       inspvax->header.stamp = stamp;
-      inspvax_msgs_.push_back(std::move(inspvax));
+      inspvax_msgs_.push_back(inspvax);
+      latest_inspvax_ = inspvax;
     }
     else if (sentence.id == "INSSTDEVA")
     {
