@@ -775,6 +775,39 @@ TEST(ParserTestSuite, testInsRotationCommandEmptyWhenRotationWrongSize)
   EXPECT_EQ("", novatel_gps_driver::BuildInsRotationCommand({}, {}));
 }
 
+// Per the OEM7 RXSTATUS reference (and NovAtel's own novatel_oem7_driver, whose
+// AUX2_STATUS_STRS table spells these out explicitly), AUX2 bit 28 is set when the
+// secondary antenna is NOT powered -- the opposite of what its bit position might
+// suggest. The driver used to read it as "powered" and then invert that for
+// display, so the reported power state came out exactly backwards.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/79.
+TEST(ParserTestSuite, testDualAntennaStatusDecodesNotPoweredBit)
+{
+  novatel_gps_driver::DualAntennaStatus status = novatel_gps_driver::DecodeDualAntennaStatus(0x10000000);
+  EXPECT_TRUE(status.not_powered);
+  EXPECT_FALSE(status.open);
+  EXPECT_FALSE(status.shorted);
+}
+
+TEST(ParserTestSuite, testDualAntennaStatusDecodesOpenAndShortedBits)
+{
+  novatel_gps_driver::DualAntennaStatus status = novatel_gps_driver::DecodeDualAntennaStatus(0x60000000);
+  EXPECT_FALSE(status.not_powered);
+  EXPECT_TRUE(status.open);
+  EXPECT_TRUE(status.shorted);
+}
+
+TEST(ParserTestSuite, testDualAntennaStatusNominalWhenNoFaultBitsSet)
+{
+  // Bit 9 (COM1 buffer overrun) is unrelated to antenna power/connection and
+  // must not be mistaken for one of the antenna fault bits.
+  novatel_gps_driver::DualAntennaStatus status = novatel_gps_driver::DecodeDualAntennaStatus(1 << 9);
+  EXPECT_FALSE(status.not_powered);
+  EXPECT_FALSE(status.open);
+  EXPECT_FALSE(status.shorted);
+}
+
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);

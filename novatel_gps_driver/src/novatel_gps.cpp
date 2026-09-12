@@ -1679,6 +1679,15 @@ namespace novatel_gps_driver
     return command.str();
   }
 
+  DualAntennaStatus DecodeDualAntennaStatus(uint32_t aux2stat)
+  {
+    DualAntennaStatus status{};
+    status.not_powered = aux2stat & 0x10000000;
+    status.open = aux2stat & 0x20000000;
+    status.shorted = aux2stat & 0x40000000;
+    return status;
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
