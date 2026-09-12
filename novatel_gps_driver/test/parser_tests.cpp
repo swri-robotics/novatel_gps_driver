@@ -721,6 +721,60 @@ TEST(ParserTestSuite, testImuMessageOptsOmitsRawimuxaWhenSampleRateForced)
   EXPECT_EQ(1.0 / 20.0, opts["corrimudataa"]);
 }
 
+// Without SETINSTRANSLATION, the receiver assumes each antenna sits at the IMU's
+// origin, which biases the INS position/velocity solution by however far the
+// antenna actually is from the IMU.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/88.
+TEST(ParserTestSuite, testInsTranslationCommandIncludesStdevWhenGiven)
+{
+  EXPECT_EQ("SETINSTRANSLATION ANT1 1 2 3 0.01 0.02 0.03\r\n",
+            novatel_gps_driver::BuildInsTranslationCommand(
+                "ANT1", {1.0, 2.0, 3.0}, {0.01, 0.02, 0.03}));
+}
+
+TEST(ParserTestSuite, testInsTranslationCommandOmitsStdevWhenNotGiven)
+{
+  EXPECT_EQ("SETINSTRANSLATION ANT2 -0.1 0.2 0.05\r\n",
+            novatel_gps_driver::BuildInsTranslationCommand("ANT2", {-0.1, 0.2, 0.05}, {}));
+}
+
+TEST(ParserTestSuite, testInsTranslationCommandEmptyWhenOffsetWrongSize)
+{
+  EXPECT_EQ("", novatel_gps_driver::BuildInsTranslationCommand("ANT1", {1.0, 2.0}, {}));
+  EXPECT_EQ("", novatel_gps_driver::BuildInsTranslationCommand("ANT1", {}, {}));
+}
+
+TEST(ParserTestSuite, testInsTranslationCommandIgnoresStdevOfWrongSize)
+{
+  // A malformed stdev shouldn't corrupt the command; it's just dropped.
+  EXPECT_EQ("SETINSTRANSLATION ANT1 1 2 3\r\n",
+            novatel_gps_driver::BuildInsTranslationCommand("ANT1", {1.0, 2.0, 3.0}, {0.01, 0.02}));
+}
+
+// Without SETINSROTATION RBV, the receiver can't correctly resolve attitude into
+// the vehicle frame unless the IMU happens to be mounted perfectly aligned with
+// the vehicle.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/88.
+TEST(ParserTestSuite, testInsRotationCommandIncludesStdevWhenGiven)
+{
+  EXPECT_EQ("SETINSROTATION RBV 0 0 90 3 3 3\r\n",
+            novatel_gps_driver::BuildInsRotationCommand({0.0, 0.0, 90.0}, {3.0, 3.0, 3.0}));
+}
+
+TEST(ParserTestSuite, testInsRotationCommandOmitsStdevWhenNotGiven)
+{
+  EXPECT_EQ("SETINSROTATION RBV 0 0 90\r\n",
+            novatel_gps_driver::BuildInsRotationCommand({0.0, 0.0, 90.0}, {}));
+}
+
+TEST(ParserTestSuite, testInsRotationCommandEmptyWhenRotationWrongSize)
+{
+  EXPECT_EQ("", novatel_gps_driver::BuildInsRotationCommand({0.0, 0.0}, {}));
+  EXPECT_EQ("", novatel_gps_driver::BuildInsRotationCommand({}, {}));
+}
+
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);

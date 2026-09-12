@@ -131,6 +131,48 @@ namespace novatel_gps_driver
   void AddImuMessageOpts(NovatelMessageOpts& opts, const std::string& format_suffix,
                          double imu_rate, double imu_sample_rate);
 
+  /**
+   * @brief Builds the SETINSTRANSLATION command that tells the receiver where a GNSS
+   * antenna is mounted relative to the IMU.
+   *
+   * Without this, the receiver assumes the antenna is at the IMU's origin, which
+   * biases the INS position/velocity solution by however far the antenna actually is
+   * from the IMU. See https://github.com/swri-robotics/novatel_gps_driver/issues/88.
+   *
+   * @param translation_type Which antenna this offset is for: "ANT1" or "ANT2".
+   * @param offset The [x, y, z] lever arm from the IMU to the antenna, in meters, in
+   * the IMU body frame. Must be empty (meaning "not configured") or exactly 3 elements;
+   * any other size is treated as empty.
+   * @param offset_stdev The [x, y, z] standard deviation of offset, in meters. May be
+   * empty to use the receiver's default uncertainty; any size other than 0 or 3 is
+   * treated as empty.
+   * @return The full command string including the trailing "\r\n", or an empty string
+   * if offset is not exactly 3 elements.
+   */
+  std::string BuildInsTranslationCommand(const std::string& translation_type,
+                                         const std::vector<double>& offset,
+                                         const std::vector<double>& offset_stdev);
+
+  /**
+   * @brief Builds the "SETINSROTATION RBV" command that tells the receiver how the IMU
+   * is rotated relative to the vehicle frame.
+   *
+   * Without this, the receiver can't correctly resolve attitude into the vehicle
+   * frame unless the IMU happens to be mounted perfectly aligned with the vehicle.
+   * See https://github.com/swri-robotics/novatel_gps_driver/issues/88.
+   *
+   * @param rotation The [x, y, z] Euler angle rotation from the IMU body frame to the
+   * vehicle frame, in degrees. Must be empty (meaning "not configured") or exactly 3
+   * elements; any other size is treated as empty.
+   * @param rotation_stdev The [x, y, z] standard deviation of rotation, in degrees. May
+   * be empty to use the receiver's default uncertainty; any size other than 0 or 3 is
+   * treated as empty.
+   * @return The full command string including the trailing "\r\n", or an empty string
+   * if rotation is not exactly 3 elements.
+   */
+  std::string BuildInsRotationCommand(const std::vector<double>& rotation,
+                                      const std::vector<double>& rotation_stdev);
+
   class NovatelGps
   {
     public:
@@ -359,6 +401,42 @@ namespace novatel_gps_driver
        * @param apply_rotation Logs a deprecation warning when true.
        */
       void ApplyVehicleBodyRotation(const bool& apply_rotation);
+
+      /**
+       * @brief Sets the ANT1 antenna-to-IMU lever arm Configure() sends via
+       * SETINSTRANSLATION on connect. Call before Connect().
+       * @param offset The [x, y, z] offset in meters; empty to stop sending this
+       * command, any size other than 0 or 3 is rejected with a warning and treated
+       * as empty.
+       * @param offset_stdev The [x, y, z] standard deviation of offset, in meters;
+       * may be left empty even when offset is set.
+       */
+      void SetInsTranslationAnt1(const std::vector<double>& offset,
+                                 const std::vector<double>& offset_stdev = {});
+
+      /**
+       * @brief Sets the ANT2 antenna-to-IMU lever arm Configure() sends via
+       * SETINSTRANSLATION on connect. Call before Connect().
+       * @param offset The [x, y, z] offset in meters; empty to stop sending this
+       * command, any size other than 0 or 3 is rejected with a warning and treated
+       * as empty.
+       * @param offset_stdev The [x, y, z] standard deviation of offset, in meters;
+       * may be left empty even when offset is set.
+       */
+      void SetInsTranslationAnt2(const std::vector<double>& offset,
+                                 const std::vector<double>& offset_stdev = {});
+
+      /**
+       * @brief Sets the IMU-to-vehicle-frame rotation Configure() sends via
+       * "SETINSROTATION RBV" on connect. Call before Connect().
+       * @param rotation The [x, y, z] Euler angle rotation, in degrees; empty to stop
+       * sending this command, any size other than 0 or 3 is rejected with a warning
+       * and treated as empty.
+       * @param rotation_stdev The [x, y, z] standard deviation of rotation, in
+       * degrees; may be left empty even when rotation is set.
+       */
+      void SetInsRotationRbv(const std::vector<double>& rotation,
+                             const std::vector<double>& rotation_stdev = {});
 
       /**
        * @brief Processes any data that has been received from the device since the last time
@@ -617,6 +695,13 @@ namespace novatel_gps_driver
       // (a true direction of travel) over BESTVEL's Doppler-derived track_ground
       // for GPSFix::track, which degrades badly at low speed.
       novatel_gps_driver::InspvaxParser::MessageType latest_inspvax_;
+
+      // SETINSTRANSLATION/SETINSROTATION commands Configure() sends on connect, built
+      // by SetInsTranslationAnt1/Ant2 and SetInsRotationRbv. Empty means "not
+      // configured, don't send."
+      std::string ins_translation_ant1_command_;
+      std::string ins_translation_ant2_command_;
+      std::string ins_rotation_rbv_command_;
   };
 }
 

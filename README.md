@@ -169,6 +169,27 @@ Nodelets
             - This is set as the rate for `CORRIMUDATA` logs.
             - Default: `100`
         - `imu_sample_rate`: Sample rate of the connected IMU.  Normally this is automatically detected based on the IMU type.
+        - `ins_rotation_rbv`: `[x, y, z]` Euler angle rotation, in degrees, from the IMU body frame to the vehicle
+        frame, sent to the receiver via `SETINSROTATION RBV` on connect.
+            - Default: Empty (don't send this command, leaving the receiver's existing configuration in place)
+            - Must be empty or exactly 3 elements.
+        - `ins_rotation_rbv_stdev`: `[x, y, z]` standard deviation of `ins_rotation_rbv`, in degrees.
+            - Default: Empty (use the receiver's default uncertainty)
+            - May be left empty even when `ins_rotation_rbv` is set. Must be empty or exactly 3 elements.
+        - `ins_translation_ant1_offset`: `[x, y, z]` lever arm, in meters, from the IMU to the primary GNSS antenna,
+        in the IMU body frame, sent to the receiver via `SETINSTRANSLATION ANT1` on connect.
+            - Default: Empty (don't send this command)
+            - Must be empty or exactly 3 elements.
+        - `ins_translation_ant1_offset_stdev`: `[x, y, z]` standard deviation of `ins_translation_ant1_offset`, in
+        meters.
+            - Default: Empty (use the receiver's default uncertainty)
+            - May be left empty even when `ins_translation_ant1_offset` is set. Must be empty or exactly 3 elements.
+        - `ins_translation_ant2_offset`: Like `ins_translation_ant1_offset`, but for the secondary antenna on a
+        dual-antenna receiver, sent via `SETINSTRANSLATION ANT2`.
+            - Default: Empty (don't send this command)
+        - `ins_translation_ant2_offset_stdev`: Like `ins_translation_ant1_offset_stdev`, but for
+        `ins_translation_ant2_offset`.
+            - Default: Empty (use the receiver's default uncertainty)
         - `polling_period`: Desired period between GPS messages. 
             - This will be set as the period for `GPGGA`, `GPRMC`, `GPGSA`, `BESTPOS`, 
             and `BESTVEL` logs.
