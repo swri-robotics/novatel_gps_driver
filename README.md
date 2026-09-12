@@ -231,7 +231,14 @@ Nodelets
             - Default: `0.5`
         - `serial_baud`: Select the serial baud rate to be used in a serial connection.
             - Default: `115200`
-        - `span_frame_to_ros_frame`: Translate the SPAN coordinate frame to a ROS coordinate frame using the VEHICLEBODYROTATION and APPLYVEHICLEBODYROTATION commands.
+        - `span_frame_to_ros_frame`: **Deprecated and ignored.**  Setting it logs a warning and has no effect.
+            - `sensor_msgs/Imu` is always published in the ROS body frame (REP 103: x forward, y left, z up),
+            with yaw measured counter-clockwise from East rather than as an azimuth clockwise from North.
+            The driver converts out of the SPAN frame (x right, y forward, z up, azimuth clockwise from North)
+            itself, so the receiver no longer needs to be asked to do it.
+            - This previously sent `VEHICLEBODYROTATION` and `APPLYVEHICLEBODYROTATION`, which could never do
+            the whole job: they rotate only the attitude logs (INSPVA, INSPVAS, INSPVAX, INSATT, INSATTS,
+            INSATTX), leaving the CORRIMUDATA rates and accelerations in the SPAN frame.
             - Default: `false`
         - `use_binary_messages`: `true` to request binary NovAtel logs, `false` to request ASCII.
             - Binary logs are much more efficient and effectively required for IMU data,

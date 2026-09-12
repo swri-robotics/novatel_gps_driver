@@ -58,7 +58,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
   ros_msg->latitude_dev = ParseFloat(&bin_msg.data_[0]);
-  ros_msg->latitude_dev = ParseFloat(&bin_msg.data_[4]);
+  ros_msg->longitude_dev = ParseFloat(&bin_msg.data_[4]);
   ros_msg->height_dev = ParseFloat(&bin_msg.data_[8]);
   ros_msg->north_velocity_dev = ParseFloat(&bin_msg.data_[12]);
   ros_msg->east_velocity_dev = ParseFloat(&bin_msg.data_[16]);
