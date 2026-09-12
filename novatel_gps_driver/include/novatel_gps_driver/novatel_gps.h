@@ -91,6 +91,21 @@ namespace novatel_gps_driver
   /// A negative period will be logged as "onchanged" rather than "ontime"
   typedef std::map<std::string, double> NovatelMessageOpts;
 
+  /**
+   * @brief Builds the "log" command Configure() sends to request one message from the
+   * receiver.
+   *
+   * HEADING2 and DUALANTENNAHEADING report a computed heading solution rather than a
+   * fixed-rate measurement, and NovAtel receivers don't reliably emit them on an ontime
+   * trigger, so they're requested with onnew instead. A negative period requests
+   * onchanged; anything else requests ontime at that period.
+   *
+   * @param name The message name, as it appears in a NovAtel log command (e.g. "bestposa").
+   * @param period The log period in seconds, as stored in a NovatelMessageOpts entry.
+   * @return The full command string, including the trailing "\r\n".
+   */
+  std::string BuildLogCommand(const std::string& name, double period);
+
   class NovatelGps
   {
     public:
