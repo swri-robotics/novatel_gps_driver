@@ -1578,9 +1578,6 @@ namespace novatel_gps_driver
       configured = configured && Write(BuildLogCommand(option.first, option.second));
     }
 
-    // Log the IMU data once to get the IMU type
-    configured = configured && Write("log rawimuxa\r\n");
-
     return configured;
   }
 }

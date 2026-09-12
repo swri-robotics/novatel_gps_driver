@@ -404,6 +404,16 @@ namespace novatel_gps_driver
       {
         gps_.SetImuRate(imu_sample_rate_, true);
       }
+      else
+      {
+        // Otherwise, auto-detect it from RAWIMUXA. This has to keep arriving
+        // rather than being asked for once: a single reply can be lost, or can
+        // arrive before the receiver has identified its IMU at cold boot, and
+        // there's nothing else to retry it -- silently leaving imu_rate_ unset
+        // for the rest of the session and CORRIMUDATA/INSPVA piling up in their
+        // queues with nothing to drain them. See issue #98.
+        opts["rawimuxa"] = 1.0;
+      }
     }
     if (publish_range_messages_)
     {
