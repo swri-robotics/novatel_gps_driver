@@ -65,6 +65,8 @@ constexpr double AZIMUTH_DEV_DEG = 3.0;
 constexpr double ROLL_VAR_DEG2 = 0.25;        // INSCOV variances
 constexpr double PITCH_VAR_DEG2 = 1.0;
 constexpr double AZIMUTH_VAR_DEG2 = 2.25;
+constexpr double BESTVEL_TRACK_DEG = 45.0;    // deliberately different from INSPVAX_AZIMUTH_DEG
+constexpr double INSPVAX_AZIMUTH_DEG = 270.0; // so the two are easy to tell apart in a test
 
 constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
 
@@ -118,6 +120,40 @@ TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
   EXPECT_DOUBLE_EQ(fix_messages.front()->speed, 0.041456376659522925);
   EXPECT_DOUBLE_EQ(fix_messages.front()->track, 135.51629763185957);
   EXPECT_DOUBLE_EQ(fix_messages.front()->gdop, 1.9980000257492065);
+}
+
+// BESTVEL's track_ground is derived from Doppler/carrier-phase velocity and gets
+// noisy as ground speed approaches zero. INSPVAX's azimuth is the SPAN filter's
+// true direction of travel and doesn't have that problem, so GetFixMessages()
+// should prefer it over track_ground once the INS solution is good.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/101.
+TEST_F(NovatelGpsTestSuite, testGpsFixTrackPrefersInspvaxAzimuthOverBestvel)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+  gps.wait_for_sync_ = true;
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/bestpos-bestvel-inspvax-sync.pcap",
+      novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<gps_msgs::msg::GPSFix::UniquePtr> fix_messages;
+
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<gps_msgs::msg::GPSFix::UniquePtr> tmp_messages;
+    gps.GetFixMessages(tmp_messages);
+
+    std::move(std::make_move_iterator(tmp_messages.begin()),
+        std::make_move_iterator(tmp_messages.end()),
+        std::back_inserter(fix_messages));
+  }
+
+  ASSERT_EQ(1, fix_messages.size());
+
+  // Not BESTVEL_TRACK_DEG: proves BESTVEL's track_ground was overridden rather
+  // than just never having been set.
+  EXPECT_DOUBLE_EQ(fix_messages.front()->track, INSPVAX_AZIMUTH_DEG);
 }
 
 TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)

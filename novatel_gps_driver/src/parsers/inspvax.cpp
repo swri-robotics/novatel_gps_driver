@@ -55,7 +55,7 @@ novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryM
     error << "Unexpected inspvax message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  auto ros_msg = std::make_unique<novatel_gps_msgs::msg::Inspvax>();
+  auto ros_msg = std::make_shared<novatel_gps_msgs::msg::Inspvax>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
@@ -125,7 +125,7 @@ novatel_gps_driver::InspvaxParser::ParseAscii(const novatel_gps_driver::NovatelS
     error << "Unexpected number of fields in INSPVA log: " << sentence.body.size();
     throw ParseException(error.str());
   }
-  auto msg = std::make_unique<novatel_gps_msgs::msg::Inspvax>();
+  auto msg = std::make_shared<novatel_gps_msgs::msg::Inspvax>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

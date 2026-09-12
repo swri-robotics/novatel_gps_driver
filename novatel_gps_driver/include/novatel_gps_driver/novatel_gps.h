@@ -587,6 +587,11 @@ namespace novatel_gps_driver
       novatel_gps_driver::InsstdevParser::MessageType latest_insstdev_;
       novatel_gps_driver::InscovParser::MessageType latest_inscov_;
       double imu_rate_;
+
+      // The most recent INSPVAX, kept so GetFixMessages() can prefer its azimuth
+      // (a true direction of travel) over BESTVEL's Doppler-derived track_ground
+      // for GPSFix::track, which degrades badly at low speed.
+      novatel_gps_driver::InspvaxParser::MessageType latest_inspvax_;
   };
 }
 

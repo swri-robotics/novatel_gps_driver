@@ -35,7 +35,7 @@
 
 namespace novatel_gps_driver
 {
-  class InspvaxParser : public MessageParser<novatel_gps_msgs::msg::Inspvax::UniquePtr>
+  class InspvaxParser : public MessageParser<novatel_gps_msgs::msg::Inspvax::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;
