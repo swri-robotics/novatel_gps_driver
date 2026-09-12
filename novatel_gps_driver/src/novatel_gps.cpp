@@ -1531,6 +1531,26 @@ namespace novatel_gps_driver
     return false;
   }
 
+  std::string BuildLogCommand(const std::string& name, double period)
+  {
+    std::stringstream command;
+    command << std::setprecision(3);
+    if (name.find("heading2") != std::string::npos ||
+        name.find("dualantennaheading") != std::string::npos)
+    {
+      command << "log " << name << " onnew" << "\r\n";
+    }
+    else if (period < 0.0)
+    {
+      command << "log " << name << " onchanged\r\n";
+    }
+    else
+    {
+      command << "log " << name << " ontime " << period << "\r\n";
+    }
+    return command.str();
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
@@ -1538,25 +1558,7 @@ namespace novatel_gps_driver
 
     for(const auto& option : opts)
     {
-      std::stringstream command;
-      command << std::setprecision(3);
-      // HEADING2 and DUALANTENNAHEADING report a computed heading solution rather
-      // than a fixed-rate measurement, and NovAtel receivers don't reliably emit
-      // them on an ontime trigger; onnew is required to get them at all.
-      if (option.first.find("heading2") != std::string::npos ||
-          option.first.find("dualantennaheading") != std::string::npos)
-      {
-        command << "log " << option.first << " onnew" << "\r\n";
-      }
-      else if (option.second < 0.0)
-      {
-        command << "log " << option.first << " onchanged\r\n";
-      }
-      else
-      {
-      	command << "log " << option.first << " ontime " << option.second << "\r\n";
-      }
-      configured = configured && Write(command.str());
+      configured = configured && Write(BuildLogCommand(option.first, option.second));
     }
 
     // Log the IMU data once to get the IMU type

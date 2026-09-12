@@ -32,6 +32,7 @@
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/parsers/gphdt.h>
 #include <novatel_gps_driver/novatel_message_extractor.h>
+#include <novatel_gps_driver/novatel_gps.h>
 #include <novatel_gps_driver/parsers/bestxyz.h>
 #include <novatel_gps_driver/parsers/heading2.h>
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
@@ -658,6 +659,30 @@ TEST(ParserTestSuite, testDualAntennaHeadingAsciiParsing)
 
   ASSERT_NE(msg.get(), nullptr);
   ASSERT_EQ(novatel_gps_msgs::msg::NovatelDualAntennaHeading::SOURCE_PRIMARY_ANTENNA, msg->solution_source);
+}
+
+// HEADING2 and DUALANTENNAHEADING report a computed heading solution rather than a
+// fixed-rate measurement, and NovAtel receivers don't reliably emit them on an ontime
+// trigger, so Configure() has to request them with onnew instead. The dualantennaheading
+// half of that was missing, which silently dropped every DualAntennaHeading message.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/78.
+TEST(ParserTestSuite, testLogCommandUsesOnnewForComputedHeadingLogs)
+{
+  EXPECT_EQ("log heading2a onnew\r\n",
+            novatel_gps_driver::BuildLogCommand("heading2a", 0.5));
+  EXPECT_EQ("log dualantennaheadinga onnew\r\n",
+            novatel_gps_driver::BuildLogCommand("dualantennaheadinga", 0.5));
+  EXPECT_EQ("log dualantennaheadingb onnew\r\n",
+            novatel_gps_driver::BuildLogCommand("dualantennaheadingb", 0.5));
+}
+
+TEST(ParserTestSuite, testLogCommandUsesOntimeAndOnchangedForOtherLogs)
+{
+  EXPECT_EQ("log bestposa ontime 0.5\r\n",
+            novatel_gps_driver::BuildLogCommand("bestposa", 0.5));
+  EXPECT_EQ("log psrdop2a onchanged\r\n",
+            novatel_gps_driver::BuildLogCommand("psrdop2a", -1.0));
 }
 
 int main(int argc, char **argv)
