@@ -1540,9 +1540,13 @@ namespace novatel_gps_driver
     {
       std::stringstream command;
       command << std::setprecision(3);
-      if (option.first.find("heading2") != std::string::npos)
+      // HEADING2 and DUALANTENNAHEADING report a computed heading solution rather
+      // than a fixed-rate measurement, and NovAtel receivers don't reliably emit
+      // them on an ontime trigger; onnew is required to get them at all.
+      if (option.first.find("heading2") != std::string::npos ||
+          option.first.find("dualantennaheading") != std::string::npos)
       {
-      	command << "log " << option.first << " onnew " << "\r\n";
+        command << "log " << option.first << " onnew" << "\r\n";
       }
       else if (option.second < 0.0)
       {
