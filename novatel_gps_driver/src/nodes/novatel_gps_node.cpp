@@ -142,6 +142,19 @@ namespace novatel_gps_driver
     gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
     gps_.wait_for_sync_ = this->declare_parameter("wait_for_sync", true);
 
+    // Antenna lever arms and IMU-to-vehicle rotation. Empty (the default) means
+    // "not configured, don't send"; see SETINSTRANSLATION/SETINSROTATION in the
+    // OEM7 command reference. https://github.com/swri-robotics/novatel_gps_driver/issues/88
+    gps_.SetInsTranslationAnt1(
+        this->declare_parameter("ins_translation_ant1_offset", std::vector<double>()),
+        this->declare_parameter("ins_translation_ant1_offset_stdev", std::vector<double>()));
+    gps_.SetInsTranslationAnt2(
+        this->declare_parameter("ins_translation_ant2_offset", std::vector<double>()),
+        this->declare_parameter("ins_translation_ant2_offset_stdev", std::vector<double>()));
+    gps_.SetInsRotationRbv(
+        this->declare_parameter("ins_rotation_rbv", std::vector<double>()),
+        this->declare_parameter("ins_rotation_rbv_stdev", std::vector<double>()));
+
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
                                                                                 std::bind(

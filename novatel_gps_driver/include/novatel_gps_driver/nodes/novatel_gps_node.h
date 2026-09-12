@@ -127,6 +127,27 @@
  *    [100.0]
  * \e imu_sample_rate <tt>dbl</tt> - Rate at which the device internally samples
  *    its IMU. Negative means detect it from the IMU type. [-1.0]
+ * \e ins_rotation_rbv <tt>dbl[]</tt> - The [x, y, z] Euler angle rotation, in
+ *    degrees, from the IMU body frame to the vehicle frame, sent to the receiver
+ *    via "SETINSROTATION RBV" on connect. Empty means don't send it, leaving
+ *    the receiver's existing configuration (if any) in place. Must be empty or
+ *    exactly 3 elements. []
+ * \e ins_rotation_rbv_stdev <tt>dbl[]</tt> - The [x, y, z] standard deviation of
+ *    ins_rotation_rbv, in degrees. May be left empty even when ins_rotation_rbv
+ *    is set, to use the receiver's default uncertainty. Must be empty or
+ *    exactly 3 elements. []
+ * \e ins_translation_ant1_offset <tt>dbl[]</tt> - The [x, y, z] lever arm, in
+ *    meters, from the IMU to the primary GNSS antenna, in the IMU body frame,
+ *    sent to the receiver via SETINSTRANSLATION on connect. Empty means don't
+ *    send it. Must be empty or exactly 3 elements. []
+ * \e ins_translation_ant1_offset_stdev <tt>dbl[]</tt> - The [x, y, z] standard
+ *    deviation of ins_translation_ant1_offset, in meters. May be left empty
+ *    even when ins_translation_ant1_offset is set. Must be empty or exactly 3
+ *    elements. []
+ * \e ins_translation_ant2_offset <tt>dbl[]</tt> - Like ins_translation_ant1_offset,
+ *    but for the secondary antenna on a dual-antenna receiver. []
+ * \e ins_translation_ant2_offset_stdev <tt>dbl[]</tt> - Like
+ *    ins_translation_ant1_offset_stdev, but for ins_translation_ant2_offset. []
  * \e loop <tt>bool</tt> - Replay the PCAP file in a loop. Only effective when
  *    `connection_type` is "pcap". [false]
  * \e polling_period <tt>dbl</tt> - The number of seconds in between messages

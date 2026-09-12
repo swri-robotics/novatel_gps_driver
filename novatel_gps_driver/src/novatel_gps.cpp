@@ -203,6 +203,62 @@ namespace novatel_gps_driver
     }
   }
 
+  void NovatelGps::SetInsTranslationAnt1(const std::vector<double>& offset,
+                                         const std::vector<double>& offset_stdev)
+  {
+    if (!offset.empty() && offset.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(), "ins_translation_ant1_offset must have exactly 3 elements, got %zu; ignoring.",
+                   offset.size());
+      return;
+    }
+    if (!offset_stdev.empty() && offset_stdev.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(),
+                   "ins_translation_ant1_offset_stdev must have exactly 3 elements, got %zu; ignoring.",
+                   offset_stdev.size());
+      return;
+    }
+    ins_translation_ant1_command_ = BuildInsTranslationCommand("ANT1", offset, offset_stdev);
+  }
+
+  void NovatelGps::SetInsTranslationAnt2(const std::vector<double>& offset,
+                                         const std::vector<double>& offset_stdev)
+  {
+    if (!offset.empty() && offset.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(), "ins_translation_ant2_offset must have exactly 3 elements, got %zu; ignoring.",
+                   offset.size());
+      return;
+    }
+    if (!offset_stdev.empty() && offset_stdev.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(),
+                   "ins_translation_ant2_offset_stdev must have exactly 3 elements, got %zu; ignoring.",
+                   offset_stdev.size());
+      return;
+    }
+    ins_translation_ant2_command_ = BuildInsTranslationCommand("ANT2", offset, offset_stdev);
+  }
+
+  void NovatelGps::SetInsRotationRbv(const std::vector<double>& rotation,
+                                     const std::vector<double>& rotation_stdev)
+  {
+    if (!rotation.empty() && rotation.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(), "ins_rotation_rbv must have exactly 3 elements, got %zu; ignoring.",
+                   rotation.size());
+      return;
+    }
+    if (!rotation_stdev.empty() && rotation_stdev.size() != 3)
+    {
+      RCLCPP_ERROR(node_.get_logger(), "ins_rotation_rbv_stdev must have exactly 3 elements, got %zu; ignoring.",
+                   rotation_stdev.size());
+      return;
+    }
+    ins_rotation_rbv_command_ = BuildInsRotationCommand(rotation, rotation_stdev);
+  }
+
   NovatelGps::ReadResult NovatelGps::ProcessData()
   {
     NovatelGps::ReadResult read_result = ReadData();
@@ -1584,10 +1640,64 @@ namespace novatel_gps_driver
     }
   }
 
+  std::string BuildInsTranslationCommand(const std::string& translation_type,
+                                         const std::vector<double>& offset,
+                                         const std::vector<double>& offset_stdev)
+  {
+    if (offset.size() != 3)
+    {
+      return "";
+    }
+
+    std::stringstream command;
+    command << "SETINSTRANSLATION " << translation_type << " "
+            << offset[0] << " " << offset[1] << " " << offset[2];
+    if (offset_stdev.size() == 3)
+    {
+      command << " " << offset_stdev[0] << " " << offset_stdev[1] << " " << offset_stdev[2];
+    }
+    command << "\r\n";
+    return command.str();
+  }
+
+  std::string BuildInsRotationCommand(const std::vector<double>& rotation,
+                                      const std::vector<double>& rotation_stdev)
+  {
+    if (rotation.size() != 3)
+    {
+      return "";
+    }
+
+    std::stringstream command;
+    command << "SETINSROTATION RBV "
+            << rotation[0] << " " << rotation[1] << " " << rotation[2];
+    if (rotation_stdev.size() == 3)
+    {
+      command << " " << rotation_stdev[0] << " " << rotation_stdev[1] << " " << rotation_stdev[2];
+    }
+    command << "\r\n";
+    return command.str();
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
     configured = configured && Write("unlogall THISPORT_ALL\r\n");
+
+    // Antenna lever arms and the IMU-to-vehicle rotation, if configured, so the
+    // receiver has them before it starts computing an INS solution.
+    if (!ins_translation_ant1_command_.empty())
+    {
+      configured = configured && Write(ins_translation_ant1_command_);
+    }
+    if (!ins_translation_ant2_command_.empty())
+    {
+      configured = configured && Write(ins_translation_ant2_command_);
+    }
+    if (!ins_rotation_rbv_command_.empty())
+    {
+      configured = configured && Write(ins_rotation_rbv_command_);
+    }
 
     for(const auto& option : opts)
     {
