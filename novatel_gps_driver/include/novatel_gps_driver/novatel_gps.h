@@ -173,6 +173,29 @@ namespace novatel_gps_driver
   std::string BuildInsRotationCommand(const std::vector<double>& rotation,
                                       const std::vector<double>& rotation_stdev);
 
+  /// The secondary-antenna fault bits decoded from an RXSTATUS log's AUX2 status word.
+  struct DualAntennaStatus
+  {
+    bool not_powered;
+    bool open;
+    bool shorted;
+  };
+
+  /**
+   * @brief Decodes the secondary-antenna fault bits out of an RXSTATUS log's AUX2
+   * status word.
+   *
+   * Bit positions and polarity are per the OEM7 RXSTATUS reference (NovAtel's own
+   * novatel_oem7_driver spells these out explicitly as AUX2_STATUS_STRS): bit 28 is
+   * set when the antenna is NOT powered, not when it is -- the opposite of what its
+   * bit position might suggest. See
+   * https://github.com/swri-robotics/novatel_gps_driver/issues/79.
+   *
+   * @param aux2stat The RXSTATUS log's aux2stat word.
+   * @return The decoded not_powered/open/shorted flags.
+   */
+  DualAntennaStatus DecodeDualAntennaStatus(uint32_t aux2stat);
+
   class NovatelGps
   {
     public:

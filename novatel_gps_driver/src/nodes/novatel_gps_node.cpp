@@ -1240,22 +1240,20 @@ namespace novatel_gps_driver
 
   void NovatelGpsNode::DualAntennaDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status)
   {
-    bool powered = aux2stat_ & 0x10000000;
-    bool open = aux2stat_ & 0x20000000;
-    bool shorted = aux2stat_ & 0x40000000;
+    novatel_gps_driver::DualAntennaStatus antenna_status = novatel_gps_driver::DecodeDualAntennaStatus(aux2stat_);
 
-    if (open || shorted)
+    if (antenna_status.not_powered || antenna_status.open || antenna_status.shorted)
     {
       status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Second Antenna Connection Error");
     }
-    else 
+    else
     {
       status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Nominal");
     }
 
-    status.add("Second Antenna Not Powered", powered ? "false" : "true");
-    status.add("Second Antenna Open", aux2stat_ & 0x20000000 ? "true" : "false");
-    status.add("Second Antenna Shorted", aux2stat_ & 0x40000000 ? "true" : "false");
+    status.add("Second Antenna Not Powered", antenna_status.not_powered ? "true" : "false");
+    status.add("Second Antenna Open", antenna_status.open ? "true" : "false");
+    status.add("Second Antenna Shorted", antenna_status.shorted ? "true" : "false");
 
     status.add("aux2stat", aux2stat_);
   }
