@@ -28,19 +28,66 @@
 // *****************************************************************************
 
 #include <sstream>
+#include <vector>
 
 #include <novatel_gps_driver/parsers/clocksteering.h>
 
 const std::string novatel_gps_driver::ClockSteeringParser::MESSAGE_NAME = "CLOCKSTEERING";
 
+namespace
+{
+  // Binary enum values, in order, as the ASCII log names them.
+  const std::vector<std::string> CLOCK_SOURCES = {"INTERNAL", "EXTERNAL"};
+  const std::vector<std::string> STEERING_STATES = {
+    "FIRST_ORDER", "SECOND_ORDER", "CALIBRATE_HIGH", "CALIBRATE_LOW", "CALIBRATE_CENTER"};
+}
+
 uint32_t novatel_gps_driver::ClockSteeringParser::GetMessageId() const
 {
-  return 0;
+  return MESSAGE_ID;
 }
 
 const std::string novatel_gps_driver::ClockSteeringParser::GetMessageName() const
 {
   return MESSAGE_NAME;
+}
+
+novatel_gps_driver::ClockSteeringParser::MessageType novatel_gps_driver::ClockSteeringParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
+{
+  if (bin_msg.data_.size() != BINARY_LENGTH)
+  {
+    std::stringstream error;
+    error << "Unexpected CLOCKSTEERING message length: " << bin_msg.data_.size();
+    throw ParseException(error.str());
+  }
+  auto msg = std::make_unique<novatel_gps_msgs::msg::ClockSteering>();
+
+  uint32_t source = ParseUInt32(&bin_msg.data_[0]);
+  if (source >= CLOCK_SOURCES.size())
+  {
+    std::stringstream error;
+    error << "Unexpected clock source in CLOCKSTEERING: " << source;
+    throw ParseException(error.str());
+  }
+  msg->source = CLOCK_SOURCES[source];
+
+  uint32_t steering_state = ParseUInt32(&bin_msg.data_[4]);
+  if (steering_state >= STEERING_STATES.size())
+  {
+    std::stringstream error;
+    error << "Unexpected steering state in CLOCKSTEERING: " << steering_state;
+    throw ParseException(error.str());
+  }
+  msg->steering_state = STEERING_STATES[steering_state];
+
+  msg->period = ParseUInt32(&bin_msg.data_[8]);
+  msg->pulse_width = ParseDouble(&bin_msg.data_[12]);
+  msg->bandwidth = ParseDouble(&bin_msg.data_[20]);
+  msg->slope = ParseFloat(&bin_msg.data_[28]);
+  msg->offset = ParseDouble(&bin_msg.data_[32]);
+  msg->drift_rate = ParseDouble(&bin_msg.data_[40]);
+
+  return msg;
 }
 
 novatel_gps_driver::ClockSteeringParser::MessageType novatel_gps_driver::ClockSteeringParser::ParseAscii(const novatel_gps_driver::NovatelSentence& sentence) noexcept(false)
