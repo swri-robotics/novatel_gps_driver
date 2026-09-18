@@ -109,8 +109,8 @@ novatel_gps_driver::InspvaxParser::ParseBinary(const novatel_gps_driver::BinaryM
   ros_msg->roll_std = ParseFloat(&bin_msg.data_[108]);
   ros_msg->pitch_std = ParseFloat(&bin_msg.data_[112]);
   ros_msg->azimuth_std = ParseFloat(&bin_msg.data_[116]);
-  GetExtendedSolutionStatusMessage(bin_msg.data_[120],
-                                     ros_msg->extended_status);
+  GetInsExtendedSolutionStatusMessage(ParseUInt32(&bin_msg.data_[120]),
+                                      ros_msg->extended_status);
   ros_msg->seconds_since_update = ParseUInt16(&bin_msg.data_[124]);
 
   return ros_msg;
@@ -153,11 +153,9 @@ novatel_gps_driver::InspvaxParser::ParseAscii(const novatel_gps_driver::NovatelS
   valid &= ParseFloat(sentence.body[19], msg->pitch_std);
   valid &= ParseFloat(sentence.body[20], msg->azimuth_std);
 
-   // skip reserved field
-    uint32_t extended_solution_status = 0;
-    valid = valid && ParseUInt32(sentence.body[21], extended_solution_status, 16);
-    GetExtendedSolutionStatusMessage(
-        extended_solution_status, msg->extended_status);
+  uint32_t extended_solution_status = 0;
+  valid = valid && ParseUInt32(sentence.body[21], extended_solution_status, 16);
+  GetInsExtendedSolutionStatusMessage(extended_solution_status, msg->extended_status);
 
 
   valid &= ParseUInt16(sentence.body[22], msg->seconds_since_update);

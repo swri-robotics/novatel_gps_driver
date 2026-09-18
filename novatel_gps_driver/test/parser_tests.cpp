@@ -444,7 +444,12 @@ TEST(ParserTestSuite, testInsstdevAsciiParsing)
   ASSERT_FLOAT_EQ(3.7503, msg->roll_dev);
   ASSERT_FLOAT_EQ(3.7534, msg->pitch_dev);
   ASSERT_FLOAT_EQ(5.1857, msg->azimuth_dev);
-  ASSERT_EQ(26000005, msg->extended_solution_status.original_mask);
+  // The extended solution status is printed in hex; it used to be parsed as decimal.
+  ASSERT_EQ(0x26000005u, msg->extended_solution_status.original_mask);
+  EXPECT_TRUE(msg->extended_solution_status.position_update);
+  EXPECT_TRUE(msg->extended_solution_status.zero_velocity_update);
+  EXPECT_EQ("STATIC", msg->extended_solution_status.alignment_type);
+  EXPECT_EQ("INVALID", msg->extended_solution_status.nvm_seed_status);
 }
 
 // InsstdevParser::ParseBinary assigns latitude_dev twice -- once from the first
@@ -462,7 +467,7 @@ TEST(ParserTestSuite, testInsstdevBinaryParsing)
   // puts them on the wire: nine floats, a status word and a uint16.
   const float deviations[9] = {0.4372f, 0.3139f, 0.7547f, 0.0015f, 0.0016f,
                                0.0014f, 3.7503f, 3.7534f, 5.1857f};
-  const uint32_t extended_status = 26000005;
+  const uint32_t extended_status = 0x26000005;
   const uint16_t time_since_update = 3;
 
   novatel_gps_driver::BinaryMessage bin_msg;
@@ -489,7 +494,8 @@ TEST(ParserTestSuite, testInsstdevBinaryParsing)
   EXPECT_FLOAT_EQ(3.7503, msg->roll_dev);
   EXPECT_FLOAT_EQ(3.7534, msg->pitch_dev);
   EXPECT_FLOAT_EQ(5.1857, msg->azimuth_dev);
-  EXPECT_EQ(26000005u, msg->extended_solution_status.original_mask);
+  EXPECT_EQ(0x26000005u, msg->extended_solution_status.original_mask);
+  EXPECT_EQ("STATIC", msg->extended_solution_status.alignment_type);
   EXPECT_EQ(3, msg->time_since_update);
 }
 
@@ -916,7 +922,9 @@ TEST(ParserTestSuite, testInsUpdateStatusAsciiParsing)
   EXPECT_EQ(24, msg->num_dop);
   EXPECT_EQ("INACTIVE", msg->dmi_update_status);
   EXPECT_EQ("USED", msg->align_update_status);
-  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status.original_mask);
+  EXPECT_TRUE(msg->extended_solution_status.ins_solution_converged);
+  EXPECT_EQ("KINEMATIC", msg->extended_solution_status.alignment_type);
   EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
   EXPECT_TRUE(msg->ins_enabled_updates &
               novatel_gps_msgs::msg::NovatelInsUpdateStatus::INS_UPDATE_WHEEL_SENSOR);
@@ -947,7 +955,9 @@ TEST(ParserTestSuite, testInsUpdateStatusBinaryParsing)
   EXPECT_EQ(24, msg->num_dop);
   EXPECT_EQ("USED", msg->dmi_update_status);
   EXPECT_EQ("BAD_MISC", msg->align_update_status);
-  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status.original_mask);
+  EXPECT_TRUE(msg->extended_solution_status.ins_solution_converged);
+  EXPECT_EQ("KINEMATIC", msg->extended_solution_status.alignment_type);
   EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
 }
 
@@ -1012,6 +1022,115 @@ TEST(ParserTestSuite, testLogCommandUsesOnnewForRawDmi)
 {
   EXPECT_EQ("log rawdmia onnew\r\n", novatel_gps_driver::BuildLogCommand("rawdmia", 0.05));
   EXPECT_EQ("log rawdmib onnew\r\n", novatel_gps_driver::BuildLogCommand("rawdmib", 0.05));
+}
+
+// INS logs (INSPVAX, INSSTDEV, INSUPDATESTATUS) use a different extended solution
+// status bit table than GNSS logs like BESTPOS. They used to be decoded with the
+// GNSS table, and binary INSPVAX kept only the lowest byte of the 32-bit field.
+TEST(ParserTestSuite, testInsExtendedSolutionStatusEachFlag)
+{
+  using Status = novatel_gps_msgs::msg::NovatelInsExtendedSolutionStatus;
+  const std::vector<std::pair<uint32_t, bool Status::*>> flags = {
+    {0x00000001, &Status::position_update},
+    {0x00000002, &Status::phase_update},
+    {0x00000004, &Status::zero_velocity_update},
+    {0x00000008, &Status::wheel_sensor_update},
+    {0x00000010, &Status::align_update},
+    {0x00000020, &Status::external_position_update},
+    {0x00000040, &Status::ins_solution_converged},
+    {0x00000080, &Status::doppler_update},
+    {0x00000100, &Status::pseudorange_update},
+    {0x00000200, &Status::velocity_update},
+    {0x00000800, &Status::dead_reckoning_update},
+    {0x00001000, &Status::phase_wind_up_update},
+    {0x00002000, &Status::course_over_ground_update},
+    {0x00004000, &Status::external_velocity_update},
+    {0x00008000, &Status::external_attitude_update},
+    {0x00400000, &Status::secondary_ins_solution_used},
+    {0x01000000, &Status::turn_on_biases_estimated},
+    {0x02000000, &Status::alignment_direction_verified},
+  };
+
+  for (const auto& flag : flags)
+  {
+    SCOPED_TRACE(flag.first);
+    Status status;
+    novatel_gps_driver::GetInsExtendedSolutionStatusMessage(flag.first, status);
+    EXPECT_EQ(flag.first, status.original_mask);
+    // Exactly this flag is set, and no other.
+    for (const auto& other : flags)
+    {
+      EXPECT_EQ(other.first == flag.first, status.*(other.second));
+    }
+  }
+}
+
+TEST(ParserTestSuite, testInsExtendedSolutionStatusAlignmentAndSeed)
+{
+  const std::vector<std::pair<uint32_t, std::string>> alignment_types = {
+    {0, "INCOMPLETE"}, {1, "STATIC"}, {2, "KINEMATIC"}, {3, "DUAL_ANTENNA"},
+    {4, "USER_COMMAND"}, {5, "NVM_SEED"}, {6, "UNKNOWN"}, {7, "UNKNOWN"}
+  };
+  for (const auto& type : alignment_types)
+  {
+    SCOPED_TRACE(type.first);
+    novatel_gps_msgs::msg::NovatelInsExtendedSolutionStatus status;
+    novatel_gps_driver::GetInsExtendedSolutionStatusMessage(type.first << 26, status);
+    EXPECT_EQ(type.second, status.alignment_type);
+  }
+
+  const std::vector<std::pair<uint32_t, std::string>> seed_statuses = {
+    {0, "UNKNOWN"}, {1, "INVALID"}, {2, "FAILED_VALIDATION"}, {3, "PENDING_VALIDATION"},
+    {4, "INJECTED"}, {5, "UNKNOWN"}, {6, "UNKNOWN"}, {7, "UNKNOWN"}
+  };
+  for (const auto& seed : seed_statuses)
+  {
+    SCOPED_TRACE(seed.first);
+    novatel_gps_msgs::msg::NovatelInsExtendedSolutionStatus status;
+    novatel_gps_driver::GetInsExtendedSolutionStatusMessage(seed.first << 29, status);
+    EXPECT_EQ(seed.second, status.nvm_seed_status);
+  }
+}
+
+// The example log from https://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm
+TEST(ParserTestSuite, testInspvaxAsciiExtendedStatus)
+{
+  novatel_gps_driver::InspvaxParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#INSPVAXA,USB1,0,65.5,FINESTEERING,2209,490782.000,02000020,46eb,16809;"
+      "INS_SOLUTION_GOOD,INS_PPP,51.15043710672,-114.03067871892,1097.3598,-17.0001,"
+      "-0.0016,0.0002,0.0029,-0.308665944,0.297893298,157.960833016,0.1816,0.1816,0.1808,"
+      "0.0018,0.0018,0.0016,0.0292,0.0292,0.0582,13000045,0*a74644a2\r\n");
+  ASSERT_EQ(1, sentences.size());
+
+  auto msg = parser.ParseAscii(sentences.front());
+
+  ASSERT_NE(msg.get(), nullptr);
+  const auto& status = msg->extended_status;
+  EXPECT_EQ(0x13000045u, status.original_mask);
+  EXPECT_TRUE(status.position_update);
+  EXPECT_FALSE(status.phase_update);
+  EXPECT_TRUE(status.zero_velocity_update);
+  EXPECT_TRUE(status.ins_solution_converged);
+  EXPECT_TRUE(status.turn_on_biases_estimated);
+  EXPECT_TRUE(status.alignment_direction_verified);
+  EXPECT_EQ("USER_COMMAND", status.alignment_type);
+  EXPECT_EQ("UNKNOWN", status.nvm_seed_status);
+}
+
+TEST(ParserTestSuite, testInspvaxBinaryExtendedStatusKeepsAll32Bits)
+{
+  novatel_gps_driver::InspvaxParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InspvaxParser::BINARY_LENGTH, 0);
+  PutUInt32(message.data_, 120, 0x13000045);
+
+  auto msg = parser.ParseBinary(message);
+
+  EXPECT_EQ(0x13000045u, msg->extended_status.original_mask);
+  EXPECT_TRUE(msg->extended_status.alignment_direction_verified);
+  EXPECT_EQ("USER_COMMAND", msg->extended_status.alignment_type);
 }
 
 int main(int argc, char **argv)

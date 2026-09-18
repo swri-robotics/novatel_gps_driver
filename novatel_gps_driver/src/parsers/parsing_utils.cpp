@@ -97,6 +97,75 @@ namespace novatel_gps_driver
     }
   }
 
+  void GetInsExtendedSolutionStatusMessage(
+      uint32_t status,
+      novatel_gps_msgs::msg::NovatelInsExtendedSolutionStatus& msg)
+  {
+    msg.original_mask = status;
+    msg.position_update = (status & 0x00000001u) != 0;
+    msg.phase_update = (status & 0x00000002u) != 0;
+    msg.zero_velocity_update = (status & 0x00000004u) != 0;
+    msg.wheel_sensor_update = (status & 0x00000008u) != 0;
+    msg.align_update = (status & 0x00000010u) != 0;
+    msg.external_position_update = (status & 0x00000020u) != 0;
+    msg.ins_solution_converged = (status & 0x00000040u) != 0;
+    msg.doppler_update = (status & 0x00000080u) != 0;
+    msg.pseudorange_update = (status & 0x00000100u) != 0;
+    msg.velocity_update = (status & 0x00000200u) != 0;
+    msg.dead_reckoning_update = (status & 0x00000800u) != 0;
+    msg.phase_wind_up_update = (status & 0x00001000u) != 0;
+    msg.course_over_ground_update = (status & 0x00002000u) != 0;
+    msg.external_velocity_update = (status & 0x00004000u) != 0;
+    msg.external_attitude_update = (status & 0x00008000u) != 0;
+    msg.secondary_ins_solution_used = (status & 0x00400000u) != 0;
+    msg.turn_on_biases_estimated = (status & 0x01000000u) != 0;
+    msg.alignment_direction_verified = (status & 0x02000000u) != 0;
+
+    switch ((status >> 26u) & 0x7u)
+    {
+      case 0:
+        msg.alignment_type = "INCOMPLETE";
+        break;
+      case 1:
+        msg.alignment_type = "STATIC";
+        break;
+      case 2:
+        msg.alignment_type = "KINEMATIC";
+        break;
+      case 3:
+        msg.alignment_type = "DUAL_ANTENNA";
+        break;
+      case 4:
+        msg.alignment_type = "USER_COMMAND";
+        break;
+      case 5:
+        msg.alignment_type = "NVM_SEED";
+        break;
+      default:
+        msg.alignment_type = "UNKNOWN";
+        break;
+    }
+
+    switch ((status >> 29u) & 0x7u)
+    {
+      case 1:
+        msg.nvm_seed_status = "INVALID";
+        break;
+      case 2:
+        msg.nvm_seed_status = "FAILED_VALIDATION";
+        break;
+      case 3:
+        msg.nvm_seed_status = "PENDING_VALIDATION";
+        break;
+      case 4:
+        msg.nvm_seed_status = "INJECTED";
+        break;
+      default:
+        msg.nvm_seed_status = "UNKNOWN";
+        break;
+    }
+  }
+
   void GetSignalsUsed(uint32_t mask, novatel_gps_msgs::msg::NovatelSignalMask& msg)
   {
     msg.original_mask = mask;

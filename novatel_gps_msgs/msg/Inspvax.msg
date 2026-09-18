@@ -40,6 +40,6 @@ float32 roll_std
 float32 pitch_std
 float32 azimuth_std
 
-NovatelExtendedSolutionStatus extended_status
+NovatelInsExtendedSolutionStatus extended_status
 
 uint16 seconds_since_update

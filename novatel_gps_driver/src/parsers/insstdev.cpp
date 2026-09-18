@@ -67,7 +67,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
   ros_msg->pitch_dev = ParseFloat(&bin_msg.data_[28]);
   ros_msg->azimuth_dev = ParseFloat(&bin_msg.data_[32]);
   uint32_t status = ParseUInt32(&bin_msg.data_[36]);
-  GetExtendedSolutionStatusMessage(status, ros_msg->extended_solution_status);
+  GetInsExtendedSolutionStatusMessage(status, ros_msg->extended_solution_status);
   ros_msg->time_since_update = ParseUInt16(&bin_msg.data_[40]);
 
   return ros_msg;
@@ -97,9 +97,11 @@ novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::Novatel
   valid &= ParseFloat(sentence.body[6], msg->roll_dev);
   valid &= ParseFloat(sentence.body[7], msg->pitch_dev);
   valid &= ParseFloat(sentence.body[8], msg->azimuth_dev);
+  // The receiver prints this field in hex, even though the INSSTDEV reference
+  // lists it as a Ulong.
   uint32_t status;
-  valid &= ParseUInt32(sentence.body[9], status);
-  GetExtendedSolutionStatusMessage(status, msg->extended_solution_status);
+  valid &= ParseUInt32(sentence.body[9], status, 16);
+  GetInsExtendedSolutionStatusMessage(status, msg->extended_solution_status);
 
   if (!valid)
   {

@@ -25,6 +25,7 @@ set(MSG_FILES
   msg/NovatelDualAntennaHeading.msg
   msg/NovatelExtendedSolutionStatus.msg
   msg/NovatelHeading2.msg
+  msg/NovatelInsExtendedSolutionStatus.msg
   msg/NovatelInsUpdateStatus.msg
   msg/NovatelMessageHeader.msg
   msg/NovatelPosition.msg

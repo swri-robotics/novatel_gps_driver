@@ -13,6 +13,6 @@ float32 up_velocity_dev
 float32 roll_dev
 float32 pitch_dev
 float32 azimuth_dev
-NovatelExtendedSolutionStatus extended_solution_status
+NovatelInsExtendedSolutionStatus extended_solution_status
 uint16 time_since_update
 
