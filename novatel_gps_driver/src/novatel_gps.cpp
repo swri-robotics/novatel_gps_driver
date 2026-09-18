@@ -435,7 +435,7 @@ namespace novatel_gps_driver
       if (!synced && wait_for_sync_)
       {
         // If we have a bestpos and are configured to wait for a sync, we need
-        // to wait until a bestvel arrives -- but not forever, or a BESTVEL that
+        // to wait until a bestvel arrives, but not forever, or a BESTVEL that
         // lags too far behind stops GPSFix output entirely.  Give up and publish
         // without speed & track if any of these are true:
         //  - A newer BESTVEL has already arrived.  The loop above only leaves
