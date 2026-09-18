@@ -47,6 +47,13 @@ const std::string novatel_gps_driver::RangeParser::GetMessageName() const
 novatel_gps_driver::RangeParser::MessageType
 novatel_gps_driver::RangeParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
+  // The observation count has to be there before it can be read.
+  if (bin_msg.data_.size() < 4)
+  {
+    std::stringstream error;
+    error << "Unexpected range message size: " << bin_msg.data_.size();
+    throw ParseException(error.str());
+  }
   uint32_t num_obs = ParseUInt32(&bin_msg.data_[0]);
   if (bin_msg.data_.size() != (BINARY_OBSERVATION_SIZE * num_obs) + 4)
   {

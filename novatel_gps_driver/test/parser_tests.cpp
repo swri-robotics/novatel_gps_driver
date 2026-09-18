@@ -48,6 +48,9 @@
 #include <novatel_gps_driver/parsers/insupdatestatus.h>
 #include <novatel_gps_driver/parsers/rawdmi.h>
 #include <novatel_gps_driver/parsers/rawimux.h>
+#include <novatel_gps_driver/parsers/range.h>
+#include <novatel_gps_driver/parsers/trackstat.h>
+#include <novatel_gps_driver/parsers/psrdop2.h>
 #include <novatel_gps_driver/parsers/header.h>
 
 #include <rclcpp/rclcpp.hpp>
@@ -1277,6 +1280,63 @@ TEST(ParserTestSuite, testLogCommandUsesOnnewForZeroPeriod)
 {
   EXPECT_EQ("log rawimuxb onnew\r\n", novatel_gps_driver::BuildLogCommand("rawimuxb", 0.0));
   EXPECT_EQ("log rawimuxa ontime 1\r\n", novatel_gps_driver::BuildLogCommand("rawimuxa", 1.0));
+}
+
+// A binary log with no body used to make the extractor take &data_[0] of an empty
+// vector, which is undefined behavior and aborted in builds with assertions.  A
+// corrupted length field could produce one.  This is a 28-byte header for
+// message ID 65000 with a message length of 0, followed by its CRC.
+TEST(ParserTestSuite, testExtractorHandlesBinaryLogWithNoBody)
+{
+  const uint8_t bytes[] = {
+    0xaa, 0x44, 0x12, 0x1c, 0xe8, 0xfd, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0xb4, 0x1c, 0x07,
+    0x4c, 0x8c, 0x8c, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5c, 0xcd, 0x97, 0x76
+  };
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(std::string(reinterpret_cast<const char*>(bytes), sizeof(bytes)),
+                                    nmea_sentences, novatel_sentences, binary_messages, remaining);
+
+  ASSERT_EQ(1, binary_messages.size());
+  EXPECT_EQ(65000, binary_messages.front().header_.message_id_);
+  EXPECT_TRUE(binary_messages.front().data_.empty());
+}
+
+// RANGE, TRACKSTAT and PSRDOP2 read how many entries they have from a count field
+// in the body, and used to read it before checking the body was long enough to
+// hold it.
+template <typename Parser>
+void ExpectBodyTooShortForCountThrows(size_t count_end)
+{
+  Parser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 180;  // FINESTEERING
+
+  for (size_t length : {size_t(0), count_end - 1})
+  {
+    SCOPED_TRACE(length);
+    message.data_.assign(length, 0);
+    EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+  }
+}
+
+TEST(ParserTestSuite, testRangeBinaryBodyTooShortForCount)
+{
+  ExpectBodyTooShortForCountThrows<novatel_gps_driver::RangeParser>(4);
+}
+
+TEST(ParserTestSuite, testTrackstatBinaryBodyTooShortForCount)
+{
+  ExpectBodyTooShortForCountThrows<novatel_gps_driver::TrackstatParser>(16);
+}
+
+TEST(ParserTestSuite, testPsrdop2BinaryBodyTooShortForCount)
+{
+  ExpectBodyTooShortForCountThrows<novatel_gps_driver::Psrdop2Parser>(20);
 }
 
 int main(int argc, char **argv)
