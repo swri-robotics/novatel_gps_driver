@@ -163,6 +163,11 @@ Nodelets
         - `gpsfix_sync_tol`: Maximum difference, in seconds, between the timestamps of a BESTPOS and a BESTVEL
         log for them to be treated as synchronized when building a `gps_msgs/GPSFix`.
             - Default: `0.01`
+        - `gpsfix_sync_timeout`: When `wait_for_sync` is `true`, the maximum time, in seconds of GPS time, that a
+        BESTPOS log will wait for a matching BESTVEL.  After this, the `gps_msgs/GPSFix` is published with speed &
+        track set to NaN.  It is also published that way if a newer BESTVEL has already arrived, or if enough BESTPOS logs
+        have backed up that it would otherwise be discarded.
+            - Default: `1.0`
         - `imu_frame_id`: TF frame id to use in IMU messages.
             - Default: Empty
         - `imu_rate`: Desired logging rate in Hz for IMU messages.
@@ -268,7 +273,7 @@ Nodelets
         - `wait_for_sync`: `true` in order to wait for both BESTPOS and BESTVEL messages to arrive before publishing
         `gps_msgs/GPSFix` messages.  If this is `false`, GPSFix messages will be published immediately when BESTPOS
         messages are received, but a side effect is that the driver will often be unable to fill in the speed & track
-        fields.  This has no effect if `publish_novatel_velocity` is `false`.
+        fields, which will be NaN.  This has no effect if `publish_novatel_velocity` is `false`.
             - Default: `true`
         - `loop` : `true` to keep replaying PCAP reply. Only effective when device is `pcap`.
             - Default: `false`

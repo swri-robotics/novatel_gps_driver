@@ -31,6 +31,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 
 #include <ament_index_cpp/get_package_prefix.hpp>
@@ -67,6 +68,9 @@ constexpr double PITCH_VAR_DEG2 = 1.0;
 constexpr double AZIMUTH_VAR_DEG2 = 2.25;
 constexpr double BESTVEL_TRACK_DEG = 45.0;    // deliberately different from INSPVAX_AZIMUTH_DEG
 constexpr double INSPVAX_AZIMUTH_DEG = 270.0; // so the two are easy to tell apart in a test
+constexpr double BESTVEL_HORIZONTAL_SPEED = 0.05;  // vertical speed is 0
+constexpr size_t FIX_COUNT = 40;              // BESTPOS logs in the bestpos-bestvel-* sync captures
+constexpr size_t DROPPED_BESTVEL_INDEX = 10;  // the epoch missing its BESTVEL in bestpos-bestvel-dropped
 
 constexpr double DEGREES_TO_RADIANS = M_PI / 180.0;
 
@@ -113,13 +117,19 @@ TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
         std::back_inserter(fix_messages));
   }
 
-  ASSERT_EQ(22, fix_messages.size());
+  ASSERT_EQ(24, fix_messages.size());
 
-  EXPECT_DOUBLE_EQ(fix_messages.front()->latitude, 29.443917634921949);
-  EXPECT_DOUBLE_EQ(fix_messages.front()->longitude, -98.614755510637181);
-  EXPECT_DOUBLE_EQ(fix_messages.front()->speed, 0.041456376659522925);
-  EXPECT_DOUBLE_EQ(fix_messages.front()->track, 135.51629763185957);
-  EXPECT_DOUBLE_EQ(fix_messages.front()->gdop, 1.9980000257492065);
+  // The driver doesn't get a BESTVEL for the first BESTPOS in this capture, so
+  // it's published without speed & track once the next BESTVEL shows up.
+  EXPECT_DOUBLE_EQ(fix_messages[0]->time, 412623.4);
+  EXPECT_TRUE(std::isnan(fix_messages[0]->speed));
+  EXPECT_TRUE(std::isnan(fix_messages[0]->track));
+
+  EXPECT_DOUBLE_EQ(fix_messages[1]->latitude, 29.443917634921949);
+  EXPECT_DOUBLE_EQ(fix_messages[1]->longitude, -98.614755510637181);
+  EXPECT_DOUBLE_EQ(fix_messages[1]->speed, 0.041456376659522925);
+  EXPECT_DOUBLE_EQ(fix_messages[1]->track, 135.51629763185957);
+  EXPECT_DOUBLE_EQ(fix_messages[1]->gdop, 1.9980000257492065);
 }
 
 // BESTVEL's track_ground is derived from Doppler/carrier-phase velocity and gets
@@ -154,6 +164,99 @@ TEST_F(NovatelGpsTestSuite, testGpsFixTrackPrefersInspvaxAzimuthOverBestvel)
   // Not BESTVEL_TRACK_DEG: proves BESTVEL's track_ground was overridden rather
   // than just never having been set.
   EXPECT_DOUBLE_EQ(fix_messages.front()->track, INSPVAX_AZIMUTH_DEG);
+}
+
+// Replays a capture of BESTPOS and BESTVEL logs from test/make_imu_sync_pcaps.py
+// and collects every GPSFix that GetFixMessages() produces from it.
+//
+// Regression tests for https://github.com/swri-robotics/novatel_gps_driver/issues/2,
+// where GetFixMessages() waited forever for a BESTPOS's matching BESTVEL, so GPSFix
+// output stopped entirely if BESTVEL lagged farther behind than the sync buffer held.
+static std::vector<gps_msgs::msg::GPSFix::UniquePtr> ReplayFixCapture(
+    rclcpp::Node& node,
+    const std::string& capture,
+    double sync_timeout = 1.0)
+{
+  novatel_gps_driver::NovatelGps gps(node);
+  gps.wait_for_sync_ = true;
+  gps.gpsfix_sync_timeout_ = sync_timeout;
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  EXPECT_TRUE(gps.Connect(path + "/test/" + capture, novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<gps_msgs::msg::GPSFix::UniquePtr> fix_messages;
+
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<gps_msgs::msg::GPSFix::UniquePtr> tmp_messages;
+    gps.GetFixMessages(tmp_messages);
+
+    std::move(std::make_move_iterator(tmp_messages.begin()),
+        std::make_move_iterator(tmp_messages.end()),
+        std::back_inserter(fix_messages));
+  }
+
+  return fix_messages;
+}
+
+static size_t CountSyncedFixes(const std::vector<gps_msgs::msg::GPSFix::UniquePtr>& fix_messages)
+{
+  return std::count_if(fix_messages.begin(), fix_messages.end(),
+      [](const gps_msgs::msg::GPSFix::UniquePtr& fix) { return fix->track == BESTVEL_TRACK_DEG; });
+}
+
+// BESTVEL 5 epochs (0.25 s) behind BESTPOS is within the default timeout, so every
+// fix should still wait for and get its speed & track.
+TEST_F(NovatelGpsTestSuite, testGpsFixWaitsForLaggingBestvel)
+{
+  auto fix_messages = ReplayFixCapture(*this, "bestpos-bestvel-lag5.pcap");
+
+  ASSERT_EQ(FIX_COUNT, fix_messages.size());
+  EXPECT_EQ(FIX_COUNT, CountSyncedFixes(fix_messages));
+  EXPECT_DOUBLE_EQ(fix_messages.front()->speed, BESTVEL_HORIZONTAL_SPEED);
+}
+
+// With a shorter timeout, a fix stops waiting once a BESTPOS 3 epochs (0.15 s) newer
+// has arrived.  Only the last 3 BESTPOS are still waiting when the trailing BESTVELs
+// arrive at the end of the capture.
+TEST_F(NovatelGpsTestSuite, testGpsFixSyncTimeout)
+{
+  auto fix_messages = ReplayFixCapture(*this, "bestpos-bestvel-lag5.pcap", 0.12);
+
+  ASSERT_EQ(FIX_COUNT, fix_messages.size());
+  EXPECT_EQ(3, CountSyncedFixes(fix_messages));
+  EXPECT_TRUE(std::isnan(fix_messages.front()->speed));
+  EXPECT_TRUE(std::isnan(fix_messages.front()->track));
+  EXPECT_DOUBLE_EQ(fix_messages.back()->speed, BESTVEL_HORIZONTAL_SPEED);
+}
+
+// BESTVEL 15 epochs behind BESTPOS is more than the sync buffer holds.  This used to
+// stop GPSFix output entirely; now each BESTPOS is published without speed & track
+// before the buffer would discard it.
+TEST_F(NovatelGpsTestSuite, testGpsFixPublishedWhenBestvelLagsPastSyncBuffer)
+{
+  auto fix_messages = ReplayFixCapture(*this, "bestpos-bestvel-lag15.pcap");
+
+  ASSERT_EQ(FIX_COUNT, fix_messages.size());
+  for (size_t i = 1; i < fix_messages.size(); i++)
+  {
+    EXPECT_GT(fix_messages[i]->time, fix_messages[i - 1]->time);
+  }
+  EXPECT_TRUE(std::isnan(fix_messages.front()->speed));
+  EXPECT_TRUE(std::isnan(fix_messages.front()->track));
+}
+
+// A missing BESTVEL shouldn't hold up the fixes after it: once a newer BESTVEL has
+// arrived, the matching one never will, so that fix is published without it.
+TEST_F(NovatelGpsTestSuite, testGpsFixPublishedWhenBestvelDropped)
+{
+  auto fix_messages = ReplayFixCapture(*this, "bestpos-bestvel-dropped.pcap");
+
+  ASSERT_EQ(FIX_COUNT, fix_messages.size());
+  EXPECT_EQ(FIX_COUNT - 1, CountSyncedFixes(fix_messages));
+  EXPECT_TRUE(std::isnan(fix_messages[DROPPED_BESTVEL_INDEX]->speed));
+  EXPECT_TRUE(std::isnan(fix_messages[DROPPED_BESTVEL_INDEX]->track));
+  EXPECT_DOUBLE_EQ(fix_messages[DROPPED_BESTVEL_INDEX + 1]->speed, BESTVEL_HORIZONTAL_SPEED);
 }
 
 TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)

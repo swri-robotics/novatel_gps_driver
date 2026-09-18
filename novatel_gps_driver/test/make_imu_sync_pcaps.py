@@ -11,6 +11,11 @@ This also covers https://github.com/swri-robotics/novatel_gps_driver/issues/101,
 which needs a capture with BESTPOS, BESTVEL, and INSPVAX all present so a test can
 check which one GetFixMessages() actually used for GPSFix::track.
 
+It also covers https://github.com/swri-robotics/novatel_gps_driver/issues/2, where
+GetFixMessages() stopped publishing GPSFix messages entirely if BESTVEL logs arrived
+too far behind their BESTPOS logs, so there are captures where BESTVEL lags behind
+BESTPOS or goes missing.
+
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
 
@@ -162,6 +167,36 @@ def inspvax_fields():
             '0.0100', '0.0200', '0.0500', '0.0500', '0.1000', '00000000', '0']
 
 
+# BESTPOS/BESTVEL captures for the GPSFix sync tests: 20 Hz, like the driver's
+# default bestposa/bestvela log period.
+FIX_PERIOD_S = 0.05
+FIX_COUNT = 40
+
+
+def lagged_fix_messages(lag):
+    """BESTPOS for every epoch, with each BESTVEL arriving `lag` epochs late."""
+    messages = []
+    for i in range(FIX_COUNT + lag):
+        if i < FIX_COUNT:
+            messages.append(ascii_message('BESTPOSA', START_SECONDS + i * FIX_PERIOD_S,
+                                          bestpos_fields()))
+        if i >= lag:
+            messages.append(ascii_message('BESTVELA', START_SECONDS + (i - lag) * FIX_PERIOD_S,
+                                          bestvel_fields()))
+    return messages
+
+
+def dropped_fix_messages(dropped):
+    """BESTPOS and BESTVEL for every epoch, except for a missing BESTVEL at `dropped`."""
+    messages = []
+    for i in range(FIX_COUNT):
+        seconds = START_SECONDS + i * FIX_PERIOD_S
+        if i != dropped:
+            messages.append(ascii_message('BESTVELA', seconds, bestvel_fields()))
+        messages.append(ascii_message('BESTPOSA', seconds, bestpos_fields()))
+    return messages
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -234,6 +269,12 @@ def main():
         ascii_message('BESTPOSA', START_SECONDS, bestpos_fields()),
     ]
     write_pcap('bestpos-bestvel-inspvax-sync.pcap', track_msgs)
+
+    # Within the default 1 s sync timeout and the 10-message sync buffer.
+    write_pcap('bestpos-bestvel-lag5.pcap', lagged_fix_messages(5))
+    # Farther behind than the sync buffer can hold.
+    write_pcap('bestpos-bestvel-lag15.pcap', lagged_fix_messages(15))
+    write_pcap('bestpos-bestvel-dropped.pcap', dropped_fix_messages(10))
 
 
 if __name__ == '__main__':
