@@ -42,10 +42,14 @@ namespace novatel_gps_driver
 
     const std::string GetMessageName() const override;
 
+    MessageType ParseBinary(const BinaryMessage& bin_msg) noexcept(false) override;
+
     MessageType ParseAscii(const NovatelSentence& sentence) noexcept(false) override;
 
+    static constexpr uint16_t MESSAGE_ID = 26;
+    static constexpr size_t BINARY_LENGTH = 48;
     static const std::string MESSAGE_NAME;
   };
 }
 
-#endif //NOVATEL_GPS_DRIVER_GPGSV_H
+#endif //NOVATEL_GPS_DRIVER_CLOCKSTEERING_H

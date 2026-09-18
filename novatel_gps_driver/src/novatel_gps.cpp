@@ -1451,6 +1451,12 @@ namespace novatel_gps_driver
         rawimux_msgs_.push_back(std::move(rawimux));
         break;
       }
+      case ClockSteeringParser::MESSAGE_ID:
+      {
+        auto clocksteering = clocksteering_parser_.ParseBinary(msg);
+        clocksteering_msgs_.push_back(std::move(clocksteering));
+        break;
+      }
       default:
         // A log the driver doesn't parse keeps arriving at its logging rate, which
         // can be hundreds of times a second, so only warn about each one once.
