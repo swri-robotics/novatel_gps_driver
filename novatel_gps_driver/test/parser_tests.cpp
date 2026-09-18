@@ -695,24 +695,14 @@ TEST(ParserTestSuite, testLogCommandUsesOntimeAndOnchangedForOtherLogs)
             novatel_gps_driver::BuildLogCommand("psrdop2a", -1.0));
 }
 
-// A single "log rawimuxa" reply is the only way the driver learns the IMU's
-// sample rate when it isn't set explicitly. If that reply is lost, or arrives
-// before the receiver has identified its IMU at cold boot, imu_rate_ stays
-// unset for the rest of the session and CORRIMUDATA/INSPVA overflow their
-// queues forever with nothing to drain them. Requesting it periodically
-// instead of once makes a missed reply self-correcting.
-//
-// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/98.
-TEST(ParserTestSuite, testImuMessageOptsRequestsRawimuxaWhenSampleRateNotForced)
+// RAWIMUX isn't valid with the ontime trigger, so AddImuMessageOpts mustn't
+// request it; NovatelGps::RequestImuType() asks for it once at a time instead.
+TEST(ParserTestSuite, testImuMessageOptsDoesNotRequestRawimux)
 {
   novatel_gps_driver::NovatelMessageOpts opts;
-  novatel_gps_driver::AddImuMessageOpts(opts, "b", 20.0, -1.0);
+  novatel_gps_driver::AddImuMessageOpts(opts, "b", 20.0);
 
-  ASSERT_NE(opts.find("rawimuxa"), opts.end());
-  EXPECT_EQ(1.0, opts["rawimuxa"]);
-
-  // Always unsuffixed ASCII, even though every other log here is requested in
-  // binary ("b").
+  EXPECT_EQ(opts.find("rawimuxa"), opts.end());
   EXPECT_EQ(opts.find("rawimuxb"), opts.end());
 
   EXPECT_EQ(1.0 / 20.0, opts["corrimudatab"]);
@@ -720,15 +710,6 @@ TEST(ParserTestSuite, testImuMessageOptsRequestsRawimuxaWhenSampleRateNotForced)
   EXPECT_EQ(1.0 / 20.0, opts["inspvaxb"]);
   EXPECT_EQ(1.0, opts["inscovb"]);
   EXPECT_EQ(1.0, opts["insstdevb"]);
-}
-
-TEST(ParserTestSuite, testImuMessageOptsOmitsRawimuxaWhenSampleRateForced)
-{
-  novatel_gps_driver::NovatelMessageOpts opts;
-  novatel_gps_driver::AddImuMessageOpts(opts, "a", 20.0, 100.0);
-
-  EXPECT_EQ(opts.find("rawimuxa"), opts.end());
-  EXPECT_EQ(1.0 / 20.0, opts["corrimudataa"]);
 }
 
 // Without SETINSTRANSLATION, the receiver assumes each antenna sits at the IMU's
