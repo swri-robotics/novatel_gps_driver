@@ -92,9 +92,11 @@ namespace novatel_gps_driver
       rxstatus_msgs_(MAX_BUFFER_SIZE),
       rawdmi_msgs_(MAX_BUFFER_SIZE),
       insupdatestatus_msgs_(MAX_BUFFER_SIZE),
+      rawimux_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0),
       imu_log_period_(-1.0),
-      last_corrimu_gap_(-1.0)
+      last_corrimu_gap_(-1.0),
+      last_imu_type_(-1)
   {
   }
 
@@ -668,6 +670,11 @@ namespace novatel_gps_driver
   void NovatelGps::GetRawDmiMessages(std::vector<novatel_gps_driver::RawDmiParser::MessageType>& rawdmi_msgs)
   {
     DrainQueue(rawdmi_msgs_, rawdmi_msgs);
+  }
+
+  void NovatelGps::GetRawImuxMessages(std::vector<novatel_gps_driver::RawImuxParser::MessageType>& rawimux_msgs)
+  {
+    DrainQueue(rawimux_msgs_, rawimux_msgs);
   }
 
   void NovatelGps::GetInsUpdateStatusMessages(
@@ -1432,8 +1439,22 @@ namespace novatel_gps_driver
         insupdatestatus_msgs_.push_back(std::move(insupdatestatus));
         break;
       }
+      case RawImuxParser::MESSAGE_ID:
+      case RawImuxParser::SHORT_MESSAGE_ID:
+      {
+        auto rawimux = rawimux_parser_.ParseBinary(msg);
+        rawimux->header.stamp = stamp;
+        UpdateImuType(rawimux->imu_type);
+        rawimux_msgs_.push_back(std::move(rawimux));
+        break;
+      }
       default:
-        RCLCPP_WARN(node_.get_logger(), "Unexpected binary message id: %u", msg.header_.message_id_);
+        // A log the driver doesn't parse keeps arriving at its logging rate, which
+        // can be hundreds of times a second, so only warn about each one once.
+        if (unexpected_binary_message_ids_.insert(msg.header_.message_id_).second)
+        {
+          RCLCPP_WARN(node_.get_logger(), "Unexpected binary message id: %u", msg.header_.message_id_);
+        }
         break;
     }
 
@@ -1628,53 +1649,10 @@ namespace novatel_gps_driver
     }
     else if (sentence.id == "RAWIMUXA")
     {
-      static std::map<std::string, std::pair<double, std::string>> rates = {
-        { "0",  std::pair<double, std::string>(100, "Unknown") },
-        { "1",  std::pair<double, std::string>(100, "Honeywell HG1700 AG11") },
-        { "4",  std::pair<double, std::string>(100, "Honeywell HG1700 AG17") },
-        { "5",  std::pair<double, std::string>(100, "Honeywell HG1700 CA29") },
-        { "8",  std::pair<double, std::string>(200, "Litton LN-200 (200hz model)") },
-        { "11", std::pair<double, std::string>(100, "Honeywell HG1700 AG58") },
-        { "12", std::pair<double, std::string>(100, "Honeywell HG1700 AG62") },
-        { "13", std::pair<double, std::string>(200, "iMAR ilMU-FSAS") },
-        { "16", std::pair<double, std::string>(200, "KVH 1750 IMU") },
-        { "19", std::pair<double, std::string>(200, "Northrop Grumman Litef LCI-1") },
-        { "20", std::pair<double, std::string>(100, "Honeywell HG1930 AA99") },
-        { "26", std::pair<double, std::string>(100, "Northrop Grumman Litef ISA-100C") },
-        { "27", std::pair<double, std::string>(100, "Honeywell HG1900 CA50") },
-        { "28", std::pair<double, std::string>(100, "Honeywell HG1930 CA50") },
-        { "31", std::pair<double, std::string>(200, "Analog Devices ADIS16488") },
-        { "32", std::pair<double, std::string>(125, "Sensonor STIM300") },
-        { "33", std::pair<double, std::string>(200, "KVH1750 IMU") },
-        { "34", std::pair<double, std::string>(200, "Northrop Grumman Litef ISA-100") },
-        { "38", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100 400Hz") },
-        { "39", std::pair<double, std::string>(400, "Northrop Grumman Litef ISA-100C 400Hz") },
-        { "41", std::pair<double, std::string>(125, "Epson G320N") },
-        { "45", std::pair<double, std::string>(200, "KVH 1725 IMU?") }, //(This was a guess based on the 1750
-                       // as the actual rate is not documented and the specs are similar)
-        { "52", std::pair<double, std::string>(200, "Litef microIMU") },
-        { "56", std::pair<double, std::string>(125, "Sensonor STIM300, Direct Connection") },
-        { "58", std::pair<double, std::string>(200, "Honeywell HG4930 AN01") },
-        { "61", std::pair<double, std::string>(100, "Epson G370N") },
-       };
-
-      // Parse out the IMU type then save it, we don't care about the rest (3rd field)
-      std::string id = sentence.body.size() > 1 ? sentence.body[1] : "";
-      if (rates.find(id) != rates.end())
-      {
-        double rate = rates[id].first;
-        RCLCPP_INFO(node_.get_logger(), "IMU Type %s Found, Rate: %f Hz", rates[id].second.c_str(), (float)rate);
-        // Set the rate only if it hasn't been forced already
-        if (!imu_rate_forced_)
-        {
-          SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
-        }
-      }
-      else
-      {
-        // Error because the imu type was unknown
-        RCLCPP_ERROR(node_.get_logger(), "Unknown IMU Type Received: %s", id.c_str());
-      }
+      auto rawimux = rawimux_parser_.ParseAscii(sentence);
+      rawimux->header.stamp = stamp;
+      UpdateImuType(rawimux->imu_type);
+      rawimux_msgs_.push_back(std::move(rawimux));
     }
     else if (sentence.id == "CLOCKSTEERINGA")
     {
@@ -1748,6 +1726,10 @@ namespace novatel_gps_driver
     else if (period < 0.0)
     {
       command << "log " << name << " onchanged\r\n";
+    }
+    else if (period == 0.0)
+    {
+      command << "log " << name << " onnew\r\n";
     }
     else
     {
@@ -1859,6 +1841,72 @@ namespace novatel_gps_driver
               << sample_rate << " Hz divided by a whole number.";
     }
     return warning.str();
+  }
+
+  bool GetImuTypeInfo(uint8_t imu_type, double& sample_rate, std::string& name)
+  {
+    static const std::map<uint8_t, std::pair<double, std::string>> IMU_TYPES = {
+      { 0, { 100, "Unknown" } },
+      { 1, { 100, "Honeywell HG1700 AG11" } },
+      { 4, { 100, "Honeywell HG1700 AG17" } },
+      { 5, { 100, "Honeywell HG1700 CA29" } },
+      { 8, { 200, "Litton LN-200 (200hz model)" } },
+      { 11, { 100, "Honeywell HG1700 AG58" } },
+      { 12, { 100, "Honeywell HG1700 AG62" } },
+      { 13, { 200, "iMAR ilMU-FSAS" } },
+      { 16, { 200, "KVH 1750 IMU" } },
+      { 19, { 200, "Northrop Grumman Litef LCI-1" } },
+      { 20, { 100, "Honeywell HG1930 AA99" } },
+      { 26, { 100, "Northrop Grumman Litef ISA-100C" } },
+      { 27, { 100, "Honeywell HG1900 CA50" } },
+      { 28, { 100, "Honeywell HG1930 CA50" } },
+      { 31, { 200, "Analog Devices ADIS16488" } },
+      { 32, { 125, "Sensonor STIM300" } },
+      { 33, { 200, "KVH1750 IMU" } },
+      { 34, { 200, "Northrop Grumman Litef ISA-100" } },
+      { 38, { 400, "Northrop Grumman Litef ISA-100 400Hz" } },
+      { 39, { 400, "Northrop Grumman Litef ISA-100C 400Hz" } },
+      { 41, { 125, "Epson G320N" } },
+      { 45, { 200, "KVH 1725 IMU?" } }, //(This was a guess based on the 1750
+                   // as the actual rate is not documented and the specs are similar)
+      { 52, { 200, "Litef microIMU" } },
+      { 56, { 125, "Sensonor STIM300, Direct Connection" } },
+      { 58, { 200, "Honeywell HG4930 AN01" } },
+      { 61, { 100, "Epson G370N" } },
+    };
+
+    auto type = IMU_TYPES.find(imu_type);
+    if (type == IMU_TYPES.end())
+    {
+      return false;
+    }
+    sample_rate = type->second.first;
+    name = type->second.second;
+    return true;
+  }
+
+  void NovatelGps::UpdateImuType(uint8_t imu_type)
+  {
+    if (imu_type == last_imu_type_)
+    {
+      return;
+    }
+    last_imu_type_ = imu_type;
+
+    double rate = 0.0;
+    std::string name;
+    if (!GetImuTypeInfo(imu_type, rate, name))
+    {
+      RCLCPP_ERROR(node_.get_logger(), "Unknown IMU Type Received: %u", imu_type);
+      return;
+    }
+
+    RCLCPP_INFO(node_.get_logger(), "IMU Type %s Found, Rate: %f Hz", name.c_str(), rate);
+    // Set the rate only if it hasn't been forced already
+    if (!imu_rate_forced_)
+    {
+      SetImuRate(rate, false); // Dont force set from here so it can be configured elsewhere
+    }
   }
 
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)

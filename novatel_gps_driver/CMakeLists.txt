@@ -67,6 +67,7 @@ add_library(${PROJECT_NAME}
   src/parsers/psrdop2.cpp
   src/parsers/range.cpp
   src/parsers/rawdmi.cpp
+  src/parsers/rawimux.cpp
   src/parsers/time.cpp
   src/parsers/trackstat.cpp
   src/parsers/rxstatus.cpp

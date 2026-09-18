@@ -23,6 +23,10 @@ For https://github.com/swri-robotics/novatel_gps_driver/issues/28 there's a capt
 of CORRIMUDATA logs that don't each cover one logging interval: one holds no IMU
 data, the one after it holds two intervals' worth, and one is missing.
 
+For https://github.com/swri-robotics/novatel_gps_driver/issues/39 there's a capture
+of RAWIMUX logs in ASCII and binary, and RAWIMUSX in binary, followed by a log the
+driver doesn't parse repeated several times.
+
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
 
@@ -45,6 +49,9 @@ INSPVAS_ID = 508
 INSSTDEV_ID = 2051
 INSCOV_ID = 264
 RAWDMI_ID = 2269
+RAWIMUX_ID = 1461
+RAWIMUSX_ID = 1462
+UNPARSED_ID = 65000
 INSUPDATESTATUS_ID = 1825
 
 TIME_STATUS_FINESTEERING = 180
@@ -228,6 +235,17 @@ def insupdatestatus_payload(dmi_status):
                        0x0b0020c3, 0x007ff3bf, 0, 0)
 
 
+# RAWIMUX.  The ASCII one is the example from NovAtel's RAWIMUX reference.
+RAWIMUX_ASCII = (b'#RAWIMUXA,USB1,0,64.5,FINESTEERING,2209,491740.110,02000020,0dc5,16809;'
+                 b'04,41,2209,491740.109817,ea57fe00,329394068,-2396829,4481425,321199,257329,-936077*cf9c035d\r\n')
+HG4930_IMU_TYPE = 58
+
+
+def rawimux_payload(seconds, imu_type):
+    return struct.pack('<BBHd4s6i', 0, imu_type, WEEK, seconds, bytes((0xea, 0x57, 0xfe, 0x00)),
+                       1, -2, 3, -4, 5, -6)
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -320,6 +338,12 @@ def main():
     write_pcap('corrimudata-intervals.pcap', interval_msgs)
 
     start_ms = int(round(START_SECONDS * 1000))
+    write_pcap('rawimux.pcap', [RAWIMUX_ASCII] * 3 + [
+        long_message(RAWIMUX_ID, start_ms, rawimux_payload(START_SECONDS, HG4930_IMU_TYPE)),
+        long_message(RAWIMUX_ID, start_ms + 5, rawimux_payload(START_SECONDS + 0.005, HG4930_IMU_TYPE)),
+        short_message(RAWIMUSX_ID, start_ms + 10, rawimux_payload(START_SECONDS + 0.010, HG4930_IMU_TYPE)),
+    ] + [long_message(UNPARSED_ID, start_ms + 15, b'')] * 3)
+
     write_pcap('rawdmi-insupdatestatus.pcap', [
         RAWDMI_ASCII,
         INSUPDATESTATUS_ASCII,

@@ -33,6 +33,7 @@
 // std libraries
 #include <chrono>
 #include <map>
+#include <set>
 #include <queue>
 #include <string>
 #include <vector>
@@ -82,6 +83,7 @@
 #include <novatel_gps_driver/parsers/insupdatestatus.h>
 #include <novatel_gps_driver/parsers/range.h>
 #include <novatel_gps_driver/parsers/rawdmi.h>
+#include <novatel_gps_driver/parsers/rawimux.h>
 #include <novatel_gps_driver/parsers/psrdop2.h>
 #include <novatel_gps_driver/parsers/time.h>
 #include <novatel_gps_driver/parsers/trackstat.h>
@@ -101,7 +103,8 @@ namespace novatel_gps_driver
    * fixed-rate measurement, and NovAtel receivers don't reliably emit them on an ontime
    * trigger, so they're requested with onnew instead. RAWDMI is also requested with
    * onnew, since it's emitted as wheel sensor data arrives. A negative period requests
-   * onchanged; anything else requests ontime at that period.
+   * onchanged, a period of 0 requests onnew, and anything else requests ontime at that
+   * period.
    *
    * @param name The message name, as it appears in a NovAtel log command (e.g. "bestposa").
    * @param period The log period in seconds, as stored in a NovatelMessageOpts entry.
@@ -122,8 +125,9 @@ namespace novatel_gps_driver
    * CORRIMUDATA/INSPVA piling up in their queues with nothing to drain them.
    * See https://github.com/swri-robotics/novatel_gps_driver/issues/98.
    *
-   * RAWIMUXA is requested unsuffixed ("rawimuxa") regardless of format_suffix:
-   * there is no binary RAWIMUX parser, so it must always be logged as ASCII.
+   * RAWIMUXA is requested unsuffixed ("rawimuxa") regardless of format_suffix,
+   * since this was written before there was a binary RAWIMUX parser. At 1 Hz, the
+   * format makes little difference.
    *
    * @param opts The options map to add entries to.
    * @param format_suffix "a" or "b", appended to each rate-dependent log name.
@@ -150,6 +154,15 @@ namespace novatel_gps_driver
    * or either rate is unknown (non-positive).
    */
   std::string CheckImuLogRate(double log_rate, double sample_rate);
+
+  /**
+   * @brief Looks up an IMU type identifier, as reported in RAWIMUX logs.
+   * @param imu_type The IMU type identifier.
+   * @param[out] sample_rate The IMU's sample rate, in Hz.
+   * @param[out] name The IMU's name.
+   * @return true if the IMU type is known, false otherwise.
+   */
+  bool GetImuTypeInfo(uint8_t imu_type, double& sample_rate, std::string& name);
 
   /**
    * @brief Builds the SETINSTRANSLATION command that tells the receiver where a GNSS
@@ -449,6 +462,12 @@ namespace novatel_gps_driver
        */
       void GetInsUpdateStatusMessages(
           std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType>& insupdatestatus_msgs);
+      /**
+       * @brief Provides any RAWIMUX and RAWIMUSX messages that have been received
+       * since the last time this was called.
+       * @param[out] rawimux_msgs New RAWIMUX and RAWIMUSX messages.
+       */
+      void GetRawImuxMessages(std::vector<novatel_gps_driver::RawImuxParser::MessageType>& rawimux_msgs);
 
       /**
        * @return true if we are connected to a NovAtel device, false otherwise.
@@ -646,6 +665,13 @@ namespace novatel_gps_driver
       void WarnIfImuLogRateMismatched();
 
       /**
+       * @brief Updates the IMU sample rate from the IMU type in a RAWIMUX or RAWIMUSX
+       * log, unless it's been set explicitly.  Only logs anything when the type changes,
+       * since these logs can arrive hundreds of times a second.
+       */
+      void UpdateImuType(uint8_t imu_type);
+
+      /**
        * @brief Converts a BinaryMessage object into a ROS message of the appropriate type
        * and places it in the appropriate buffer.
        * @param[in] msg A valid binary message
@@ -758,6 +784,7 @@ namespace novatel_gps_driver
       RxStatusParser rxstatus_parser_;
       RawDmiParser rawdmi_parser_;
       InsUpdateStatusParser insupdatestatus_parser_;
+      RawImuxParser rawimux_parser_;
 
       // Message buffers
       boost::circular_buffer<novatel_gps_driver::ClockSteeringParser::MessageType> clocksteering_msgs_;
@@ -789,6 +816,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_driver::RxStatusParser::MessageType> rxstatus_msgs_;
       boost::circular_buffer<novatel_gps_driver::RawDmiParser::MessageType> rawdmi_msgs_;
       boost::circular_buffer<novatel_gps_driver::InsUpdateStatusParser::MessageType> insupdatestatus_msgs_;
+      boost::circular_buffer<novatel_gps_driver::RawImuxParser::MessageType> rawimux_msgs_;
 
       novatel_gps_driver::Psrdop2Parser::MessageType latest_psrdop2_;
 
@@ -811,6 +839,11 @@ namespace novatel_gps_driver
       double last_corrimu_gap_;
       // The last warning WarnIfImuLogRateMismatched() logged, so it isn't repeated
       std::string last_imu_rate_warning_;
+      // The IMU type from the last RAWIMUX or RAWIMUSX, or -1 if there hasn't been one
+      int32_t last_imu_type_;
+      // Binary message IDs that have been warned about as unexpected, so each is only
+      // warned about once rather than every time it arrives
+      std::set<uint16_t> unexpected_binary_message_ids_;
 
       // The most recent INSPVAX, kept so GetFixMessages() can prefer its azimuth
       // (a true direction of travel) over BESTVEL's Doppler-derived track_ground

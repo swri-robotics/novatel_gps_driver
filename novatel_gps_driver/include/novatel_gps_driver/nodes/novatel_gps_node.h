@@ -97,6 +97,9 @@
  *    (only published if `publish_range_messages` is set `true`)
  * \e rawdmi <tt>novatel_gps_msgs/NovatelRawDmi</tt> - Raw wheel sensor input.
  *    (only published if `publish_novatel_rawdmi` is set `true`)
+ * \e rawimux <tt>novatel_gps_msgs/NovatelRawImu</tt> - Raw IMU data, in counts, at
+ *    the IMU's full rate, e.g. for post-processing. (only published if
+ *    `publish_rawimux` is set `true`)
  * \e time <tt>novatel_gps_msgs/NovatelTime</tt> - Novatel-specific time data.
  *    (Only published if `publish_time_messages` is set `true`.) On Lyrical and
  *    older this message is named <tt>novatel_gps_msgs/Time</tt> instead.
@@ -207,6 +210,10 @@
  *    gps_msgs/GPSFix messages [true]
  * \e publish_novatel_xyz_positions <tt>bool</tt> - If set true, the driver
  *    publishes Novatel BESTXYZ messages (see Topics Published) [false]
+ * \e publish_rawimux <tt>bool</tt> - If set true, the driver requests RAWIMUX
+ *    logs at the IMU's full rate and publishes them (see Topics Published). This
+ *    is a lot of data: over a serial link, it needs a faster baud rate than the
+ *    default. [false]
  * \e publish_range_messages <tt>bool</tt> - If set true, the driver
  *    publishes Novatel RANGE messages [false]
  * \e publish_sync_diagnostic <tt>bool</tt> - If true, publish a Sync diagnostic.
@@ -311,6 +318,7 @@ namespace novatel_gps_driver
     bool publish_novatel_psrdop2_;
     bool publish_novatel_rawdmi_;
     bool publish_novatel_insupdatestatus_;
+    bool publish_rawimux_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
@@ -342,6 +350,7 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelPsrdop2>::SharedPtr novatel_psrdop2_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelRawDmi>::SharedPtr novatel_rawdmi_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelInsUpdateStatus>::SharedPtr novatel_insupdatestatus_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::NovatelRawImu>::SharedPtr rawimux_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgga>::SharedPtr gpgga_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsv>::SharedPtr gpgsv_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsa>::SharedPtr gpgsa_pub_;
