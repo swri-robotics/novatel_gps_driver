@@ -20,11 +20,14 @@ set(MSG_FILES
   msg/Inscov.msg
   msg/Inspva.msg
   msg/Inspvax.msg
+  msg/Inspvax2.msg
   msg/Insstdev.msg
+  msg/Insstdev2.msg
   msg/NovatelCorrectedImuData.msg
   msg/NovatelDualAntennaHeading.msg
   msg/NovatelExtendedSolutionStatus.msg
   msg/NovatelHeading2.msg
+  msg/NovatelInsExtendedSolutionStatus.msg
   msg/NovatelInsUpdateStatus.msg
   msg/NovatelMessageHeader.msg
   msg/NovatelPosition.msg

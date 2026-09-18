@@ -34,6 +34,8 @@
 
 #include <novatel_gps_msgs/msg/novatel_extended_solution_status.hpp>
 
+#include <novatel_gps_msgs/msg/novatel_ins_extended_solution_status.hpp>
+
 #include <novatel_gps_msgs/msg/novatel_signal_mask.hpp>
 
 #include <cstdint>
@@ -118,6 +120,17 @@ namespace novatel_gps_driver
   void GetExtendedSolutionStatusMessage(
       uint32_t status,
       novatel_gps_msgs::msg::NovatelExtendedSolutionStatus& msg);
+
+  /**
+   * @brief Decodes the extended solution status of an INS log (INSPVAX, INSSTDEV,
+   * INSUPDATESTATUS), which uses a different bit table than GNSS logs.
+   *
+   * @param status The 32-bit extended solution status word.
+   * @param msg The message to fill in.
+   */
+  void GetInsExtendedSolutionStatusMessage(
+      uint32_t status,
+      novatel_gps_msgs::msg::NovatelInsExtendedSolutionStatus& msg);
 
 
   void GetNovatelReceiverStatusMessage(

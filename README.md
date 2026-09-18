@@ -222,7 +222,7 @@ Nodelets
         - `publish_gphdt`: `true` to publish novatel_gps_msgs/Gphdt messages.
             - Default: `false`
         - `publish_imu_messages`: `true` to publish novatel_gps_msgs/NovatelCorrectedImuData, novatel_gps_msgs/Inspva,
-        novatel_gps_msgs/Inspvax, novatel_gps_msgs/Insstdev, and sensor_msgs/Imu messages.
+        novatel_gps_msgs/Inspvax2, novatel_gps_msgs/Insstdev2, and sensor_msgs/Imu messages.
             - Default: `false`
         - `publish_nmea_messages`: `true` to publish novatel_gps_msgs/Gpgga and novatel_gps_msgs/Gprmc messages.
             - Default: `false`
@@ -319,8 +319,11 @@ Nodelets
         - `/imu` *([sensor_msgs/Imu](http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html))*: CORRIMUDATA logs converted to Imu messages
         - `/inscov` *(novatel_gps_msgs/Inscov)*: [INSCOV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSCOV.htm) logs
         - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
-        - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
-        - `/insstdev` *(novatel_gps_msgs/Insstdev)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
+        - `/inspvax` *(novatel_gps_msgs/Inspvax2)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
+        - `/insstdev` *(novatel_gps_msgs/Insstdev2)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
+            - **Note**: Earlier versions published these as novatel_gps_msgs/Inspvax and novatel_gps_msgs/Insstdev, which
+            decoded the extended solution status incorrectly.  Those messages are still defined so old recordings can be
+            played back.
         - `/insupdatestatus` *(novatel_gps_msgs/NovatelInsUpdateStatus)*: [INSUPDATESTATUS](https://docs.novatel.com/OEM7/Content/SPAN_Logs/INSUPDATESTATUS.htm) logs
         - `/psrdop2` *(novatel_gps_msgs/NovatelPsrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs

@@ -84,9 +84,9 @@
  *    published if `publish_imu_messages` is set `true`)
  * \e inspva <tt>novatel_gps_msgs/Inspva</tt> - INS position, velocity and
  *    attitude. (only published if `publish_imu_messages` is set `true`)
- * \e inspvax <tt>novatel_gps_msgs/Inspvax</tt> - Extended INS position, velocity
+ * \e inspvax <tt>novatel_gps_msgs/Inspvax2</tt> - Extended INS position, velocity
  *    and attitude. (only published if `publish_imu_messages` is set `true`)
- * \e insstdev <tt>novatel_gps_msgs/Insstdev</tt> - INS standard deviations. (only
+ * \e insstdev <tt>novatel_gps_msgs/Insstdev2</tt> - INS standard deviations. (only
  *    published if `publish_imu_messages` is set `true`)
  * \e insupdatestatus <tt>novatel_gps_msgs/NovatelInsUpdateStatus</tt> - Which
  *    updates, including the wheel sensor, the INS filter used at its last update.
@@ -330,8 +330,8 @@ namespace novatel_gps_driver
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Inscov>::SharedPtr inscov_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Inspva>::SharedPtr inspva_pub_;
-    rclcpp::Publisher<novatel_gps_msgs::msg::Inspvax>::SharedPtr inspvax_pub_;
-    rclcpp::Publisher<novatel_gps_msgs::msg::Insstdev>::SharedPtr insstdev_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::Inspvax2>::SharedPtr inspvax_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::Insstdev2>::SharedPtr insstdev_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelCorrectedImuData>::SharedPtr novatel_imu_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelPosition>::SharedPtr novatel_position_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelXYZ>::SharedPtr novatel_xyz_position_pub_;
