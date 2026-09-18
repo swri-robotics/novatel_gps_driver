@@ -204,7 +204,8 @@ namespace novatel_gps_driver
 
     RCLCPP_DEBUG(this->logger_, "Reading binary message data.");
     msg.data_.resize(data_length);
-    std::copy(&str[data_start], &str[data_start+data_length], reinterpret_cast<char*>(&msg.data_[0]));
+    // data_[0] doesn't exist for a log with no body.
+    std::copy(str.begin() + data_start, str.begin() + data_start + data_length, msg.data_.begin());
 
     RCLCPP_DEBUG(this->logger_, "Calculating CRC.");
 

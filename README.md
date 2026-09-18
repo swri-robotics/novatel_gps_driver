@@ -254,6 +254,14 @@ Nodelets
             - Default: `false`
         - `publish_novatel_xyz_positions`: `true` to publish novatel_gps_msgs/NovatelXYZ messages.
             - Default: `false`
+        - `publish_rawimux`: `true` to publish novatel_gps_msgs/NovatelRawImu messages, from
+        [RAWIMUX](https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWIMUX.htm) logs, e.g. for post-processing.
+            - These are raw counts, logged at the IMU's full rate (`onnew`), since raw IMU data can't be logged
+            `ontime`.  NovAtel's reference has the scale factors for converting them to physical units.
+            - This is a lot of data: at 200 Hz in binary, about 144 kbit/s, which is more than a serial link at the
+            default `serial_baud` can carry.  NovAtel also recommends logging only one log faster than 50 Hz at a
+            time, and `publish_imu_messages` already logs CORRIMUDATA and INSPVA at `imu_rate`.
+            - Default: `false`
         - `publish_range_messages`: `true` to publish novatel_gps_msgs/Range messages.
             - Default: `false`
         - `publish_sync_diagnostic`: If true, publish a time Sync diagnostic.
@@ -334,6 +342,7 @@ Nodelets
         - `/psrdop2` *(novatel_gps_msgs/NovatelPsrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
         - `/rawdmi` *(novatel_gps_msgs/NovatelRawDmi)*: [RAWDMI](https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWDMI.htm) logs
+        - `/rawimux` *(novatel_gps_msgs/NovatelRawImu)*: [RAWIMUX](https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWIMUX.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
         - `/time` *(novatel_gps_msgs/NovatelTime)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
             - **Note**: This message is named novatel_gps_msgs/Time on Lyrical and older.

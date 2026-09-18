@@ -64,6 +64,7 @@ namespace novatel_gps_driver
       publish_novatel_psrdop2_(false),
       publish_novatel_rawdmi_(false),
       publish_novatel_insupdatestatus_(false),
+      publish_rawimux_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
@@ -122,6 +123,7 @@ namespace novatel_gps_driver
     publish_novatel_rawdmi_ = this->declare_parameter("publish_novatel_rawdmi", publish_novatel_rawdmi_);
     publish_novatel_insupdatestatus_ = this->declare_parameter("publish_novatel_insupdatestatus",
                                                                publish_novatel_insupdatestatus_);
+    publish_rawimux_ = this->declare_parameter("publish_rawimux", publish_rawimux_);
     publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
     publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
     publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
@@ -269,6 +271,11 @@ namespace novatel_gps_driver
     if (publish_novatel_rawdmi_)
     {
       novatel_rawdmi_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelRawDmi>("rawdmi", rclcpp::QoS(100));
+    }
+
+    if (publish_rawimux_)
+    {
+      rawimux_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelRawImu>("rawimux", rclcpp::QoS(100));
     }
 
     if (publish_novatel_insupdatestatus_)
@@ -464,6 +471,15 @@ namespace novatel_gps_driver
     if (publish_novatel_rawdmi_)
     {
       opts["rawdmi" + format_suffix] = polling_period_;
+    }
+    if (publish_rawimux_)
+    {
+      // Raw IMU data is only usable at the IMU's full rate, so it can only be logged
+      // onnew. The IMU type in each log also serves to detect the IMU's sample rate,
+      // so the separate 1 Hz ASCII request for that isn't needed.
+      // https://github.com/swri-robotics/novatel_gps_driver/issues/39
+      opts.erase("rawimuxa");
+      opts["rawimux" + format_suffix] = 0.0;
     }
     if (publish_novatel_insupdatestatus_ || (publish_wheel_sensor_diagnostic_ && publish_diagnostics_))
     {
@@ -870,6 +886,17 @@ namespace novatel_gps_driver
           aux2stat_ = msg->aux2stat;
           aux3stat_ = msg->aux3stat;
           aux4stat_ = msg->aux4stat;
+      }
+    }
+    if (publish_rawimux_)
+    {
+      std::vector<novatel_gps_driver::RawImuxParser::MessageType> rawimux_msgs;
+      gps_.GetRawImuxMessages(rawimux_msgs);
+      for (auto& msg : rawimux_msgs)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = imu_frame_id_;
+        rawimux_pub_->publish(std::move(msg));
       }
     }
     if (publish_novatel_rawdmi_)

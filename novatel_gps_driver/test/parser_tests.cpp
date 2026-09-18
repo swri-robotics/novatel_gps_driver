@@ -47,6 +47,8 @@
 #include <novatel_gps_driver/parsers/inscov.h>
 #include <novatel_gps_driver/parsers/insupdatestatus.h>
 #include <novatel_gps_driver/parsers/rawdmi.h>
+#include <novatel_gps_driver/parsers/rawimux.h>
+#include <novatel_gps_driver/parsers/header.h>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -710,7 +712,7 @@ TEST(ParserTestSuite, testImuMessageOptsRequestsRawimuxaWhenSampleRateNotForced)
   EXPECT_EQ(1.0, opts["rawimuxa"]);
 
   // Always unsuffixed ASCII, even though every other log here is requested in
-  // binary ("b"): there is no binary RAWIMUX parser.
+  // binary ("b").
   EXPECT_EQ(opts.find("rawimuxb"), opts.end());
 
   EXPECT_EQ(1.0 / 20.0, opts["corrimudatab"]);
@@ -1164,6 +1166,136 @@ TEST(ParserTestSuite, testImuLogRateSilentWhenARateIsUnknown)
 {
   EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(-1.0, 100.0));
   EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(100.0, -1.0));
+}
+
+// RAWIMUX support. https://github.com/swri-robotics/novatel_gps_driver/issues/39
+
+namespace
+{
+// A RAWIMUX body with distinctive values, as the receiver sends it in binary.
+novatel_gps_driver::BinaryMessage MakeRawImuxBinary(uint32_t header_length)
+{
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.header_length_ = header_length;
+  message.header_.time_status_ = 180;  // FINESTEERING
+  message.header_.week_ = 2209;
+  message.header_.gps_ms_ = 491740110;
+  message.data_.resize(novatel_gps_driver::RawImuxParser::BINARY_LENGTH, 0);
+  message.data_[0] = 0x01;  // IMU error
+  message.data_[1] = 58;    // HG4930
+  message.data_[2] = 2209 & 0xff;
+  message.data_[3] = 2209 >> 8;
+  const double seconds = 491740.109817;
+  std::memcpy(&message.data_[4], &seconds, sizeof(seconds));
+  const uint8_t status[] = {0xea, 0x57, 0xfe, 0x00};
+  std::memcpy(&message.data_[12], status, sizeof(status));
+  const int32_t counts[] = {329394068, -2396829, 4481425, 321199, 257329, -936077};
+  std::memcpy(&message.data_[16], counts, sizeof(counts));
+  return message;
+}
+
+void ExpectRawImuxCounts(const novatel_gps_msgs::msg::NovatelRawImu& msg)
+{
+  EXPECT_EQ(2209u, msg.gps_week_num);
+  EXPECT_DOUBLE_EQ(491740.109817, msg.gps_seconds);
+  EXPECT_EQ(0xea, msg.imu_status[0]);
+  EXPECT_EQ(0x57, msg.imu_status[1]);
+  EXPECT_EQ(0xfe, msg.imu_status[2]);
+  EXPECT_EQ(0x00, msg.imu_status[3]);
+  EXPECT_EQ(329394068, msg.z_acceleration);
+  EXPECT_EQ(-2396829, msg.negated_y_acceleration);
+  EXPECT_EQ(4481425, msg.x_acceleration);
+  EXPECT_EQ(321199, msg.z_rotation);
+  EXPECT_EQ(257329, msg.negated_y_rotation);
+  EXPECT_EQ(-936077, msg.x_rotation);
+}
+}  // namespace
+
+// The example log from https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWIMUX.htm
+TEST(ParserTestSuite, testRawImuxAsciiParsing)
+{
+  novatel_gps_driver::RawImuxParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#RAWIMUXA,USB1,0,64.5,FINESTEERING,2209,491740.110,02000020,0dc5,16809;"
+      "04,41,2209,491740.109817,ea57fe00,329394068,-2396829,4481425,321199,257329,-936077*cf9c035d\r\n");
+  ASSERT_EQ(1, sentences.size());
+  ASSERT_EQ(parser.GetMessageName() + "A", sentences.front().id);
+
+  auto msg = parser.ParseAscii(sentences.front());
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ(0x04, msg->imu_info);
+  EXPECT_EQ(41, msg->imu_type);
+  ExpectRawImuxCounts(*msg);
+}
+
+TEST(ParserTestSuite, testRawImuxAsciiRejectsMalformedStatus)
+{
+  novatel_gps_driver::RawImuxParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#RAWIMUXA,USB1,0,64.5,FINESTEERING,2209,491740.110,02000020,0dc5,16809;"
+      "04,41,2209,491740.109817,ea57fe,329394068,-2396829,4481425,321199,257329,-936077*19d19d3b\r\n");
+  ASSERT_EQ(1, sentences.size());
+
+  EXPECT_THROW(parser.ParseAscii(sentences.front()), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testRawImuxBinaryParsing)
+{
+  novatel_gps_driver::RawImuxParser parser;
+  auto msg = parser.ParseBinary(MakeRawImuxBinary(novatel_gps_driver::HeaderParser::BINARY_HEADER_LENGTH));
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("RAWIMUX", msg->novatel_msg_header.message_name);
+  EXPECT_EQ("FINESTEERING", msg->novatel_msg_header.gps_time_status);
+  EXPECT_TRUE(msg->imu_info & novatel_gps_msgs::msg::NovatelRawImu::IMU_INFO_ERROR);
+  EXPECT_EQ(58, msg->imu_type);
+  ExpectRawImuxCounts(*msg);
+}
+
+// RAWIMUSX is the same log with a short header.
+TEST(ParserTestSuite, testRawImusxBinaryParsing)
+{
+  novatel_gps_driver::RawImuxParser parser;
+  auto msg = parser.ParseBinary(MakeRawImuxBinary(novatel_gps_driver::HeaderParser::BINARY_SHORT_HEADER_LENGTH));
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("RAWIMUSX", msg->novatel_msg_header.message_name);
+  EXPECT_EQ(2209u, msg->novatel_msg_header.gps_week_num);
+  EXPECT_DOUBLE_EQ(491740.110, msg->novatel_msg_header.gps_seconds);
+  EXPECT_EQ(58, msg->imu_type);
+  ExpectRawImuxCounts(*msg);
+}
+
+TEST(ParserTestSuite, testRawImuxBinaryWrongLength)
+{
+  novatel_gps_driver::RawImuxParser parser;
+  auto message = MakeRawImuxBinary(novatel_gps_driver::HeaderParser::BINARY_HEADER_LENGTH);
+  message.data_.pop_back();
+
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testImuTypeInfo)
+{
+  double rate = 0.0;
+  std::string name;
+
+  ASSERT_TRUE(novatel_gps_driver::GetImuTypeInfo(32, rate, name));
+  EXPECT_EQ(125.0, rate);
+  EXPECT_EQ("Sensonor STIM300", name);
+
+  ASSERT_TRUE(novatel_gps_driver::GetImuTypeInfo(58, rate, name));
+  EXPECT_EQ(200.0, rate);
+
+  EXPECT_FALSE(novatel_gps_driver::GetImuTypeInfo(99, rate, name));
+}
+
+// Raw IMU logs can only be requested onnew.
+TEST(ParserTestSuite, testLogCommandUsesOnnewForZeroPeriod)
+{
+  EXPECT_EQ("log rawimuxb onnew\r\n", novatel_gps_driver::BuildLogCommand("rawimuxb", 0.0));
+  EXPECT_EQ("log rawimuxa ontime 1\r\n", novatel_gps_driver::BuildLogCommand("rawimuxa", 1.0));
 }
 
 int main(int argc, char **argv)

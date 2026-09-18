@@ -299,6 +299,45 @@ TEST_F(NovatelGpsTestSuite, testWheelSensorLogs)
   EXPECT_EQ("INS_PSRSP", insupdatestatus_messages[1]->position_type);
 }
 
+// Replays RAWIMUX logs in ASCII and binary, and RAWIMUSX in binary, and checks
+// that each reaches the RAWIMUX buffer.
+//
+// https://github.com/swri-robotics/novatel_gps_driver/issues/39
+TEST_F(NovatelGpsTestSuite, testRawImuxLogs)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/rawimux.pcap", novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<novatel_gps_driver::RawImuxParser::MessageType> rawimux_messages;
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<novatel_gps_driver::RawImuxParser::MessageType> tmp_messages;
+    gps.GetRawImuxMessages(tmp_messages);
+    std::move(std::make_move_iterator(tmp_messages.begin()),
+        std::make_move_iterator(tmp_messages.end()),
+        std::back_inserter(rawimux_messages));
+  }
+
+  ASSERT_EQ(6u, rawimux_messages.size());
+  for (size_t i = 0; i < 3; i++)
+  {
+    // ASCII logs keep the name as the receiver sent it, like every other ASCII log.
+    EXPECT_EQ("RAWIMUXA", rawimux_messages[i]->novatel_msg_header.message_name);
+    EXPECT_EQ(41, rawimux_messages[i]->imu_type);
+  }
+  EXPECT_EQ("RAWIMUX", rawimux_messages[3]->novatel_msg_header.message_name);
+  EXPECT_EQ("RAWIMUX", rawimux_messages[4]->novatel_msg_header.message_name);
+  EXPECT_EQ("RAWIMUSX", rawimux_messages[5]->novatel_msg_header.message_name);
+  for (size_t i = 3; i < 6; i++)
+  {
+    EXPECT_EQ(58, rawimux_messages[i]->imu_type);
+    EXPECT_EQ(1, rawimux_messages[i]->z_acceleration);
+    EXPECT_EQ(-6, rawimux_messages[i]->x_rotation);
+  }
+}
+
 TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 {
   novatel_gps_driver::NovatelGps gps(*this);
