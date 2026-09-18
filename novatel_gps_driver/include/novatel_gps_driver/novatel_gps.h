@@ -490,6 +490,7 @@ namespace novatel_gps_driver
       bool Write(const std::string& command);
 
       double gpsfix_sync_tol_; //seconds
+      double gpsfix_sync_timeout_; // seconds of GPS time to wait for a bestvel before publishing without it
       bool wait_for_sync_; // wait until a bestvel has arrived before publishing bestpos
 
     private:

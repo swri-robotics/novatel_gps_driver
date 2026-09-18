@@ -29,6 +29,7 @@
 
 #include "novatel_gps_driver/parsers/rxstatus.h"
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <net/ethernet.h>
 #include <netinet/udp.h>
@@ -48,6 +49,7 @@ namespace novatel_gps_driver
 {
   NovatelGps::NovatelGps(rclcpp::Node& node) :
       gpsfix_sync_tol_(0.01),
+      gpsfix_sync_timeout_(1.0),
       wait_for_sync_(true),
       node_(node),
       connection_(SERIAL),
@@ -399,7 +401,10 @@ namespace novatel_gps_driver
 
       auto gpsFix = std::make_unique<gps_msgs::msg::GPSFix>();
 
-      // Speed & Track are filled in from BESTVEL logs, if available
+      // Speed & Track are filled in from BESTVEL logs, if available.  Otherwise
+      // they're NaN, so they can't be mistaken for a stationary receiver.
+      gpsFix->speed = std::numeric_limits<double>::quiet_NaN();
+      gpsFix->track = std::numeric_limits<double>::quiet_NaN();
       while (!bestvel_sync_buffer_.empty())
       {
         auto& bestvel = bestvel_sync_buffer_.front();
@@ -429,11 +434,25 @@ namespace novatel_gps_driver
 
       if (!synced && wait_for_sync_)
       {
-        // TODO Handle this properly if bestvel is disabled
         // If we have a bestpos and are configured to wait for a sync, we need
-        // to wait until a bestvel arrives.
-
-        break;
+        // to wait until a bestvel arrives, but not forever, or a BESTVEL that
+        // lags too far behind stops GPSFix output entirely.  Give up and publish
+        // without speed & track if any of these are true:
+        //  - A newer BESTVEL has already arrived.  The loop above only leaves
+        //    one in the buffer if it's too new, so the matching one was dropped
+        //    or never logged.
+        //  - This BESTPOS is more than gpsfix_sync_timeout_ older than the
+        //    newest one.
+        //  - The sync buffer is full, so the next BESTPOS would silently
+        //    discard this one.
+        // https://github.com/swri-robotics/novatel_gps_driver/issues/2
+        bool bestvel_passed = !bestvel_sync_buffer_.empty();
+        bool timed_out = bestpos_sync_buffer_.back()->novatel_msg_header.gps_seconds -
+                         bestpos->novatel_msg_header.gps_seconds > gpsfix_sync_timeout_;
+        if (!bestvel_passed && !timed_out && !bestpos_sync_buffer_.full())
+        {
+          break;
+        }
       }
 
       // BESTVEL's track_ground is derived from Doppler/carrier-phase velocity and

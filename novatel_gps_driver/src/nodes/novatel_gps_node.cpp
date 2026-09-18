@@ -140,6 +140,7 @@ namespace novatel_gps_driver
 
     //set NovatelGps parameters
     gps_.gpsfix_sync_tol_ = this->declare_parameter("gpsfix_sync_tol", 0.01);
+    gps_.gpsfix_sync_timeout_ = this->declare_parameter("gpsfix_sync_timeout", gps_.gpsfix_sync_timeout_);
     gps_.wait_for_sync_ = this->declare_parameter("wait_for_sync", true);
 
     // Antenna lever arms and IMU-to-vehicle rotation. Empty (the default) means
