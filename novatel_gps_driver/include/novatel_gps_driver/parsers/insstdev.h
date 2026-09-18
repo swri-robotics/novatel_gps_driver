@@ -31,11 +31,11 @@
 #define NOVATEL_GPS_DRIVER_INSSTDEV_H
 
 #include <novatel_gps_driver/parsers/message_parser.h>
-#include <novatel_gps_msgs/msg/insstdev.hpp>
+#include <novatel_gps_msgs/msg/insstdev2.hpp>
 
 namespace novatel_gps_driver
 {
-  class InsstdevParser : public MessageParser<novatel_gps_msgs::msg::Insstdev::SharedPtr>
+  class InsstdevParser : public MessageParser<novatel_gps_msgs::msg::Insstdev2::SharedPtr>
   {
   public:
     uint32_t GetMessageId() const override;

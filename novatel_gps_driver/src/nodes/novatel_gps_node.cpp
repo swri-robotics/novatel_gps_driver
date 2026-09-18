@@ -207,9 +207,9 @@ namespace novatel_gps_driver
     {
       imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>("imu", rclcpp::QoS(100));
       novatel_imu_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelCorrectedImuData>("corrimudata", rclcpp::QoS(100));
-      insstdev_pub_ = this->create_publisher<novatel_gps_msgs::msg::Insstdev>("insstdev", rclcpp::QoS(100));
+      insstdev_pub_ = this->create_publisher<novatel_gps_msgs::msg::Insstdev2>("insstdev", rclcpp::QoS(100));
       inspva_pub_ = this->create_publisher<novatel_gps_msgs::msg::Inspva>("inspva", rclcpp::QoS(100));
-      inspvax_pub_ = this->create_publisher<novatel_gps_msgs::msg::Inspvax>("inspvax", rclcpp::QoS(100));
+      inspvax_pub_ = this->create_publisher<novatel_gps_msgs::msg::Inspvax2>("inspvax", rclcpp::QoS(100));
       inscov_pub_ = this->create_publisher<novatel_gps_msgs::msg::Inscov>("inscov", rclcpp::QoS(100));
     }
 

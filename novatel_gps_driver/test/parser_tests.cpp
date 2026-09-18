@@ -431,7 +431,7 @@ TEST(ParserTestSuite, testInsstdevAsciiParsing)
 
   ASSERT_EQ(parser.GetMessageName() + "A", sentence.id);
 
-  novatel_gps_msgs::msg::Insstdev::SharedPtr msg = parser.ParseAscii(sentence);
+  novatel_gps_msgs::msg::Insstdev2::SharedPtr msg = parser.ParseAscii(sentence);
 
   ASSERT_NE(msg.get(), nullptr);
 
@@ -481,7 +481,7 @@ TEST(ParserTestSuite, testInsstdevBinaryParsing)
   std::memcpy(&bin_msg.data_[36], &extended_status, sizeof(extended_status));
   std::memcpy(&bin_msg.data_[40], &time_since_update, sizeof(time_since_update));
 
-  novatel_gps_msgs::msg::Insstdev::SharedPtr msg = parser.ParseBinary(bin_msg);
+  novatel_gps_msgs::msg::Insstdev2::SharedPtr msg = parser.ParseBinary(bin_msg);
 
   ASSERT_NE(msg.get(), nullptr);
 

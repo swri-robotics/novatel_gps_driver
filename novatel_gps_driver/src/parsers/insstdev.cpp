@@ -53,7 +53,7 @@ novatel_gps_driver::InsstdevParser::ParseBinary(const novatel_gps_driver::Binary
     error << "Unexpected INSSTDEV message size: " << bin_msg.data_.size();
     throw ParseException(error.str());
   }
-  auto ros_msg = std::make_shared<novatel_gps_msgs::msg::Insstdev>();
+  auto ros_msg = std::make_shared<novatel_gps_msgs::msg::Insstdev2>();
   HeaderParser h_parser;
   ros_msg->novatel_msg_header = h_parser.ParseBinary(bin_msg);
   ros_msg->novatel_msg_header.message_name = GetMessageName();
@@ -82,7 +82,7 @@ novatel_gps_driver::InsstdevParser::ParseAscii(const novatel_gps_driver::Novatel
     error << "Unexpected number of fields in INSSTDEV log: " << sentence.body.size();
     throw ParseException(error.str());
   }
-  auto msg = std::make_shared<novatel_gps_msgs::msg::Insstdev>();
+  auto msg = std::make_shared<novatel_gps_msgs::msg::Insstdev2>();
   HeaderParser h_parser;
   msg->novatel_msg_header = h_parser.ParseAscii(sentence);
 

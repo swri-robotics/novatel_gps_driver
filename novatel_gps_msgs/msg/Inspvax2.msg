@@ -1,3 +1,6 @@
+# Supersedes Inspvax, which decoded the extended solution status with the GNSS
+# bit table instead of the INS one. Inspvax is kept so recordings made with it
+# can still be played back; the driver publishes Inspvax2 on the same topic.
 # message 1465
 
 std_msgs/Header header
@@ -40,6 +43,6 @@ float32 roll_std
 float32 pitch_std
 float32 azimuth_std
 
-NovatelExtendedSolutionStatus extended_status
+NovatelInsExtendedSolutionStatus extended_status
 
 uint16 seconds_since_update
