@@ -136,7 +136,7 @@
  * \e imu_frame_id <tt>str</tt> - The TF frame ID to set in published IMU message
  *    headers. [""]
  * \e imu_rate <tt>dbl</tt> - Rate at which to publish sensor_msgs/Imu messages.
- *    [100.0]
+ *    Should be the IMU's sample rate, or that divided by a whole number. [100.0]
  * \e imu_sample_rate <tt>dbl</tt> - Rate at which the device internally samples
  *    its IMU. Negative means detect it from the IMU type. [-1.0]
  * \e ins_rotation_rbv <tt>dbl[]</tt> - The [x, y, z] Euler angle rotation, in

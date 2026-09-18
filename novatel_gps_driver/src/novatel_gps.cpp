@@ -30,6 +30,7 @@
 #include "novatel_gps_driver/parsers/rxstatus.h"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -91,7 +92,9 @@ namespace novatel_gps_driver
       rxstatus_msgs_(MAX_BUFFER_SIZE),
       rawdmi_msgs_(MAX_BUFFER_SIZE),
       insupdatestatus_msgs_(MAX_BUFFER_SIZE),
-      imu_rate_(-1.0)
+      imu_rate_(-1.0),
+      imu_log_period_(-1.0),
+      last_corrimu_gap_(-1.0)
   {
   }
 
@@ -1037,14 +1040,66 @@ namespace novatel_gps_driver
     imu_msgs_.clear();
   }
 
-  void NovatelGps::GenerateImuMessages()
+  void NovatelGps::QueueCorrImuIncrement(std::queue<CorrImuIncrement>& queue,
+                                         const CorrImuDataParser::MessageType& imu,
+                                         const std::string& log_name)
   {
-    if (imu_rate_ <= 0.0)
+    // Seconds from one log to another.  Subtracting weeks and seconds separately
+    // keeps the precision that converting each to seconds since the GPS epoch,
+    // around 1e9, would lose.
+    auto SecondsBetween = [](const CorrImuDataParser::MessageType& earlier,
+                             const CorrImuDataParser::MessageType& later)
     {
-      RCLCPP_WARN_ONCE(node_.get_logger(), "IMU rate has not been configured; cannot produce sensor_msgs/Imu messages.");
+      double weeks = static_cast<double>(later->gps_week_num) - static_cast<double>(earlier->gps_week_num);
+      return weeks * SECONDS_PER_WEEK + (later->gps_seconds - earlier->gps_seconds);
+    };
+
+    double gap = last_corrimu_ ? SecondsBetween(last_corrimu_, imu) : -1.0;
+    double previous_gap = last_corrimu_gap_;
+    last_corrimu_ = imu;
+    last_corrimu_gap_ = gap;
+
+    // The receiver accumulates IMU samples over each logging interval, so an
+    // interval that caught no sample is all zeros.  Real data never is, since the
+    // vertical acceleration includes gravity.  The next log that holds data covers
+    // this interval too, so this one can just be skipped.
+    // https://github.com/swri-robotics/novatel_gps_driver/issues/28
+    if (imu->pitch_rate == 0.0 && imu->roll_rate == 0.0 && imu->yaw_rate == 0.0 &&
+        imu->lateral_acceleration == 0.0 && imu->longitudinal_acceleration == 0.0 &&
+        imu->vertical_acceleration == 0.0)
+    {
+      RCLCPP_DEBUG(node_.get_logger(), "%s at %f holds no IMU data; skipping it.",
+                   log_name.c_str(), imu->gps_seconds);
       return;
     }
 
+    // Log times are whole milliseconds, so rounding to microseconds only removes
+    // floating point error.
+    double interval = last_nonempty_corrimu_ ?
+        std::round(SecondsBetween(last_nonempty_corrimu_, imu) * 1e6) / 1e6 : -1.0;
+    last_nonempty_corrimu_ = imu;
+
+    // If the gap since the last log is well over the one before it, a log was lost,
+    // and this one's increments cover less time than has passed since the last.
+    bool log_lost = gap > 0.0 && previous_gap > 0.0 && gap > 1.5 * previous_gap;
+    if (interval <= 0.0 || log_lost)
+    {
+      RCLCPP_DEBUG(node_.get_logger(), "Can't tell how much time %s at %f covers; skipping it.",
+                   log_name.c_str(), imu->gps_seconds);
+      return;
+    }
+
+    queue.push({imu, interval});
+    if (queue.size() > MAX_BUFFER_SIZE)
+    {
+      // TODO pjr Make this a _THROTTLE log when it's available
+      RCLCPP_WARN(node_.get_logger(), "%s queue overflow.", log_name.c_str());
+      queue.pop();
+    }
+  }
+
+  void NovatelGps::GenerateImuMessages()
+  {
     if (!latest_insstdev_ && !latest_inscov_)
     {
       // A receiver logs neither INSSTDEV nor INSCOV until its INS has aligned, and
@@ -1068,7 +1123,8 @@ namespace novatel_gps_driver
 
       // These are copies rather than references because the messages are used after
       // they have been popped off of their queues.
-      const auto corrimudata = corrimudata_queue.front();
+      const auto increment = corrimudata_queue.front();
+      const auto& corrimudata = increment.data;
       const auto inspva = inspva_queue.front();
 
       double corrimudata_time = corrimudata->gps_week_num * SECONDS_PER_WEEK + corrimudata->gps_seconds;
@@ -1148,16 +1204,21 @@ namespace novatel_gps_driver
       // (REP 103), which is x forward, y left, z up, so the two are related by
       // x_ros = y_span, y_ros = -x_span, z_ros = z_span.
       //
-      imu->angular_velocity.x = corrimudata->roll_rate * imu_rate_;
-      imu->angular_velocity.y = -corrimudata->pitch_rate * imu_rate_;
-      imu->angular_velocity.z = corrimudata->yaw_rate * imu_rate_;
+      // The values are increments accumulated over the time the log covers, so
+      // dividing by that time turns them into rates and accelerations.  That's the
+      // logging interval, not the IMU's sample period, which can be shorter.
+      // https://github.com/swri-robotics/novatel_gps_driver/issues/28
+      double scale = 1.0 / increment.interval;
+      imu->angular_velocity.x = corrimudata->roll_rate * scale;
+      imu->angular_velocity.y = -corrimudata->pitch_rate * scale;
+      imu->angular_velocity.z = corrimudata->yaw_rate * scale;
       imu->angular_velocity_covariance[0] =
       imu->angular_velocity_covariance[4] =
       imu->angular_velocity_covariance[8] = 1e-3;
 
-      imu->linear_acceleration.x = corrimudata->longitudinal_acceleration * imu_rate_;
-      imu->linear_acceleration.y = -corrimudata->lateral_acceleration * imu_rate_;
-      imu->linear_acceleration.z = corrimudata->vertical_acceleration * imu_rate_;
+      imu->linear_acceleration.x = corrimudata->longitudinal_acceleration * scale;
+      imu->linear_acceleration.y = -corrimudata->lateral_acceleration * scale;
+      imu->linear_acceleration.z = corrimudata->vertical_acceleration * scale;
       imu->linear_acceleration_covariance[0] =
       imu->linear_acceleration_covariance[4] =
       imu->linear_acceleration_covariance[8] = 1e-3;
@@ -1177,6 +1238,19 @@ namespace novatel_gps_driver
     {
       imu_rate_forced_ = true;
     }
+    WarnIfImuLogRateMismatched();
+  }
+
+  void NovatelGps::WarnIfImuLogRateMismatched()
+  {
+    std::string warning = CheckImuLogRate(imu_log_period_ > 0.0 ? 1.0 / imu_log_period_ : -1.0, imu_rate_);
+    // The sample rate is re-detected from every RAWIMUXA, so only warn when the
+    // problem changes.
+    if (!warning.empty() && warning != last_imu_rate_warning_)
+    {
+      RCLCPP_WARN(node_.get_logger(), "%s", warning.c_str());
+    }
+    last_imu_rate_warning_ = warning;
   }
 
   void NovatelGps::SetSerialBaud(int32_t serial_baud)
@@ -1239,13 +1313,7 @@ namespace novatel_gps_driver
         auto imu = corrimudata_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
         corrimudata_msgs_.push_back(imu);
-        corrimudata_queue_.push(imu);
-        if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
-        {
-          // TODO pjr Make this a _THROTTLE log when it's available
-          RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
-          corrimudata_queue_.pop();
-        }
+        QueueCorrImuIncrement(corrimudata_queue_, imu, "CORRIMUDATA");
         GenerateImuMessages();
         break;
       }
@@ -1254,13 +1322,7 @@ namespace novatel_gps_driver
         auto imu = corrimus_parser_.ParseBinary(msg);
         imu->header.stamp = stamp;
         corrimus_msgs_.push_back(imu);
-        corrimus_queue_.push(imu);
-        if (corrimus_queue_.size() > MAX_BUFFER_SIZE)
-        {
-          // TODO pjr Make this a _THROTTLE log when it's available
-          RCLCPP_WARN(node_.get_logger(), "CORRIMUS queue overflow.");
-          corrimus_queue_.pop();
-        }
+        QueueCorrImuIncrement(corrimus_queue_, imu, "CORRIMUS");
         GenerateImuMessages();
         break;
       }
@@ -1481,13 +1543,7 @@ namespace novatel_gps_driver
       auto imu = corrimudata_parser_.ParseAscii(sentence);
       imu->header.stamp = stamp;
       corrimudata_msgs_.push_back(imu);
-      corrimudata_queue_.push(imu);
-      if (corrimudata_queue_.size() > MAX_BUFFER_SIZE)
-      {
-        // TODO pjr Make this a _THROTTLE log when it's available
-        RCLCPP_WARN(node_.get_logger(), "CORRIMUDATA queue overflow.");
-        corrimudata_queue_.pop();
-      }
+      QueueCorrImuIncrement(corrimudata_queue_, imu, "CORRIMUDATA");
       GenerateImuMessages();
     }
     else if (sentence.id == "INSCOVA")
@@ -1781,8 +1837,41 @@ namespace novatel_gps_driver
     return "";
   }
 
+  std::string CheckImuLogRate(double log_rate, double sample_rate)
+  {
+    if (log_rate <= 0.0 || sample_rate <= 0.0)
+    {
+      return "";
+    }
+
+    std::stringstream warning;
+    double samples_per_log = sample_rate / log_rate;
+    if (samples_per_log < 1.0 - 1e-6)
+    {
+      warning << "CORRIMUDATA is logged at " << log_rate << " Hz, faster than the IMU's " << sample_rate
+              << " Hz sample rate, so some logs will hold no IMU data.  Set imu_rate to " << sample_rate
+              << " Hz or less.";
+    }
+    else if (std::fabs(samples_per_log - std::round(samples_per_log)) > 1e-6)
+    {
+      warning << "CORRIMUDATA is logged at " << log_rate << " Hz, which doesn't divide the IMU's " << sample_rate
+              << " Hz sample rate evenly, so the number of IMU samples in each log will vary.  Set imu_rate to "
+              << sample_rate << " Hz divided by a whole number.";
+    }
+    return warning.str();
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
+    for (const auto& option : opts)
+    {
+      if (option.first.rfind("corrimudata", 0) == 0)
+      {
+        imu_log_period_ = option.second;
+        WarnIfImuLogRateMismatched();
+      }
+    }
+
     bool configured = true;
     configured = configured && Write("unlogall THISPORT_ALL\r\n");
 

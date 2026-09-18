@@ -19,6 +19,10 @@ BESTPOS or goes missing.
 For https://github.com/swri-robotics/novatel_gps_driver/issues/14 there's a capture
 of the wheel sensor logs, RAWDMI and INSUPDATESTATUS, in both ASCII and binary.
 
+For https://github.com/swri-robotics/novatel_gps_driver/issues/28 there's a capture
+of CORRIMUDATA logs that don't each cover one logging interval: one holds no IMU
+data, the one after it holds two intervals' worth, and one is missing.
+
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
 
@@ -98,9 +102,10 @@ def short_message(message_id, gps_ms, payload):
 
 # --- Log payloads ----------------------------------------------------------
 
-def corrimudata_payload(seconds):
-    return struct.pack('<Id6d', WEEK, seconds, PITCH_RATE, ROLL_RATE, YAW_RATE,
-                       LATERAL_ACC, LONGITUDINAL_ACC, VERTICAL_ACC)
+def corrimudata_payload(seconds, intervals=1):
+    """CORRIMUDATA accumulated over `intervals` IMU_PERIOD_S logging intervals."""
+    return struct.pack('<Id6d', WEEK, seconds, *(value * intervals for value in (
+        PITCH_RATE, ROLL_RATE, YAW_RATE, LATERAL_ACC, LONGITUDINAL_ACC, VERTICAL_ACC)))
 
 
 def corrimus_payload():
@@ -301,6 +306,18 @@ def main():
     # Farther behind than the sync buffer can hold.
     write_pcap('bestpos-bestvel-lag15.pcap', lagged_fix_messages(15))
     write_pcap('bestpos-bestvel-dropped.pcap', dropped_fix_messages(10))
+
+    # CORRIMUDATA and INSPVA every IMU_PERIOD_S, except that the CORRIMUDATA in
+    # interval 2 holds no IMU samples, so interval 3's holds two intervals' worth,
+    # and interval 4's is missing.
+    interval_msgs = []
+    for i, intervals in enumerate([1, 1, 0, 2, None, 1, 1]):
+        seconds = START_SECONDS + i * IMU_PERIOD_S
+        gps_ms = int(round(seconds * 1000))
+        if intervals is not None:
+            interval_msgs.append(long_message(CORRIMUDATA_ID, gps_ms, corrimudata_payload(seconds, intervals)))
+        interval_msgs.append(long_message(INSPVA_ID, gps_ms, inspva_payload(seconds)))
+    write_pcap('corrimudata-intervals.pcap', interval_msgs)
 
     start_ms = int(round(START_SECONDS * 1000))
     write_pcap('rawdmi-insupdatestatus.pcap', [

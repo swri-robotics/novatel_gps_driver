@@ -1133,6 +1133,39 @@ TEST(ParserTestSuite, testInspvaxBinaryExtendedStatusKeepsAll32Bits)
   EXPECT_EQ("USER_COMMAND", msg->extended_status.alignment_type);
 }
 
+// CORRIMUDATA holds the IMU samples accumulated over each logging interval, so
+// logging it faster than the IMU samples gives logs with no data, and at a rate
+// that doesn't divide the sample rate gives logs with varying amounts of data.
+//
+// https://github.com/swri-robotics/novatel_gps_driver/issues/28
+TEST(ParserTestSuite, testImuLogRateAcceptsRatesThatDivideTheSampleRate)
+{
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(100.0, 100.0));
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(100.0, 200.0));
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(50.0, 200.0));
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(62.5, 125.0));
+}
+
+TEST(ParserTestSuite, testImuLogRateWarnsWhenFasterThanSampleRate)
+{
+  std::string warning = novatel_gps_driver::CheckImuLogRate(200.0, 100.0);
+  EXPECT_NE(std::string::npos, warning.find("faster than"));
+  EXPECT_NE(std::string::npos, warning.find("Set imu_rate to 100 Hz or less"));
+}
+
+TEST(ParserTestSuite, testImuLogRateWarnsWhenNotADivisorOfSampleRate)
+{
+  // The default 100 Hz imu_rate with a 125 Hz STIM300.
+  std::string warning = novatel_gps_driver::CheckImuLogRate(100.0, 125.0);
+  EXPECT_NE(std::string::npos, warning.find("doesn't divide"));
+}
+
+TEST(ParserTestSuite, testImuLogRateSilentWhenARateIsUnknown)
+{
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(-1.0, 100.0));
+  EXPECT_EQ("", novatel_gps_driver::CheckImuLogRate(100.0, -1.0));
+}
+
 int main(int argc, char **argv)
 {
   testing::InitGoogleTest(&argc, argv);

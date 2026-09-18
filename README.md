@@ -181,6 +181,10 @@ Nodelets
             - Default: Empty
         - `imu_rate`: Desired logging rate in Hz for IMU messages.
             - This is set as the rate for `CORRIMUDATA` logs.
+            - Should be the IMU's sample rate, or that divided by a whole number.  `CORRIMUDATA` accumulates the IMU
+            samples over each logging interval, so logging it faster than the IMU samples gives logs that hold no data,
+            and logging it at a rate that doesn't divide the sample rate gives logs that hold varying amounts.  The
+            driver logs a warning if it's set otherwise.
             - Default: `100`
         - `imu_sample_rate`: Sample rate of the connected IMU.  Normally this is automatically detected based on the IMU type.
         - `ins_rotation_rbv`: `[x, y, z]` Euler angle rotation, in degrees, from the IMU body frame to the vehicle
@@ -305,6 +309,8 @@ Nodelets
         - `/bestxyz` *(novatel_gps_msgs/NovatelXYZ)*: [BESTXYZ](http://docs.novatel.com/OEM7/Content/Logs/BESTXYZ.htm) logs
         - `/clocksteering` *(novatel_gps_msgs/ClockSteering)*: [CLOCKSTEERING](http://docs.novatel.com/OEM7/Content/Logs/CLOCKSTEERING.htm) logs
         - `/corrimudata` *(novatel_gps_msgs/NovatelCorrectedImuData)*: [CORRIMUDATA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/CORRIMUDATA.htm) logs
+            - **Note**: These are the receiver's increments accumulated over each logging interval, not rates.  A log that
+            is all zeros held no IMU samples; see `imu_rate`.  `/imu` converts them to rates.
         - `/diagnostics` *(diagnostic_msgs/DiagnosticArray)*: ROS diagnostics
         - `/dual_antenna_heading` *(novatel_gps_msgs/NovatelDualAntennaHeading)*: [DUALANTENNAHEADING](http://docs.novatel.com/OEM7/Content/Logs/DUALANTENNAHEADING.htm) logs
         - `/fix` *([sensor_msgs/NavSatFix](https://docs.ros.org/kinetic/api/sensor_msgs/html/msg/NavSatFix.html))*: GPSFix messages converted to NavSatFix messages
