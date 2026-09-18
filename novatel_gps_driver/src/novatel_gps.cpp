@@ -96,7 +96,8 @@ namespace novatel_gps_driver
       imu_rate_(-1.0),
       imu_log_period_(-1.0),
       last_corrimu_gap_(-1.0),
-      last_imu_type_(-1)
+      last_imu_type_(-1),
+      imu_type_requested_(false)
   {
   }
 
@@ -287,6 +288,8 @@ namespace novatel_gps_driver
 
   NovatelGps::ReadResult NovatelGps::ProcessData()
   {
+    RequestImuTypeIfDue();
+
     NovatelGps::ReadResult read_result = ReadData();
 
     if (read_result != READ_SUCCESS)
@@ -1739,7 +1742,7 @@ namespace novatel_gps_driver
   }
 
   void AddImuMessageOpts(NovatelMessageOpts& opts, const std::string& format_suffix,
-                         double imu_rate, double imu_sample_rate)
+                         double imu_rate)
   {
     double period = 1.0 / imu_rate;
     opts["corrimudata" + format_suffix] = period;
@@ -1747,11 +1750,6 @@ namespace novatel_gps_driver
     opts["inspva" + format_suffix] = period;
     opts["inspvax" + format_suffix] = period;
     opts["insstdev" + format_suffix] = 1.0;
-
-    if (imu_sample_rate <= 0.0)
-    {
-      opts["rawimuxa"] = 1.0;
-    }
   }
 
   std::string BuildInsTranslationCommand(const std::string& translation_type,
@@ -1883,6 +1881,28 @@ namespace novatel_gps_driver
     sample_rate = type->second.first;
     name = type->second.second;
     return true;
+  }
+
+  void NovatelGps::RequestImuType()
+  {
+    imu_type_requested_ = true;
+    // Due immediately
+    last_imu_type_request_ = std::chrono::steady_clock::time_point();
+  }
+
+  void NovatelGps::RequestImuTypeIfDue()
+  {
+    if (!imu_type_requested_ || last_imu_type_ >= 0 || !is_connected_)
+    {
+      return;
+    }
+
+    auto now = std::chrono::steady_clock::now();
+    if (now - last_imu_type_request_ >= std::chrono::seconds(1))
+    {
+      last_imu_type_request_ = now;
+      Write("log rawimuxa once\r\n");
+    }
   }
 
   void NovatelGps::UpdateImuType(uint8_t imu_type)

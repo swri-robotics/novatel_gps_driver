@@ -442,18 +442,22 @@ namespace novatel_gps_driver
     }
     if (publish_imu_messages_)
     {
-      AddImuMessageOpts(opts, format_suffix, imu_rate_, imu_sample_rate_);
+      AddImuMessageOpts(opts, format_suffix, imu_rate_);
       if (!use_binary_messages_)
       {
         RCLCPP_WARN(this->get_logger(), "Using the ASCII message format with CORRIMUDATA logs is not recommended.  "
                                         "A serial link will not be able to keep up with the data rate.");
       }
 
-      // Only configure the imu rate if we set the param; otherwise
-      // AddImuMessageOpts already arranged to auto-detect it from RAWIMUXA.
+      // Use the IMU sample rate if it's set; otherwise, ask the receiver which
+      // IMU it has.
       if (imu_sample_rate_ > 0)
       {
         gps_.SetImuRate(imu_sample_rate_, true);
+      }
+      else
+      {
+        gps_.RequestImuType();
       }
     }
     if (publish_range_messages_)
@@ -475,10 +479,7 @@ namespace novatel_gps_driver
     if (publish_rawimux_)
     {
       // Raw IMU data is only usable at the IMU's full rate, so it can only be logged
-      // onnew. The IMU type in each log also serves to detect the IMU's sample rate,
-      // so the separate 1 Hz ASCII request for that isn't needed.
-      // https://github.com/swri-robotics/novatel_gps_driver/issues/39
-      opts.erase("rawimuxa");
+      // onnew. https://github.com/swri-robotics/novatel_gps_driver/issues/39
       opts["rawimux" + format_suffix] = 0.0;
     }
     if (publish_novatel_insupdatestatus_ || (publish_wheel_sensor_diagnostic_ && publish_diagnostics_))

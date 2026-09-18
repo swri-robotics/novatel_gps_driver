@@ -116,27 +116,15 @@ namespace novatel_gps_driver
    * @brief Adds the log options needed to produce sensor_msgs/Imu: CORRIMUDATA,
    * INSPVA, and INSPVAX at imu_rate, plus INSCOV and INSSTDEV at 1 Hz.
    *
-   * Also adds RAWIMUXA, at 1 Hz, if imu_sample_rate is non-positive -- meaning
-   * the IMU's internal sample rate hasn't been set explicitly and has to be
-   * auto-detected from RAWIMUXA instead. That request is periodic rather than a
-   * one-shot: a single reply can be lost, or can arrive before the receiver has
-   * identified its IMU at cold boot, and there's nothing else to retry it,
-   * silently leaving the rate unset for the rest of the session with
-   * CORRIMUDATA/INSPVA piling up in their queues with nothing to drain them.
-   * See https://github.com/swri-robotics/novatel_gps_driver/issues/98.
-   *
-   * RAWIMUXA is requested unsuffixed ("rawimuxa") regardless of format_suffix,
-   * since this was written before there was a binary RAWIMUX parser. At 1 Hz, the
-   * format makes little difference.
+   * The IMU's sample rate isn't requested here: RAWIMUX, which reports the IMU
+   * type, can't be logged ontime.  See NovatelGps::RequestImuType().
    *
    * @param opts The options map to add entries to.
    * @param format_suffix "a" or "b", appended to each rate-dependent log name.
    * @param imu_rate The rate, in Hz, to request CORRIMUDATA/INSPVA/INSPVAX at.
-   * @param imu_sample_rate The IMU's internal sample rate if set explicitly, or
-   * a non-positive value to auto-detect it from RAWIMUXA.
    */
   void AddImuMessageOpts(NovatelMessageOpts& opts, const std::string& format_suffix,
-                         double imu_rate, double imu_sample_rate);
+                         double imu_rate);
 
   /**
    * @brief Checks whether CORRIMUDATA is being logged at a rate the IMU's sample
@@ -555,6 +543,18 @@ namespace novatel_gps_driver
       void SetImuRate(double imu_rate, bool force = true);
 
       /**
+       * @brief Asks the receiver for its IMU type, to learn the IMU's sample rate,
+       * on connect and then once a second until an IMU type arrives.
+       *
+       * RAWIMUX reports the IMU type, but it's only valid onnew, at the IMU's full
+       * rate, or once.  A single request isn't enough: its reply can be lost, or
+       * can come before the receiver has identified its IMU at cold boot (see
+       * https://github.com/swri-robotics/novatel_gps_driver/issues/98), so it's
+       * requested once at a time until one arrives.
+       */
+      void RequestImuType();
+
+      /**
        * @brief Sets the serial baud rate; should be called before configuring a serial connection.
        * @param serial_baud_rate The serial baud rate.
        */
@@ -670,6 +670,9 @@ namespace novatel_gps_driver
        * since these logs can arrive hundreds of times a second.
        */
       void UpdateImuType(uint8_t imu_type);
+
+      /// Sends RequestImuType()'s request if one is due.
+      void RequestImuTypeIfDue();
 
       /**
        * @brief Converts a BinaryMessage object into a ROS message of the appropriate type
@@ -841,6 +844,9 @@ namespace novatel_gps_driver
       std::string last_imu_rate_warning_;
       // The IMU type from the last RAWIMUX or RAWIMUSX, or -1 if there hasn't been one
       int32_t last_imu_type_;
+      // Whether RequestImuType() has been called, and when its request was last sent
+      bool imu_type_requested_;
+      std::chrono::steady_clock::time_point last_imu_type_request_;
       // Binary message IDs that have been warned about as unexpected, so each is only
       // warned about once rather than every time it arrives
       std::set<uint16_t> unexpected_binary_message_ids_;
