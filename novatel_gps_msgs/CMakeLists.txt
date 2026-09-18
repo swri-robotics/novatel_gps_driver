@@ -25,10 +25,12 @@ set(MSG_FILES
   msg/NovatelDualAntennaHeading.msg
   msg/NovatelExtendedSolutionStatus.msg
   msg/NovatelHeading2.msg
+  msg/NovatelInsUpdateStatus.msg
   msg/NovatelMessageHeader.msg
   msg/NovatelPosition.msg
   msg/NovatelPsrdop2.msg
   msg/NovatelPsrdop2System.msg
+  msg/NovatelRawDmi.msg
   msg/NovatelReceiverStatus.msg
   msg/NovatelSignalMask.msg
   msg/NovatelUtmPosition.msg

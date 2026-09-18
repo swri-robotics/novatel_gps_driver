@@ -28,6 +28,8 @@
 // *****************************************************************************
 
 #include "novatel_gps_driver/parsers/rxstatus.h"
+#include <algorithm>
+#include <cctype>
 #include <iomanip>
 #include <limits>
 #include <sstream>
@@ -87,6 +89,8 @@ namespace novatel_gps_driver
       time_msgs_(MAX_BUFFER_SIZE),
       trackstat_msgs_(MAX_BUFFER_SIZE),
       rxstatus_msgs_(MAX_BUFFER_SIZE),
+      rawdmi_msgs_(MAX_BUFFER_SIZE),
+      insupdatestatus_msgs_(MAX_BUFFER_SIZE),
       imu_rate_(-1.0)
   {
   }
@@ -259,6 +263,21 @@ namespace novatel_gps_driver
       return;
     }
     ins_rotation_rbv_command_ = BuildInsRotationCommand(rotation, rotation_stdev);
+  }
+
+  bool NovatelGps::SetDmiSource(const std::string& source)
+  {
+    std::string command = BuildDmiConfigCommand(source);
+    if (!source.empty() && command.empty())
+    {
+      RCLCPP_ERROR(node_.get_logger(),
+                   "dmi_source must be EXT_COUNT, EXT_VELOCITY, IMU, ENCLOSURE, or DISABLE, got \"%s\"; ignoring.",
+                   source.c_str());
+      dmi_config_command_.clear();
+      return false;
+    }
+    dmi_config_command_ = command;
+    return true;
   }
 
   NovatelGps::ReadResult NovatelGps::ProcessData()
@@ -641,6 +660,17 @@ namespace novatel_gps_driver
   void NovatelGps::GetRxStatusMessages(std::vector<novatel_gps_driver::RxStatusParser::MessageType>& rxstatus_msgs)
   {
     DrainQueue(rxstatus_msgs_, rxstatus_msgs);
+  }
+
+  void NovatelGps::GetRawDmiMessages(std::vector<novatel_gps_driver::RawDmiParser::MessageType>& rawdmi_msgs)
+  {
+    DrainQueue(rawdmi_msgs_, rawdmi_msgs);
+  }
+
+  void NovatelGps::GetInsUpdateStatusMessages(
+      std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType>& insupdatestatus_msgs)
+  {
+    DrainQueue(insupdatestatus_msgs_, insupdatestatus_msgs);
   }
 
   bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
@@ -1326,6 +1356,20 @@ namespace novatel_gps_driver
         rxstatus_msgs_.push_back(std::move(rxstatus));
         break;
       }
+      case RawDmiParser::MESSAGE_ID:
+      {
+        auto rawdmi = rawdmi_parser_.ParseBinary(msg);
+        rawdmi->header.stamp = stamp;
+        rawdmi_msgs_.push_back(std::move(rawdmi));
+        break;
+      }
+      case InsUpdateStatusParser::MESSAGE_ID:
+      {
+        auto insupdatestatus = insupdatestatus_parser_.ParseBinary(msg);
+        insupdatestatus->header.stamp = stamp;
+        insupdatestatus_msgs_.push_back(std::move(insupdatestatus));
+        break;
+      }
       default:
         RCLCPP_WARN(node_.get_logger(), "Unexpected binary message id: %u", msg.header_.message_id_);
         break;
@@ -1514,6 +1558,18 @@ namespace novatel_gps_driver
       rxstatus->header.stamp = stamp;
       rxstatus_msgs_.push_back(std::move(rxstatus));
     }
+    else if (sentence.id == "RAWDMIA")
+    {
+      auto rawdmi = rawdmi_parser_.ParseAscii(sentence);
+      rawdmi->header.stamp = stamp;
+      rawdmi_msgs_.push_back(std::move(rawdmi));
+    }
+    else if (sentence.id == "INSUPDATESTATUSA")
+    {
+      auto insupdatestatus = insupdatestatus_parser_.ParseAscii(sentence);
+      insupdatestatus->header.stamp = stamp;
+      insupdatestatus_msgs_.push_back(std::move(insupdatestatus));
+    }
     else if (sentence.id == "RAWIMUXA")
     {
       static std::map<std::string, std::pair<double, std::string>> rates = {
@@ -1628,7 +1684,8 @@ namespace novatel_gps_driver
     std::stringstream command;
     command << std::setprecision(3);
     if (name.find("heading2") != std::string::npos ||
-        name.find("dualantennaheading") != std::string::npos)
+        name.find("dualantennaheading") != std::string::npos ||
+        name.find("rawdmi") != std::string::npos)
     {
       command << "log " << name << " onnew" << "\r\n";
     }
@@ -1707,6 +1764,23 @@ namespace novatel_gps_driver
     return status;
   }
 
+  std::string BuildDmiConfigCommand(const std::string& source)
+  {
+    std::string upper = source;
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+
+    if (upper == "DISABLE")
+    {
+      return "DMICONFIG DMI1 DISABLE\r\n";
+    }
+    if (upper == "EXT_COUNT" || upper == "EXT_VELOCITY" || upper == "IMU" || upper == "ENCLOSURE")
+    {
+      return "DMICONFIG DMI1 ENABLE " + upper + "\r\n";
+    }
+    return "";
+  }
+
   bool NovatelGps::Configure(NovatelMessageOpts const& opts)
   {
     bool configured = true;
@@ -1725,6 +1799,11 @@ namespace novatel_gps_driver
     if (!ins_rotation_rbv_command_.empty())
     {
       configured = configured && Write(ins_rotation_rbv_command_);
+    }
+    // Wheel sensor input, if configured, for the same reason.
+    if (!dmi_config_command_.empty())
+    {
+      configured = configured && Write(dmi_config_command_);
     }
 
     for(const auto& option : opts)
