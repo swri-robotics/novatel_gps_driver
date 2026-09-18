@@ -28,6 +28,13 @@ const std::string novatel_gps_driver::Psrdop2Parser::GetMessageName() const
 novatel_gps_driver::Psrdop2Parser::MessageType
 novatel_gps_driver::Psrdop2Parser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg)
 {
+  // The system count has to be there before it can be read.
+  if (bin_msg.data_.size() < BINARY_BODY_LENGTH)
+  {
+    std::stringstream error;
+    error << "Unexpected PSRDOP2 message size: " << bin_msg.data_.size();
+    throw ParseException(error.str());
+  }
   uint32_t num_systems = ParseUInt32(&bin_msg.data_[16]);
   if (bin_msg.data_.size() != (BINARY_SYSTEM_LENGTH * num_systems) + BINARY_BODY_LENGTH)
   {

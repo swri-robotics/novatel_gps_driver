@@ -46,6 +46,13 @@ const std::string novatel_gps_driver::TrackstatParser::GetMessageName() const
 novatel_gps_driver::TrackstatParser::MessageType
 novatel_gps_driver::TrackstatParser::ParseBinary(const novatel_gps_driver::BinaryMessage& bin_msg) noexcept(false)
 {
+  // The channel count has to be there before it can be read.
+  if (bin_msg.data_.size() < BINARY_BODY_LENGTH)
+  {
+    std::stringstream error;
+    error << "Unexpected trackstat message size: " << bin_msg.data_.size();
+    throw ParseException(error.str());
+  }
   uint32_t num_chans = ParseUInt32(&bin_msg.data_[12]);
   if (bin_msg.data_.size() != (BINARY_CHANNEL_LENGTH * num_chans) +
                               BINARY_BODY_LENGTH)
