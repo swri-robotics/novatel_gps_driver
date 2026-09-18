@@ -47,10 +47,9 @@
 namespace
 {
 // The values test/make_imu_sync_pcaps.py writes into the synthetic captures.
-// The rate and acceleration fields of CORRIMUDATA are increments over one IMU
-// sample period (rad/sample and m/s/sample), so the driver scales them by the
-// sample rate.
-constexpr double IMU_SAMPLE_RATE_HZ = 100.0;
+// The rate and acceleration fields of CORRIMUDATA are increments accumulated over
+// each logging interval, so the driver divides them by that interval.
+constexpr double IMU_LOG_RATE_HZ = 100.0;
 constexpr double PITCH_RATE = 0.001;          // about the SPAN x axis
 constexpr double ROLL_RATE = 0.002;           // about the SPAN y axis
 constexpr double YAW_RATE = 0.003;            // about the SPAN z axis
@@ -348,12 +347,6 @@ static void ReplayImuCapture(rclcpp::Node& node,
   std::string path = GetPackagePrefix("novatel_gps_driver");
   ASSERT_TRUE(gps.Connect(path + "/test/" + capture, novatel_gps_driver::NovatelGps::PCAP));
 
-  // The IMU rate is normally learned from the receiver's configuration; without it
-  // GenerateImuMessages returns before it pairs anything up.  The captures carry
-  // increments sampled at IMU_SAMPLE_RATE_HZ, which is what the driver multiplies
-  // by to turn them into rates and accelerations.
-  gps.SetImuRate(IMU_SAMPLE_RATE_HZ, true);
-
   imu_messages.clear();
   while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
   {
@@ -363,7 +356,9 @@ static void ReplayImuCapture(rclcpp::Node& node,
   }
 
   // The captures hold ten IMU/INS pairs, all within IMU_TOLERANCE_S of each other.
-  ASSERT_EQ(10u, imu_messages.size());
+  // The first corrected-IMU log is dropped, because without an earlier one there's
+  // no telling how much time its increments cover.
+  ASSERT_EQ(9u, imu_messages.size());
 }
 
 static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string& capture)
@@ -380,14 +375,14 @@ static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string&
   EXPECT_NEAR(0.68833400334019520, msg->orientation.z, 1e-12);
   EXPECT_NEAR(0.72513144141141830, msg->orientation.w, 1e-12);
 
-  // Rates and accelerations come from the corrected IMU log, scaled by the IMU
-  // rate and rotated from the SPAN vehicle frame into the ROS body frame.
-  EXPECT_NEAR(ROLL_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.x, 1e-12);
-  EXPECT_NEAR(-PITCH_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.y, 1e-12);
-  EXPECT_NEAR(YAW_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.z, 1e-12);
-  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.x, 1e-12);
-  EXPECT_NEAR(-LATERAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.y, 1e-12);
-  EXPECT_NEAR(VERTICAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.z, 1e-12);
+  // Rates and accelerations come from the corrected IMU log, divided by its
+  // logging interval and rotated from the SPAN vehicle frame into the ROS body frame.
+  EXPECT_NEAR(ROLL_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.x, 1e-12);
+  EXPECT_NEAR(-PITCH_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.y, 1e-12);
+  EXPECT_NEAR(YAW_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.z, 1e-12);
+  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.x, 1e-12);
+  EXPECT_NEAR(-LATERAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.y, 1e-12);
+  EXPECT_NEAR(VERTICAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.z, 1e-12);
 
   // Orientation covariance comes from the INSSTDEV log at the head of the capture.
   EXPECT_NEAR(std::pow(ROLL_DEV_DEG * DEGREES_TO_RADIANS, 2),
@@ -396,6 +391,42 @@ static void ExpectSynchronizedImuMessages(rclcpp::Node& node, const std::string&
               msg->orientation_covariance[4], 1e-12);
   EXPECT_NEAR(std::pow(AZIMUTH_DEV_DEG * DEGREES_TO_RADIANS, 2),
               msg->orientation_covariance[8], 1e-12);
+}
+
+// CORRIMUDATA holds the IMU samples accumulated over each logging interval, which
+// the driver used to multiply by the IMU's sample rate instead of dividing by the
+// interval.  A receiver also logs all zeros for an interval that caught no IMU
+// sample, which the driver published as a rate of zero.
+//
+// Regression test for https://github.com/swri-robotics/novatel_gps_driver/issues/28.
+TEST_F(NovatelGpsTestSuite, testImuRatesUseEachLogsInterval)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+  // Twice the logging rate; this must not affect the scaling.
+  gps.SetImuRate(2.0 * IMU_LOG_RATE_HZ, true);
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/corrimudata-intervals.pcap", novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<sensor_msgs::msg::Imu::SharedPtr> imu_messages;
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<sensor_msgs::msg::Imu::SharedPtr> tmp_messages;
+    gps.GetImuMessages(tmp_messages);
+    imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
+  }
+
+  // Of the six CORRIMUDATA logs, the first has nothing before it to measure from,
+  // one holds no IMU data, and one comes after a lost log, so only three produce
+  // a sensor_msgs/Imu: one covering one interval, one covering two, and one
+  // covering one.  All three should report the same rates.
+  ASSERT_EQ(3u, imu_messages.size());
+  for (const auto& msg : imu_messages)
+  {
+    EXPECT_NEAR(YAW_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.z, 1e-12);
+    EXPECT_NEAR(ROLL_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.x, 1e-12);
+    EXPECT_NEAR(VERTICAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.z, 1e-12);
+  }
 }
 
 TEST_F(NovatelGpsTestSuite, testImuFromCorrImuDataAndInspva)
@@ -431,14 +462,14 @@ TEST_F(NovatelGpsTestSuite, testImuVectorsUseTheRosBodyFrame)
   sensor_msgs::msg::Imu::SharedPtr msg = imu_messages.front();
 
   // Roll is about the ROS x axis, so the SPAN roll rate belongs there.
-  EXPECT_NEAR(ROLL_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.x, 1e-12);
-  EXPECT_NEAR(-PITCH_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.y, 1e-12);
-  EXPECT_NEAR(YAW_RATE * IMU_SAMPLE_RATE_HZ, msg->angular_velocity.z, 1e-12);
+  EXPECT_NEAR(ROLL_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.x, 1e-12);
+  EXPECT_NEAR(-PITCH_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.y, 1e-12);
+  EXPECT_NEAR(YAW_RATE * IMU_LOG_RATE_HZ, msg->angular_velocity.z, 1e-12);
 
   // ROS x points forward, which is where the longitudinal acceleration acts.
-  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.x, 1e-12);
-  EXPECT_NEAR(-LATERAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.y, 1e-12);
-  EXPECT_NEAR(VERTICAL_ACC * IMU_SAMPLE_RATE_HZ, msg->linear_acceleration.z, 1e-12);
+  EXPECT_NEAR(LONGITUDINAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.x, 1e-12);
+  EXPECT_NEAR(-LATERAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.y, 1e-12);
+  EXPECT_NEAR(VERTICAL_ACC * IMU_LOG_RATE_HZ, msg->linear_acceleration.z, 1e-12);
 }
 
 // The INSSTDEV branch of GenerateImuMessages fills orientation_covariance with

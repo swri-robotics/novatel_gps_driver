@@ -135,6 +135,23 @@ namespace novatel_gps_driver
                          double imu_rate, double imu_sample_rate);
 
   /**
+   * @brief Checks whether CORRIMUDATA is being logged at a rate the IMU's sample
+   * rate can fill evenly.
+   *
+   * CORRIMUDATA reports the IMU samples accumulated over each logging interval.
+   * Logged faster than the IMU samples, some intervals contain no sample and are
+   * all zeros; logged at a rate that doesn't divide the sample rate, the number of
+   * samples in each interval varies. See
+   * https://github.com/swri-robotics/novatel_gps_driver/issues/28.
+   *
+   * @param log_rate The rate CORRIMUDATA is logged at, in Hz.
+   * @param sample_rate The IMU's sample rate, in Hz.
+   * @return A warning describing the problem, or an empty string if there isn't one
+   * or either rate is unknown (non-positive).
+   */
+  std::string CheckImuLogRate(double log_rate, double sample_rate);
+
+  /**
    * @brief Builds the SETINSTRANSLATION command that tells the receiver where a GNSS
    * antenna is mounted relative to the IMU.
    *
@@ -511,8 +528,9 @@ namespace novatel_gps_driver
       ReadResult ProcessData();
 
       /**
-       * @brief Sets the IMU rate; necessary for producing sensor_msgs/Imu messages.
-       * @param imu_rate The IMU rate in Hz.
+       * @brief Sets the IMU's sample rate, used to check that CORRIMUDATA is logged
+       * at a rate the IMU can fill.
+       * @param imu_rate The IMU sample rate in Hz.
        * @param force If this value should be used instead of an autodetected one
        */
       void SetImuRate(double imu_rate, bool force = true);
@@ -603,6 +621,29 @@ namespace novatel_gps_driver
        * generate Imu messages from them.
        */
       void GenerateImuMessages();
+
+      /// A CORRIMUDATA or CORRIMUS log, and how many seconds of IMU data it holds.
+      struct CorrImuIncrement
+      {
+        novatel_gps_driver::CorrImuDataParser::MessageType data;
+        double interval;
+      };
+
+      /**
+       * @brief Works out how much time a CORRIMUDATA or CORRIMUS log's increments
+       * cover and, if that's known, queues it for GenerateImuMessages().
+       *
+       * The increments cover the time since the last log that held IMU data. Logs
+       * that are all zeros hold no IMU samples and aren't queued. A log is also not
+       * queued if the time it covers is unknown: the first one, one after a log was
+       * lost, or one whose time went backwards.
+       */
+      void QueueCorrImuIncrement(std::queue<CorrImuIncrement>& queue,
+                                 const novatel_gps_driver::CorrImuDataParser::MessageType& imu,
+                                 const std::string& log_name);
+
+      /// Logs a warning if CheckImuLogRate() finds a problem with the IMU rates.
+      void WarnIfImuLogRateMismatched();
 
       /**
        * @brief Converts a BinaryMessage object into a ROS message of the appropriate type
@@ -752,13 +793,24 @@ namespace novatel_gps_driver
       novatel_gps_driver::Psrdop2Parser::MessageType latest_psrdop2_;
 
       // IMU data synchronization queues
-      std::queue<novatel_gps_driver::CorrImuDataParser::MessageType> corrimudata_queue_;
-      std::queue<novatel_gps_driver::CorrImusParser::MessageType> corrimus_queue_;
+      std::queue<CorrImuIncrement> corrimudata_queue_;
+      std::queue<CorrImuIncrement> corrimus_queue_;
       std::queue<novatel_gps_driver::InspvaParser::MessageType> inspva_queue_;
       std::queue<novatel_gps_driver::InspvasParser::MessageType> inspvas_queue_;
       novatel_gps_driver::InsstdevParser::MessageType latest_insstdev_;
       novatel_gps_driver::InscovParser::MessageType latest_inscov_;
+      // The IMU's sample rate, in Hz, or negative if unknown
       double imu_rate_;
+      // The period CORRIMUDATA is requested at, in seconds, or negative if unknown
+      double imu_log_period_;
+      // The last CORRIMUDATA or CORRIMUS log, and the last one that held IMU data,
+      // for working out how much time each log covers; null if there hasn't been one.
+      novatel_gps_driver::CorrImuDataParser::MessageType last_corrimu_;
+      novatel_gps_driver::CorrImuDataParser::MessageType last_nonempty_corrimu_;
+      // Seconds between the last two CORRIMUDATA or CORRIMUS logs, or negative if unknown
+      double last_corrimu_gap_;
+      // The last warning WarnIfImuLogRateMismatched() logged, so it isn't repeated
+      std::string last_imu_rate_warning_;
 
       // The most recent INSPVAX, kept so GetFixMessages() can prefer its azimuth
       // (a true direction of travel) over BESTVEL's Doppler-derived track_ground
