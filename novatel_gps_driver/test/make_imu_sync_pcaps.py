@@ -16,6 +16,9 @@ GetFixMessages() stopped publishing GPSFix messages entirely if BESTVEL logs arr
 too far behind their BESTPOS logs, so there are captures where BESTVEL lags behind
 BESTPOS or goes missing.
 
+For https://github.com/swri-robotics/novatel_gps_driver/issues/14 there's a capture
+of the wheel sensor logs, RAWDMI and INSUPDATESTATUS, in both ASCII and binary.
+
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
 
@@ -37,6 +40,8 @@ INSPVA_ID = 507
 INSPVAS_ID = 508
 INSSTDEV_ID = 2051
 INSCOV_ID = 264
+RAWDMI_ID = 2269
+INSUPDATESTATUS_ID = 1825
 
 TIME_STATUS_FINESTEERING = 180
 INS_SOLUTION_GOOD = 3
@@ -197,6 +202,27 @@ def dropped_fix_messages(dropped):
     return messages
 
 
+# Wheel sensor logs.  The ASCII ones are the examples from NovAtel's RAWDMI and
+# INSUPDATESTATUS references; the binary ones carry different values so a test
+# can tell which is which.
+RAWDMI_ASCII = (b'#RAWDMIA,COM1,0,24.0,FINESTEERING,2048,427043.137,02004048,b411,32768;'
+                b'2297,0,0,0,00000001*61b727c0\r\n')
+INSUPDATESTATUS_ASCII = (b'#INSUPDATESTATUSA,COM3,0,49.0,FINESTEERING,2117,416218.000,02004020,78f1,32768;'
+                         b'INS_PSRSP,0,22,24,INACTIVE,USED,0b0020c3,007ff3bf,0,0*c1d6e8bc\r\n')
+RAWDMI_BINARY_TICKS = 4096
+INS_PSRSP = 53
+DMI_USED = 2
+
+
+def rawdmi_payload(ticks):
+    return struct.pack('<4iI', ticks, 0, 0, 0, 1)
+
+
+def insupdatestatus_payload(dmi_status):
+    return struct.pack('<I3iII4I', INS_PSRSP, 7, 22, 24, dmi_status, 0,
+                       0x0b0020c3, 0x007ff3bf, 0, 0)
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -275,6 +301,14 @@ def main():
     # Farther behind than the sync buffer can hold.
     write_pcap('bestpos-bestvel-lag15.pcap', lagged_fix_messages(15))
     write_pcap('bestpos-bestvel-dropped.pcap', dropped_fix_messages(10))
+
+    start_ms = int(round(START_SECONDS * 1000))
+    write_pcap('rawdmi-insupdatestatus.pcap', [
+        RAWDMI_ASCII,
+        INSUPDATESTATUS_ASCII,
+        long_message(RAWDMI_ID, start_ms, rawdmi_payload(RAWDMI_BINARY_TICKS)),
+        long_message(INSUPDATESTATUS_ID, start_ms, insupdatestatus_payload(DMI_USED)),
+    ])
 
 
 if __name__ == '__main__':

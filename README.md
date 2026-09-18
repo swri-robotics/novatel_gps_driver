@@ -158,6 +158,15 @@ Nodelets
             - For `pcap` connections, the location of a `.pcap` capture file. 
             Note that the node will exit automatically after finishing playback.
             - Default: Empty
+        - `dmi_source`: Where the receiver gets wheel sensor (Distance Measurement Instrument) data, sent via
+        [DMICONFIG](https://docs.novatel.com/OEM7/Content/SPAN_Commands/DMICONFIG.htm) on connect, so the INS can use
+        wheel ticks to reduce drift when GNSS is unavailable.  Requires OEM7 firmware 7.07 or newer.
+            - `EXT_COUNT` or `EXT_VELOCITY`: cumulative or incremental wheel ticks sent to the receiver in RAWDMI commands
+            - `IMU`: a wheel sensor wired to a NovAtel IMU
+            - `ENCLOSURE`: a wheel sensor wired to a PwrPak7 or CPT7
+            - `DISABLE`: turn wheel sensor input off
+            - Empty means don't send it, leaving the receiver's existing configuration in place.
+            - Default: Empty
         - `frame_id`: ROS TF frame to place in the header of published messages.
             - Default: Empty
         - `gpsfix_sync_tol`: Maximum difference, in seconds, between the timestamps of a BESTPOS and a BESTVEL
@@ -221,6 +230,9 @@ Nodelets
             - Default: `false`
         - `publish_novatel_heading2`: `true` to publish novatel_gps_msgs/NovatelHeading2 messages.
             - Default: `false`
+        - `publish_novatel_insupdatestatus`: `true` to publish novatel_gps_msgs/NovatelInsUpdateStatus messages.
+        These are only published when the values change.
+            - Default: `false`
         - `publish_novatel_positions`: `true` to publish novatel_gps_msgs/NovatelPosition messages.  Note that even if
         this is false, these logs will always be requested from the receiver in order to generate `gps_msgs/GPSFix`
         messages.
@@ -228,6 +240,8 @@ Nodelets
         - `publish_novatel_psrdop2`: `true` to publish novatel_gps_msgs/NovatelPsrdop2 messages.  If set, the data from
         these messages will be used to fill in the DoP values in `gps_msgs/GPSFix` messages.  Note that these messages
         are only published when the values change, not at the standard polling rate.
+            - Default: `false`
+        - `publish_novatel_rawdmi`: `true` to publish novatel_gps_msgs/NovatelRawDmi wheel sensor messages.
             - Default: `false`
         - `publish_novatel_utm_positions`: `true` to publish novatel_gps_msgs/NovatelUtmPosition messages.
             - Default: `false`
@@ -244,6 +258,10 @@ Nodelets
         - `publish_dual_antenna_diagnostic`: If true, publish diagnostics for the second antenna.
             - Ignored if `publish_diagnostics` is false.
             - Default: same as `publish_novatel_dual_antenna_heading`
+        - `publish_wheel_sensor_diagnostic`: If true, publish a diagnostic reporting whether the INS is using the wheel
+        sensor, from INSUPDATESTATUS logs.
+            - Ignored if `publish_diagnostics` is false.
+            - Default: `true` if `dmi_source` enables the wheel sensor, `false` otherwise
         - `publish_time_messages`: `true` to publish novatel_gps_msgs/NovatelTime messages.  Note that this
         message is named novatel_gps_msgs/Time on Lyrical and older.
             - Default: `false`
@@ -303,8 +321,10 @@ Nodelets
         - `/inspva` *(novatel_gps_msgs/Inspva)*: [INSPVA](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVA.htm) logs
         - `/inspvax` *(novatel_gps_msgs/Inspvax)*: [INSPVAX](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSPVAX.htm) logs
         - `/insstdev` *(novatel_gps_msgs/Insstdev)*: [INSSTDEV](http://docs.novatel.com/OEM7/Content/SPAN_Logs/INSSTDEV.htm) logs
+        - `/insupdatestatus` *(novatel_gps_msgs/NovatelInsUpdateStatus)*: [INSUPDATESTATUS](https://docs.novatel.com/OEM7/Content/SPAN_Logs/INSUPDATESTATUS.htm) logs
         - `/psrdop2` *(novatel_gps_msgs/NovatelPsrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs
+        - `/rawdmi` *(novatel_gps_msgs/NovatelRawDmi)*: [RAWDMI](https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWDMI.htm) logs
         - `/rosout` *(rosgraph_msgs/Log)*: Console output
         - `/time` *(novatel_gps_msgs/NovatelTime)*: [TIME](http://docs.novatel.com/OEM7/Content/Logs/TIME.htm) logs
             - **Note**: This message is named novatel_gps_msgs/Time on Lyrical and older.

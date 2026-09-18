@@ -79,7 +79,9 @@
 #include <novatel_gps_driver/parsers/inspvas.h>
 #include <novatel_gps_driver/parsers/inspvax.h>
 #include <novatel_gps_driver/parsers/insstdev.h>
+#include <novatel_gps_driver/parsers/insupdatestatus.h>
 #include <novatel_gps_driver/parsers/range.h>
+#include <novatel_gps_driver/parsers/rawdmi.h>
 #include <novatel_gps_driver/parsers/psrdop2.h>
 #include <novatel_gps_driver/parsers/time.h>
 #include <novatel_gps_driver/parsers/trackstat.h>
@@ -97,7 +99,8 @@ namespace novatel_gps_driver
    *
    * HEADING2 and DUALANTENNAHEADING report a computed heading solution rather than a
    * fixed-rate measurement, and NovAtel receivers don't reliably emit them on an ontime
-   * trigger, so they're requested with onnew instead. A negative period requests
+   * trigger, so they're requested with onnew instead. RAWDMI is also requested with
+   * onnew, since it's emitted as wheel sensor data arrives. A negative period requests
    * onchanged; anything else requests ontime at that period.
    *
    * @param name The message name, as it appears in a NovAtel log command (e.g. "bestposa").
@@ -172,6 +175,21 @@ namespace novatel_gps_driver
    */
   std::string BuildInsRotationCommand(const std::vector<double>& rotation,
                                       const std::vector<double>& rotation_stdev);
+
+  /**
+   * @brief Builds the DMICONFIG command that enables or disables the receiver's wheel
+   * sensor (Distance Measurement Instrument) input, so the INS can use wheel ticks to
+   * reduce drift when GNSS is unavailable. Only DMI1 is supported by the receiver.
+   * See https://github.com/swri-robotics/novatel_gps_driver/issues/14.
+   *
+   * @param source How the receiver gets its wheel sensor data: "EXT_COUNT" or
+   * "EXT_VELOCITY" (cumulative or incremental ticks sent to it in RAWDMI commands),
+   * "IMU" (a sensor wired to a NovAtel IMU), or "ENCLOSURE" (a sensor wired to a
+   * PwrPak7 or CPT7); or "DISABLE" to turn the input off. Case-insensitive.
+   * @return The full command string including the trailing "\r\n", or an empty string
+   * if source is empty or not one of the values above.
+   */
+  std::string BuildDmiConfigCommand(const std::string& source);
 
   /// The secondary-antenna fault bits decoded from an RXSTATUS log's AUX2 status word.
   struct DualAntennaStatus
@@ -401,6 +419,19 @@ namespace novatel_gps_driver
        * @param[out] rxstatus_msgs New RXSTATUS messages.
        */
       void GetRxStatusMessages(std::vector<novatel_gps_driver::RxStatusParser::MessageType>& rxstatus_msgs);
+      /**
+       * @brief Provides any RAWDMI messages that have been received since the
+       * last time this was called.
+       * @param[out] rawdmi_msgs New RAWDMI messages.
+       */
+      void GetRawDmiMessages(std::vector<novatel_gps_driver::RawDmiParser::MessageType>& rawdmi_msgs);
+      /**
+       * @brief Provides any INSUPDATESTATUS messages that have been received since
+       * the last time this was called.
+       * @param[out] insupdatestatus_msgs New INSUPDATESTATUS messages.
+       */
+      void GetInsUpdateStatusMessages(
+          std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType>& insupdatestatus_msgs);
 
       /**
        * @return true if we are connected to a NovAtel device, false otherwise.
@@ -460,6 +491,16 @@ namespace novatel_gps_driver
        */
       void SetInsRotationRbv(const std::vector<double>& rotation,
                              const std::vector<double>& rotation_stdev = {});
+
+      /**
+       * @brief Sets the wheel sensor source Configure() sends via DMICONFIG on
+       * connect. Call before Connect().
+       * @param source A source accepted by BuildDmiConfigCommand(); empty to stop
+       * sending this command. Any other value is rejected with an error and
+       * treated as empty.
+       * @return true if source was accepted (including empty), false otherwise.
+       */
+      bool SetDmiSource(const std::string& source);
 
       /**
        * @brief Processes any data that has been received from the device since the last time
@@ -674,6 +715,8 @@ namespace novatel_gps_driver
       TimeParser time_parser_;
       TrackstatParser trackstat_parser_;
       RxStatusParser rxstatus_parser_;
+      RawDmiParser rawdmi_parser_;
+      InsUpdateStatusParser insupdatestatus_parser_;
 
       // Message buffers
       boost::circular_buffer<novatel_gps_driver::ClockSteeringParser::MessageType> clocksteering_msgs_;
@@ -703,6 +746,8 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_driver::TimeParser::MessageType> time_msgs_;
       boost::circular_buffer<novatel_gps_driver::TrackstatParser::MessageType> trackstat_msgs_;
       boost::circular_buffer<novatel_gps_driver::RxStatusParser::MessageType> rxstatus_msgs_;
+      boost::circular_buffer<novatel_gps_driver::RawDmiParser::MessageType> rawdmi_msgs_;
+      boost::circular_buffer<novatel_gps_driver::InsUpdateStatusParser::MessageType> insupdatestatus_msgs_;
 
       novatel_gps_driver::Psrdop2Parser::MessageType latest_psrdop2_;
 
@@ -726,6 +771,9 @@ namespace novatel_gps_driver
       std::string ins_translation_ant1_command_;
       std::string ins_translation_ant2_command_;
       std::string ins_rotation_rbv_command_;
+      // DMICONFIG command Configure() sends on connect, built by SetDmiSource.
+      // Empty means "not configured, don't send."
+      std::string dmi_config_command_;
   };
 }
 

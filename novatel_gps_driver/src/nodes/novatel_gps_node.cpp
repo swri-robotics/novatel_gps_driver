@@ -62,6 +62,8 @@ namespace novatel_gps_driver
       publish_novatel_heading2_(false),
       publish_novatel_dual_antenna_heading_(false),
       publish_novatel_psrdop2_(false),
+      publish_novatel_rawdmi_(false),
+      publish_novatel_insupdatestatus_(false),
       publish_nmea_messages_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
@@ -70,6 +72,7 @@ namespace novatel_gps_driver
       publish_diagnostics_(true),
       publish_sync_diagnostic_(true),
       publish_dual_antenna_diagnostic_(publish_novatel_dual_antenna_heading_),
+      publish_wheel_sensor_diagnostic_(false),
       publish_invalid_gpsfix_(false),
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
@@ -116,6 +119,9 @@ namespace novatel_gps_driver
     publish_novatel_heading2_ = this->declare_parameter("publish_novatel_heading2", publish_novatel_heading2_);
     publish_novatel_dual_antenna_heading_ = this->declare_parameter("publish_novatel_dual_antenna_heading", publish_novatel_dual_antenna_heading_);
     publish_novatel_psrdop2_ = this->declare_parameter("publish_novatel_psrdop2", publish_novatel_psrdop2_);
+    publish_novatel_rawdmi_ = this->declare_parameter("publish_novatel_rawdmi", publish_novatel_rawdmi_);
+    publish_novatel_insupdatestatus_ = this->declare_parameter("publish_novatel_insupdatestatus",
+                                                               publish_novatel_insupdatestatus_);
     publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
     publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
     publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
@@ -155,6 +161,15 @@ namespace novatel_gps_driver
     gps_.SetInsRotationRbv(
         this->declare_parameter("ins_rotation_rbv", std::vector<double>()),
         this->declare_parameter("ins_rotation_rbv_stdev", std::vector<double>()));
+
+    // Wheel sensor input. Empty (the default) means "not configured, don't send";
+    // see DMICONFIG in the OEM7 command reference.
+    // https://github.com/swri-robotics/novatel_gps_driver/issues/14
+    std::string dmi_source = this->declare_parameter("dmi_source", std::string(""));
+    bool wheel_sensor_enabled = gps_.SetDmiSource(dmi_source) &&
+        BuildDmiConfigCommand(dmi_source).find(" ENABLE ") != std::string::npos;
+    publish_wheel_sensor_diagnostic_ = this->declare_parameter("publish_wheel_sensor_diagnostic",
+                                                               wheel_sensor_enabled);
 
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
@@ -251,6 +266,18 @@ namespace novatel_gps_driver
           rclcpp::QoS(100).transient_local());
     }
 
+    if (publish_novatel_rawdmi_)
+    {
+      novatel_rawdmi_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelRawDmi>("rawdmi", rclcpp::QoS(100));
+    }
+
+    if (publish_novatel_insupdatestatus_)
+    {
+      novatel_insupdatestatus_pub_ = this->create_publisher<novatel_gps_msgs::msg::NovatelInsUpdateStatus>(
+          "insupdatestatus",
+          rclcpp::QoS(100));
+    }
+
     if (publish_range_messages_)
     {
       range_pub_ = this->create_publisher<novatel_gps_msgs::msg::Range>("range", rclcpp::QoS(100));
@@ -310,6 +337,13 @@ namespace novatel_gps_driver
         diagnostic_updater_.add("Dual Antenna",
                                 this,
                                 &NovatelGpsNode::DualAntennaDiagnostic);
+      }
+
+      if (publish_wheel_sensor_diagnostic_)
+      {
+        diagnostic_updater_.add("Wheel Sensor",
+                                this,
+                                &NovatelGpsNode::WheelSensorDiagnostic);
       }
     }
 
@@ -426,6 +460,14 @@ namespace novatel_gps_driver
     if (publish_dual_antenna_diagnostic_ && publish_diagnostics_)
     {
       opts["rxstatus" + format_suffix] = 1.0;
+    }
+    if (publish_novatel_rawdmi_)
+    {
+      opts["rawdmi" + format_suffix] = polling_period_;
+    }
+    if (publish_novatel_insupdatestatus_ || (publish_wheel_sensor_diagnostic_ && publish_diagnostics_))
+    {
+      opts["insupdatestatus" + format_suffix] = -1.0;
     }
     // Set the serial baud rate if needed
     if (connection_ == NovatelGps::SERIAL)
@@ -828,6 +870,36 @@ namespace novatel_gps_driver
           aux2stat_ = msg->aux2stat;
           aux3stat_ = msg->aux3stat;
           aux4stat_ = msg->aux4stat;
+      }
+    }
+    if (publish_novatel_rawdmi_)
+    {
+      std::vector<novatel_gps_driver::RawDmiParser::MessageType> rawdmi_msgs;
+      gps_.GetRawDmiMessages(rawdmi_msgs);
+      for (auto& msg : rawdmi_msgs)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = frame_id_;
+        novatel_rawdmi_pub_->publish(std::move(msg));
+      }
+    }
+    if (publish_novatel_insupdatestatus_ || publish_wheel_sensor_diagnostic_)
+    {
+      std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType> insupdatestatus_msgs;
+      gps_.GetInsUpdateStatusMessages(insupdatestatus_msgs);
+      if (!insupdatestatus_msgs.empty())
+      {
+        std::unique_lock<std::mutex> lock(mutex_);
+        dmi_update_status_ = insupdatestatus_msgs.back()->dmi_update_status;
+      }
+      if (publish_novatel_insupdatestatus_)
+      {
+        for (auto& msg : insupdatestatus_msgs)
+        {
+          msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+          msg->header.frame_id = frame_id_;
+          novatel_insupdatestatus_pub_->publish(std::move(msg));
+        }
       }
     }
     if (publish_imu_messages_)
@@ -1257,6 +1329,36 @@ namespace novatel_gps_driver
     status.add("Second Antenna Shorted", antenna_status.shorted ? "true" : "false");
 
     status.add("aux2stat", aux2stat_);
+  }
+
+  void NovatelGpsNode::WheelSensorDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status)
+  {
+    std::string dmi_update_status;
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      dmi_update_status = dmi_update_status_;
+    }
+
+    if (dmi_update_status.empty())
+    {
+      status.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "No INSUPDATESTATUS received");
+    }
+    else if (dmi_update_status == "USED")
+    {
+      status.summary(diagnostic_msgs::msg::DiagnosticStatus::OK, "Used in INS solution");
+    }
+    else if (dmi_update_status == "INACTIVE")
+    {
+      status.summary(diagnostic_msgs::msg::DiagnosticStatus::ERROR, "Wheel sensor not connected");
+    }
+    else
+    {
+      // ACTIVE, BAD_MISC, and HIGH_ROTATION all mean the receiver sees the wheel
+      // sensor but the INS isn't using it right now.
+      status.summary(diagnostic_msgs::msg::DiagnosticStatus::WARN, "Not used in INS solution");
+    }
+
+    status.add("DMI Update Status", dmi_update_status);
   }
 
   rclcpp::Time NovatelGpsNode::NovatelTimeToLocalTime(const TimeParserMsgT & time_msg)

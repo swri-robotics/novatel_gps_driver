@@ -45,6 +45,8 @@
 #include <novatel_gps_driver/parsers/insstdev.h>
 #include <novatel_gps_driver/parsers/corrimudata.h>
 #include <novatel_gps_driver/parsers/inscov.h>
+#include <novatel_gps_driver/parsers/insupdatestatus.h>
+#include <novatel_gps_driver/parsers/rawdmi.h>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -806,6 +808,210 @@ TEST(ParserTestSuite, testDualAntennaStatusNominalWhenNoFaultBitsSet)
   EXPECT_FALSE(status.not_powered);
   EXPECT_FALSE(status.open);
   EXPECT_FALSE(status.shorted);
+}
+
+namespace
+{
+// Writes value into data at offset, little-endian, as it appears in a binary log.
+void PutUInt32(std::vector<uint8_t>& data, size_t offset, uint32_t value)
+{
+  for (size_t byte = 0; byte < sizeof(value); ++byte)
+  {
+    data[offset + byte] = static_cast<uint8_t>(value >> (8 * byte));
+  }
+}
+
+// Extracts the NovAtel ASCII sentences from str, expecting nothing else in it.
+std::vector<novatel_gps_driver::NovatelSentence> ExtractNovatelSentences(const std::string& str)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  EXPECT_EQ(0, nmea_sentences.size());
+  EXPECT_EQ(0, binary_messages.size());
+  return novatel_sentences;
+}
+}  // namespace
+
+// Support for wheel sensor (Distance Measurement Instrument) configuration and logs.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/14
+
+// The example log from https://docs.novatel.com/OEM7/Content/SPAN_Logs/RAWDMI.htm
+TEST(ParserTestSuite, testRawDmiAsciiParsing)
+{
+  novatel_gps_driver::RawDmiParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#RAWDMIA,COM1,0,24.0,FINESTEERING,2048,427043.137,02004048,b411,32768;"
+      "2297,0,0,0,00000001*61b727c0\r\n");
+  ASSERT_EQ(1, sentences.size());
+  ASSERT_EQ(parser.GetMessageName() + "A", sentences.front().id);
+
+  auto msg = parser.ParseAscii(sentences.front());
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ(2048, msg->novatel_msg_header.gps_week_num);
+  EXPECT_DOUBLE_EQ(427043.137, msg->novatel_msg_header.gps_seconds);
+  EXPECT_EQ(2297, msg->dmi[0]);
+  EXPECT_EQ(0, msg->dmi[1]);
+  EXPECT_EQ(0, msg->dmi[2]);
+  EXPECT_EQ(0, msg->dmi[3]);
+  EXPECT_EQ(1u, msg->mask);
+}
+
+TEST(ParserTestSuite, testRawDmiBinaryParsing)
+{
+  novatel_gps_driver::RawDmiParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::RawDmiParser::BINARY_LENGTH, 0);
+  // Ticks are signed, so a wheel turning backwards can report a negative count.
+  PutUInt32(message.data_, 0, static_cast<uint32_t>(-1234));
+  PutUInt32(message.data_, 4, 2297);
+  PutUInt32(message.data_, 16, 0x3);
+
+  auto msg = parser.ParseBinary(message);
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("RAWDMI", msg->novatel_msg_header.message_name);
+  EXPECT_EQ(-1234, msg->dmi[0]);
+  EXPECT_EQ(2297, msg->dmi[1]);
+  EXPECT_EQ(0, msg->dmi[2]);
+  EXPECT_EQ(0, msg->dmi[3]);
+  EXPECT_EQ(0x3u, msg->mask);
+}
+
+TEST(ParserTestSuite, testRawDmiBinaryWrongLength)
+{
+  novatel_gps_driver::RawDmiParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::RawDmiParser::BINARY_LENGTH - 4, 0);
+
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+// The example log from https://docs.novatel.com/OEM7/Content/SPAN_Logs/INSUPDATESTATUS.htm
+TEST(ParserTestSuite, testInsUpdateStatusAsciiParsing)
+{
+  novatel_gps_driver::InsUpdateStatusParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#INSUPDATESTATUSA,COM3,0,49.0,FINESTEERING,2117,416218.000,02004020,78f1,32768;"
+      "INS_PSRSP,0,22,24,INACTIVE,USED,0b0020c3,007ff3bf,0,0*c1d6e8bc\r\n");
+  ASSERT_EQ(1, sentences.size());
+  ASSERT_EQ(parser.GetMessageName() + "A", sentences.front().id);
+
+  auto msg = parser.ParseAscii(sentences.front());
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("INS_PSRSP", msg->position_type);
+  EXPECT_EQ(0, msg->num_psr);
+  EXPECT_EQ(22, msg->num_adr);
+  EXPECT_EQ(24, msg->num_dop);
+  EXPECT_EQ("INACTIVE", msg->dmi_update_status);
+  EXPECT_EQ("USED", msg->align_update_status);
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
+  EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
+  EXPECT_TRUE(msg->ins_enabled_updates &
+              novatel_gps_msgs::msg::NovatelInsUpdateStatus::INS_UPDATE_WHEEL_SENSOR);
+}
+
+TEST(ParserTestSuite, testInsUpdateStatusBinaryParsing)
+{
+  novatel_gps_driver::InsUpdateStatusParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InsUpdateStatusParser::BINARY_LENGTH, 0);
+  PutUInt32(message.data_, 0, 53);  // INS_PSRSP
+  PutUInt32(message.data_, 4, 7);
+  PutUInt32(message.data_, 8, 22);
+  PutUInt32(message.data_, 12, 24);
+  PutUInt32(message.data_, 16, 2);  // DMI USED
+  PutUInt32(message.data_, 20, 5);  // ALIGN BAD_MISC
+  PutUInt32(message.data_, 24, 0x0b0020c3);
+  PutUInt32(message.data_, 28, 0x007ff3bf);
+
+  auto msg = parser.ParseBinary(message);
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("INSUPDATESTATUS", msg->novatel_msg_header.message_name);
+  EXPECT_EQ("INS_PSRSP", msg->position_type);
+  EXPECT_EQ(7, msg->num_psr);
+  EXPECT_EQ(22, msg->num_adr);
+  EXPECT_EQ(24, msg->num_dop);
+  EXPECT_EQ("USED", msg->dmi_update_status);
+  EXPECT_EQ("BAD_MISC", msg->align_update_status);
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
+  EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
+}
+
+TEST(ParserTestSuite, testInsUpdateStatusBinaryDmiStatuses)
+{
+  novatel_gps_driver::InsUpdateStatusParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InsUpdateStatusParser::BINARY_LENGTH, 0);
+
+  const std::vector<std::pair<uint32_t, std::string>> statuses = {
+    {0, "INACTIVE"},
+    {1, "ACTIVE"},
+    {2, "USED"},
+    {4, "BAD_MISC"},
+    {5, "HIGH_ROTATION"}
+  };
+  for (const auto& status : statuses)
+  {
+    SCOPED_TRACE(status.first);
+    PutUInt32(message.data_, 16, status.first);
+    EXPECT_EQ(status.second, parser.ParseBinary(message)->dmi_update_status);
+  }
+
+  PutUInt32(message.data_, 16, 6);
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testInsUpdateStatusBinaryInvalidAlignStatus)
+{
+  novatel_gps_driver::InsUpdateStatusParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.time_status_ = 20;
+  message.data_.resize(novatel_gps_driver::InsUpdateStatusParser::BINARY_LENGTH, 0);
+  PutUInt32(message.data_, 20, 6);
+
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testDmiConfigCommandEnablesEachSource)
+{
+  EXPECT_EQ("DMICONFIG DMI1 ENABLE EXT_COUNT\r\n", novatel_gps_driver::BuildDmiConfigCommand("EXT_COUNT"));
+  EXPECT_EQ("DMICONFIG DMI1 ENABLE EXT_VELOCITY\r\n", novatel_gps_driver::BuildDmiConfigCommand("EXT_VELOCITY"));
+  EXPECT_EQ("DMICONFIG DMI1 ENABLE IMU\r\n", novatel_gps_driver::BuildDmiConfigCommand("IMU"));
+  EXPECT_EQ("DMICONFIG DMI1 ENABLE ENCLOSURE\r\n", novatel_gps_driver::BuildDmiConfigCommand("ENCLOSURE"));
+}
+
+TEST(ParserTestSuite, testDmiConfigCommandIsCaseInsensitive)
+{
+  EXPECT_EQ("DMICONFIG DMI1 ENABLE IMU\r\n", novatel_gps_driver::BuildDmiConfigCommand("imu"));
+  EXPECT_EQ("DMICONFIG DMI1 DISABLE\r\n", novatel_gps_driver::BuildDmiConfigCommand("Disable"));
+}
+
+TEST(ParserTestSuite, testDmiConfigCommandEmptyWhenSourceEmptyOrUnknown)
+{
+  EXPECT_EQ("", novatel_gps_driver::BuildDmiConfigCommand(""));
+  EXPECT_EQ("", novatel_gps_driver::BuildDmiConfigCommand("ENABLE"));
+  EXPECT_EQ("", novatel_gps_driver::BuildDmiConfigCommand("WHEEL"));
+}
+
+TEST(ParserTestSuite, testLogCommandUsesOnnewForRawDmi)
+{
+  EXPECT_EQ("log rawdmia onnew\r\n", novatel_gps_driver::BuildLogCommand("rawdmia", 0.05));
+  EXPECT_EQ("log rawdmib onnew\r\n", novatel_gps_driver::BuildLogCommand("rawdmib", 0.05));
 }
 
 int main(int argc, char **argv)

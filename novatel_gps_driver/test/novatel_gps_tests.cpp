@@ -259,6 +259,47 @@ TEST_F(NovatelGpsTestSuite, testGpsFixPublishedWhenBestvelDropped)
   EXPECT_DOUBLE_EQ(fix_messages[DROPPED_BESTVEL_INDEX + 1]->speed, BESTVEL_HORIZONTAL_SPEED);
 }
 
+// Replays ASCII and binary RAWDMI and INSUPDATESTATUS logs from
+// test/make_imu_sync_pcaps.py and checks that both formats of each reach their buffer.
+//
+// https://github.com/swri-robotics/novatel_gps_driver/issues/14
+TEST_F(NovatelGpsTestSuite, testWheelSensorLogs)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/rawdmi-insupdatestatus.pcap",
+      novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<novatel_gps_driver::RawDmiParser::MessageType> rawdmi_messages;
+  std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType> insupdatestatus_messages;
+
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<novatel_gps_driver::RawDmiParser::MessageType> tmp_rawdmi;
+    gps.GetRawDmiMessages(tmp_rawdmi);
+    std::move(std::make_move_iterator(tmp_rawdmi.begin()),
+        std::make_move_iterator(tmp_rawdmi.end()),
+        std::back_inserter(rawdmi_messages));
+
+    std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType> tmp_insupdatestatus;
+    gps.GetInsUpdateStatusMessages(tmp_insupdatestatus);
+    std::move(std::make_move_iterator(tmp_insupdatestatus.begin()),
+        std::make_move_iterator(tmp_insupdatestatus.end()),
+        std::back_inserter(insupdatestatus_messages));
+  }
+
+  ASSERT_EQ(2, rawdmi_messages.size());
+  EXPECT_EQ(2297, rawdmi_messages[0]->dmi[0]);   // ASCII
+  EXPECT_EQ(4096, rawdmi_messages[1]->dmi[0]);   // binary
+  EXPECT_EQ(1u, rawdmi_messages[1]->mask);
+
+  ASSERT_EQ(2, insupdatestatus_messages.size());
+  EXPECT_EQ("INACTIVE", insupdatestatus_messages[0]->dmi_update_status);  // ASCII
+  EXPECT_EQ("USED", insupdatestatus_messages[1]->dmi_update_status);      // binary
+  EXPECT_EQ("INS_PSRSP", insupdatestatus_messages[1]->position_type);
+}
+
 TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 {
   novatel_gps_driver::NovatelGps gps(*this);

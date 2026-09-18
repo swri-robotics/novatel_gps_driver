@@ -88,10 +88,15 @@
  *    and attitude. (only published if `publish_imu_messages` is set `true`)
  * \e insstdev <tt>novatel_gps_msgs/Insstdev</tt> - INS standard deviations. (only
  *    published if `publish_imu_messages` is set `true`)
+ * \e insupdatestatus <tt>novatel_gps_msgs/NovatelInsUpdateStatus</tt> - Which
+ *    updates, including the wheel sensor, the INS filter used at its last update.
+ *    (only published if `publish_novatel_insupdatestatus` is set `true`)
  * \e psrdop2 <tt>novatel_gps_msgs/NovatelPsrdop2</tt> - Pseudorange Dilution of Precision
  *    measurements. (only published if `publish_novatel_psrdop2` is set `true`)
  * \e range <tt>novatel_gps_msgs/Range</tt> - Satellite ranging information
  *    (only published if `publish_range_messages` is set `true`)
+ * \e rawdmi <tt>novatel_gps_msgs/NovatelRawDmi</tt> - Raw wheel sensor input.
+ *    (only published if `publish_novatel_rawdmi` is set `true`)
  * \e time <tt>novatel_gps_msgs/NovatelTime</tt> - Novatel-specific time data.
  *    (Only published if `publish_time_messages` is set `true`.) On Lyrical and
  *    older this message is named <tt>novatel_gps_msgs/Time</tt> instead.
@@ -114,6 +119,13 @@
  * \e device <tt>str</tt> - The path to the device, e.g. /dev/ttyUSB0 for
  *    serial connections or "192.168.1.10:3001" for IP.
  *    [""]
+ * \e dmi_source <tt>str</tt> - Where the receiver gets wheel sensor data, sent via
+ *    DMICONFIG on connect: "EXT_COUNT" or "EXT_VELOCITY" (cumulative or
+ *    incremental ticks sent to the receiver in RAWDMI commands), "IMU" (a sensor
+ *    wired to a NovAtel IMU), "ENCLOSURE" (a sensor wired to a PwrPak7 or CPT7),
+ *    or "DISABLE" to turn wheel sensor input off. Empty means don't send it,
+ *    leaving the receiver's existing configuration in place. Requires OEM7
+ *    firmware 7.07 or newer. [""]
  * \e expected_rate <tt>dbl</tt> - Expected publish rate, in Hz, used by the
  *    rate diagnostic. [1.0 / polling_period]
  * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
@@ -176,6 +188,8 @@
  *    publishes Novatel DUALANTENNAHEADING messages (see Topics Published) [false]
  * \e publish_novatel_heading2 <tt>bool</tt> - If set true, the driver publishes
  *    Novatel HEADING2 messages (see Topics Published) [false]
+ * \e publish_novatel_insupdatestatus <tt>bool</tt> - If set true, the driver
+ *    publishes Novatel INSUPDATESTATUS messages (see Topics Published) [false]
  * \e publish_novatel_positions <tt>bool</tt> - If set true, the driver
  *    publishes Novatel Bestpos messages (see Topics Published); even if
  *    this is false, these logs will still be requested from the receiver [false]
@@ -183,6 +197,8 @@
  *    publishes Novatel PSRDOP2 messages (see Topics Published); data from this
  *    message will be used to fill in DoP values in gps_msgs/GPSFix messages.
  *    Note that this topic is only published when the values change [false]
+ * \e publish_novatel_rawdmi <tt>bool</tt> - If set true, the driver publishes
+ *    Novatel RAWDMI wheel sensor messages (see Topics Published) [false]
  * \e publish_novatel_utm_positions <tt>bool</tt> - If set true, the driver
  *    publishes Novatel BESTUTM messages (see Topics Published) [false]
  * \e publish_novatel_velocity <tt>bool</tt> - If set true, the driver
@@ -201,6 +217,10 @@
  *    sensor_msgs/msg/TimeReference messages (see Topics Published) [false]
  * \e publish_trackstat <tt>bool</tt> - If set true, the driver publishes
  *    Novatel Trackstat messages (see Topics Published) [false]
+ * \e publish_wheel_sensor_diagnostic <tt>bool</tt> - If true, publish a
+ *    diagnostic reporting whether the INS is using the wheel sensor. This is
+ *    ignored if publish_diagnostics is false. [true if dmi_source enables the
+ *    wheel sensor, false otherwise]
  * \e reconnect_delay_s <tt>dbl</tt> - If the driver is disconnected from the
  *    device, how long (in seconds) to wait between reconnect attempts. [0.5]
  * \e serial_baud <tt>int</tt> - Baud rate to use for a serial connection.
@@ -289,6 +309,8 @@ namespace novatel_gps_driver
     bool publish_novatel_heading2_;
     bool publish_novatel_dual_antenna_heading_;
     bool publish_novatel_psrdop2_;
+    bool publish_novatel_rawdmi_;
+    bool publish_novatel_insupdatestatus_;
     bool publish_nmea_messages_;
     bool publish_range_messages_;
     bool publish_time_messages_;
@@ -297,6 +319,7 @@ namespace novatel_gps_driver
     bool publish_diagnostics_;
     bool publish_sync_diagnostic_;
     bool publish_dual_antenna_diagnostic_;
+    bool publish_wheel_sensor_diagnostic_;
     bool publish_invalid_gpsfix_;
     double reconnect_delay_s_;
     bool use_binary_messages_;
@@ -317,6 +340,8 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelHeading2>::SharedPtr novatel_heading2_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelDualAntennaHeading>::SharedPtr novatel_dual_antenna_heading_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelPsrdop2>::SharedPtr novatel_psrdop2_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::NovatelRawDmi>::SharedPtr novatel_rawdmi_pub_;
+    rclcpp::Publisher<novatel_gps_msgs::msg::NovatelInsUpdateStatus>::SharedPtr novatel_insupdatestatus_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgga>::SharedPtr gpgga_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsv>::SharedPtr gpgsv_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsa>::SharedPtr gpgsa_pub_;
@@ -374,6 +399,9 @@ namespace novatel_gps_driver
     uint32_t aux2stat_;
     uint32_t aux3stat_;
     uint32_t aux4stat_;
+    // ROS wheel sensor diagnostics; the DMI update status from the latest
+    // INSUPDATESTATUS log, or empty if none has arrived. Guarded by mutex_.
+    std::string dmi_update_status_;
 
     std::string imu_frame_id_;
     std::string frame_id_;
@@ -415,6 +443,8 @@ namespace novatel_gps_driver
     void RateDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status);
 
     void DualAntennaDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status);
+
+    void WheelSensorDiagnostic(diagnostic_updater::DiagnosticStatusWrapper& status);
 
     rclcpp::Time NovatelTimeToLocalTime(const TimeParserMsgT & utc_time);
   };
