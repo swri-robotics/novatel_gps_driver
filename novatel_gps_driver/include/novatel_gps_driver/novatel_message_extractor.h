@@ -124,10 +124,18 @@ namespace novatel_gps_driver
     /// Indicates the beginning of a binary NovAtel message
     static const std::string NOVATEL_BINARY_SYNC_BYTES;
     static const std::string NOVATEL_BINARY_SYNC_BYTES2;
+    /// Indicates the beginning of an RTCM 3 frame
+    static const std::string RTCM3_PREAMBLE;
     /// Indicates the end of an ASCII message
     static const std::string NOVATEL_ENDLINE;
 
     static constexpr uint32_t NOVATEL_CRC32_POLYNOMIAL = 0xEDB88320L;
+    /// The CRC-24Q polynomial RTCM 3 frames are checked with
+    static constexpr uint32_t RTCM3_CRC24Q_POLYNOMIAL = 0x1864CFBu;
+    /// Preamble, two length bytes, and three CRC bytes
+    static constexpr size_t RTCM3_FRAME_OVERHEAD = 6;
+    /// The largest payload a 10-bit length field can describe
+    static constexpr size_t RTCM3_MAX_PAYLOAD_LENGTH = 1023;
 
     rclcpp::Logger logger_;
 
@@ -187,6 +195,31 @@ namespace novatel_gps_driver
     int32_t GetBinaryMessage(const std::string& str,
                              size_t start_idx,
                              BinaryMessage& msg);
+
+    /**
+     * @brief Calculates the CRC-24Q of a block of data, as RTCM 3 frames use.
+     * @param[in] buffer The data block.
+     * @param[in] length The number of bytes in the data block.
+     * @return The CRC-24Q of the data block.
+     */
+    uint32_t CalculateCrc24Q(const uint8_t* buffer, size_t length);
+
+    /**
+     * @brief Measures the RTCM 3 correction frame beginning at start_idx.
+     *
+     * A receiver configured to take RTCM 3 corrections on the port the driver is
+     * reading, or to send them from it, mixes those frames into the stream.  They are
+     * binary, so their contents can look like a NovAtel binary header; measuring them
+     * lets the caller step over a whole frame instead of parsing into one.
+     * See https://github.com/swri-robotics/novatel_gps_driver/issues/97.
+     *
+     * @param[in] str The data buffer to search through.
+     * @param[in] start_idx The index of the frame's preamble byte.
+     * @return >0: the length of the frame in bytes
+     *         -1: not enough data was available to check the whole frame
+     *         -2: this is not the start of a valid frame
+     */
+    int32_t GetRtcm3FrameLength(const std::string& str, size_t start_idx);
 
     /**
      * @brief Splits an ASCII NovAtel message up into header and body parts.

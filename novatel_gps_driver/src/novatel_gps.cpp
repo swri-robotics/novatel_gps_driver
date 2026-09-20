@@ -98,13 +98,17 @@ namespace novatel_gps_driver
       imu_log_period_(-1.0),
       last_corrimu_gap_(-1.0),
       last_imu_type_(-1),
-      imu_type_requested_(false)
+      imu_type_requested_(false),
+      correction_connection_(INVALID),
+      correction_shares_connection_(false),
+      correction_tcp_socket_(io_service_)
   {
   }
 
   NovatelGps::~NovatelGps()
   {
     Disconnect();
+    DisconnectCorrectionPort();
   }
 
   bool NovatelGps::Connect(
@@ -715,6 +719,184 @@ namespace novatel_gps_driver
       std::vector<novatel_gps_driver::InsUpdateStatusParser::MessageType>& insupdatestatus_msgs)
   {
     DrainQueue(insupdatestatus_msgs_, insupdatestatus_msgs);
+  }
+
+  bool NovatelGps::ConnectCorrectionPort(const std::string& device, ConnectionType connection,
+                                         int32_t serial_baud)
+  {
+    DisconnectCorrectionPort();
+
+    if (connection == SERIAL)
+    {
+      swri_serial_util::SerialConfig config;
+      config.baud = serial_baud;
+      config.parity = swri_serial_util::SerialConfig::NO_PARITY;
+      config.flow_control = false;
+      config.data_bits = 8;
+      config.stop_bits = 1;
+      config.low_latency_mode = false;
+      config.writable = true;
+
+      std::lock_guard<std::mutex> lock(correction_mutex_);
+      if (!correction_serial_.Open(device, config))
+      {
+        error_msg_ = correction_serial_.ErrorMsg();
+        return false;
+      }
+      correction_connection_ = SERIAL;
+      return true;
+    }
+
+    if (connection == TCP || connection == UDP)
+    {
+      std::lock_guard<std::mutex> lock(correction_mutex_);
+      if (!CreateCorrectionIpConnection(device, connection))
+      {
+        return false;
+      }
+      correction_connection_ = connection;
+      return true;
+    }
+
+    error_msg_ = "A correction port has to be a serial, TCP or UDP connection.";
+    return false;
+  }
+
+  bool NovatelGps::CreateCorrectionIpConnection(const std::string& endpoint, ConnectionType connection)
+  {
+    // Corrections are always sent to a receiver that is listening, so unlike the
+    // driver's own connection this one is never a server.
+    size_t sep_pos = endpoint.find(':');
+    if (sep_pos == std::string::npos || sep_pos == 0 || sep_pos == endpoint.size() - 1)
+    {
+      error_msg_ = "A correction port on TCP or UDP needs both a host and a port, "
+                   "e.g. \"192.168.1.10:3003\", but it was given \"" + endpoint + "\".";
+      return false;
+    }
+    std::string ip = endpoint.substr(0, sep_pos);
+    std::string port = endpoint.substr(sep_pos + 1);
+
+    try
+    {
+      if (connection == TCP)
+      {
+        boost::asio::ip::tcp::resolver resolver(io_service_);
+        boost::asio::connect(correction_tcp_socket_, resolver.resolve(ip, port));
+        RCLCPP_INFO(node_.get_logger(), "Sending corrections via TCP to %s:%s", ip.c_str(), port.c_str());
+      }
+      else
+      {
+        boost::asio::ip::udp::resolver resolver(io_service_);
+        auto endpoints = resolver.resolve(ip, port);
+        if (endpoints.begin() == endpoints.end())
+        {
+          error_msg_ = "Unable to resolve the correction endpoint " + ip + ":" + port;
+          return false;
+        }
+        correction_udp_endpoint_ = std::make_shared<boost::asio::ip::udp::endpoint>(*endpoints.begin());
+        correction_udp_socket_.reset(new boost::asio::ip::udp::socket(io_service_));
+        correction_udp_socket_->open(boost::asio::ip::udp::v4());
+        RCLCPP_INFO(node_.get_logger(), "Sending corrections via UDP to %s:%s", ip.c_str(), port.c_str());
+      }
+    }
+    catch (std::exception& e)
+    {
+      error_msg_ = e.what();
+      return false;
+    }
+
+    return true;
+  }
+
+  void NovatelGps::UseConnectionForCorrections()
+  {
+    DisconnectCorrectionPort();
+    std::lock_guard<std::mutex> lock(correction_mutex_);
+    correction_shares_connection_ = true;
+  }
+
+  bool NovatelGps::IsCorrectionPortConnected() const
+  {
+    return correction_shares_connection_ || correction_connection_ != INVALID;
+  }
+
+  void NovatelGps::DisconnectCorrectionPort()
+  {
+    std::lock_guard<std::mutex> lock(correction_mutex_);
+    boost::system::error_code error;
+    switch (correction_connection_)
+    {
+      case SERIAL:
+        correction_serial_.Close();
+        break;
+      case TCP:
+        correction_tcp_socket_.close(error);
+        break;
+      case UDP:
+        if (correction_udp_socket_)
+        {
+          correction_udp_socket_->close(error);
+          correction_udp_socket_.reset();
+        }
+        correction_udp_endpoint_.reset();
+        break;
+      default:
+        break;
+    }
+    correction_connection_ = INVALID;
+    correction_shares_connection_ = false;
+  }
+
+  bool NovatelGps::WriteCorrections(const std::vector<uint8_t>& data)
+  {
+    if (data.empty())
+    {
+      return true;
+    }
+    if (correction_shares_connection_)
+    {
+      return Write(std::string(data.begin(), data.end()));
+    }
+
+    bool written = false;
+    {
+      std::lock_guard<std::mutex> lock(correction_mutex_);
+      boost::system::error_code error;
+      switch (correction_connection_)
+      {
+        case SERIAL:
+          written = correction_serial_.Write(data) == static_cast<int32_t>(data.size());
+          if (!written)
+          {
+            error_msg_ = correction_serial_.ErrorMsg();
+          }
+          break;
+        case TCP:
+          written = boost::asio::write(correction_tcp_socket_, boost::asio::buffer(data), error) ==
+                    data.size() && !error;
+          break;
+        case UDP:
+          written = correction_udp_socket_->send_to(boost::asio::buffer(data), *correction_udp_endpoint_,
+                                                    0, error) == data.size() && !error;
+          break;
+        default:
+          error_msg_ = "No correction port is open.";
+          return false;
+      }
+      if (error)
+      {
+        error_msg_ = error.message();
+      }
+    }
+
+    if (!written)
+    {
+      RCLCPP_ERROR(node_.get_logger(), "Failed to send corrections: %s", error_msg_.c_str());
+      // Stop writing to a port that isn't working; the driver reopens it when it
+      // reconnects to the receiver.
+      DisconnectCorrectionPort();
+    }
+    return written;
   }
 
   bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& /* opts */)
@@ -1705,6 +1887,7 @@ namespace novatel_gps_driver
 
   bool NovatelGps::Write(const std::string& command)
   {
+    std::lock_guard<std::mutex> lock(write_mutex_);
     std::vector<uint8_t> bytes(command.begin(), command.end());
 
     if (connection_ == SERIAL)

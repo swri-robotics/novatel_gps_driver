@@ -46,6 +46,7 @@ namespace novatel_gps_driver
       device_(""),
       connection_type_("serial"),
       serial_baud_(115200),
+      correction_reconnect_delay_s_(5.0),
       polling_period_(0.05),
       publish_gpgsa_(false),
       publish_gpgsv_(false),
@@ -79,6 +80,7 @@ namespace novatel_gps_driver
       reconnect_delay_s_(0.5),
       use_binary_messages_(false),
       connection_(NovatelGps::SERIAL),
+      correction_error_logged_(false),
       gps_(*this),
       last_sync_(get_clock()->get_clock_type()),
       rolling_offset_(stats::tag::rolling_window::window_size = 10),
@@ -158,6 +160,39 @@ namespace novatel_gps_driver
     connection_type_ = this->declare_parameter("connection_type", connection_type_);
     connection_ = NovatelGps::ParseConnection(connection_type_);
     serial_baud_ = this->declare_parameter("serial_baud", serial_baud_);
+
+    // A second, write-only port for RTCM corrections.  Empty means corrections are
+    // not sent; the same string as device_ means they share the driver's own
+    // connection. https://github.com/swri-robotics/novatel_gps_driver/issues/97
+    correction_device_ = this->declare_parameter("correction_device", std::string(""));
+    correction_connection_type_ = this->declare_parameter("correction_connection_type",
+                                                          connection_type_);
+    correction_connection_ = NovatelGps::ParseConnection(correction_connection_type_);
+    correction_serial_baud_ = this->declare_parameter("correction_serial_baud", serial_baud_);
+    correction_reconnect_delay_s_ = this->declare_parameter("correction_reconnect_delay_s",
+                                                            correction_reconnect_delay_s_);
+    correction_reconnect_delay_s_ = ValidatePositiveParameter("correction_reconnect_delay_s",
+                                                              correction_reconnect_delay_s_, 5.0,
+                                                              parameter_warning);
+    if (!parameter_warning.empty())
+    {
+      RCLCPP_WARN(this->get_logger(), "%s", parameter_warning.c_str());
+    }
+    if (!correction_device_.empty() && correction_device_ != device_ &&
+        (correction_connection_ == NovatelGps::PCAP || correction_connection_ == NovatelGps::INVALID))
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "correction_connection_type must be serial, tcp or udp, but it was \"%s\"; "
+                   "corrections will not be sent.",
+                   correction_connection_type_.c_str());
+      correction_device_.clear();
+    }
+    if (!correction_device_.empty())
+    {
+      rtcm_sub_ = this->create_subscription<rtcm_msgs::msg::Message>(
+          "rtcm", rclcpp::QoS(10),
+          std::bind(&NovatelGpsNode::RtcmCallback, this, std::placeholders::_1));
+    }
 
     imu_frame_id_ = this->declare_parameter("imu_frame_id", std::string(""));
     frame_id_ = this->declare_parameter("frame_id", std::string(""));
@@ -405,6 +440,76 @@ namespace novatel_gps_driver
     sync_times_.push_back(rclcpp::Time(*sync, this->get_clock()->get_clock_type()));
   }
 
+  void NovatelGpsNode::RtcmCallback(const rtcm_msgs::msg::Message::ConstSharedPtr& rtcm)
+  {
+    if (!gps_.IsCorrectionPortConnected())
+    {
+      // Nothing to do until the driver has (re)connected to the receiver.
+      return;
+    }
+    gps_.WriteCorrections(rtcm->message);
+  }
+
+  /**
+   * @brief Opens the port RTCM corrections are written to, if one is configured.
+   *
+   * Called after every connection to the receiver, so a correction port that was
+   * unplugged comes back with it.  A failure here is not fatal: the driver keeps
+   * working without corrections.
+   */
+  void NovatelGpsNode::ConnectCorrectionPort()
+  {
+    if (correction_device_.empty() || gps_.IsCorrectionPortConnected())
+    {
+      // The correction port is independent of the connection the logs come over, so
+      // it stays up while the driver reconnects to the receiver.
+      return;
+    }
+    if (correction_device_ == device_)
+    {
+      gps_.UseConnectionForCorrections();
+      RCLCPP_INFO(this->get_logger(),
+                  "Sending RTCM corrections over the driver's own connection.  This needs the "
+                  "port to be set to INTERFACEMODE ... AUTO so it accepts both commands and "
+                  "corrections.");
+      return;
+    }
+
+    // Opening the port blocks this thread, so don't try it on every pass through the
+    // read loop; a correction port that isn't there yet gets retried on its own.
+    auto now = std::chrono::steady_clock::now();
+    if (now - last_correction_attempt_ <
+        std::chrono::duration<double>(correction_reconnect_delay_s_))
+    {
+      return;
+    }
+    last_correction_attempt_ = now;
+
+    if (gps_.ConnectCorrectionPort(correction_device_, correction_connection_,
+                                   correction_serial_baud_))
+    {
+      RCLCPP_INFO(this->get_logger(), "Sending RTCM corrections to <%s:%s>",
+                  correction_connection_type_.c_str(), correction_device_.c_str());
+      correction_error_logged_ = false;
+    }
+    else if (!correction_error_logged_)
+    {
+      RCLCPP_ERROR(this->get_logger(),
+                   "Error connecting to correction port <%s:%s>: %s.  Corrections will not be "
+                   "sent; retrying every %.1f seconds.",
+                   correction_connection_type_.c_str(), correction_device_.c_str(),
+                   gps_.ErrorMsg().c_str(), correction_reconnect_delay_s_);
+      correction_error_logged_ = true;
+    }
+    else
+    {
+      // Already reported; don't fill the log with one message per retry.
+      RCLCPP_DEBUG(this->get_logger(), "Correction port <%s:%s> is still unavailable: %s",
+                   correction_connection_type_.c_str(), correction_device_.c_str(),
+                   gps_.ErrorMsg().c_str());
+    }
+  }
+
   /**
    * Main spin loop connects to device, then reads data from it and publishes
    * messages.
@@ -526,6 +631,7 @@ namespace novatel_gps_driver
       {
         // Connected to device. Begin reading/processing data
         RCLCPP_INFO(this->get_logger(), "%s connected to device", hw_id_.c_str());
+        ConnectCorrectionPort();
         while (gps_.IsConnected() && rclcpp::ok())
         {
           // Read data from the device and publish any received messages
@@ -537,6 +643,8 @@ namespace novatel_gps_driver
           {
             RCLCPP_ERROR(this->get_logger(), "Error when checking for data: %s", e.what());
           }
+
+          ConnectCorrectionPort();
 
           // Poke the diagnostic updater. It will only fire diagnostics if
           // its internal timer (1 Hz) has elapsed. Otherwise, this is a
@@ -577,6 +685,7 @@ namespace novatel_gps_driver
     }  // While (ros::ok) (outer loop to reconnect to device)
 
     gps_.Disconnect();
+    gps_.DisconnectCorrectionPort();
     RCLCPP_INFO(this->get_logger(), "%s disconnected and shut down", hw_id_.c_str());
   }
 

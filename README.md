@@ -163,6 +163,27 @@ Nodelets
             driver logs a warning when it sends one.
             - Ignored for `pcap` connections, which can't be written to.
             - Default: Empty
+        - `correction_connection_type`: The correction port's connection type, one of `serial`, `tcp`, or `udp`.
+            - Default: the value of `connection_type`
+        - `correction_device`: Where RTCM corrections received on the `/rtcm` topic are written: a serial device,
+        or a `host:port` for `tcp` and `udp`.
+            - The receiver port has to be set to
+            [`INTERFACEMODE`](https://docs.novatel.com/OEM7/Content/Commands/INTERFACEMODE.htm) `... RTCMV3`, which
+            stops it accepting NovAtel commands, so this is normally **not** the port the driver reads logs from.
+            - Set it to the same string as `device` to send corrections over the driver's own connection instead of
+            opening a second port.  That needs the port set to `INTERFACEMODE ... AUTO` so it accepts both commands
+            and corrections.
+            - The port is opened when the driver connects to the receiver, and stays open across reconnections
+            to it.  If it can't be opened the driver logs an error, keeps running without corrections, and retries
+            every `correction_reconnect_delay_s` seconds.
+            - Empty means corrections are not sent and `/rtcm` is not subscribed to.
+            - Default: Empty
+        - `correction_reconnect_delay_s`: How long to wait, in seconds, between attempts to open a correction
+        port that could not be opened.
+            - A value that isn't positive is ignored and the default is used instead.
+            - Default: `5.0`
+        - `correction_serial_baud`: Baud rate for a serial correction port.
+            - Default: the value of `serial_baud`
         - `device`: Location of device connection.
             - For `serial` connections, the device node; e. g., `/dev/ttyUSB0`
             - For `tcp` or `udp` connections, a `host:port` specification.
@@ -332,6 +353,8 @@ Nodelets
     2. **ROS Topic Subscriptions**
         - `/gps_sync` *(builtin_interfaces/Time)*: *(optional)* Timestamped sync pulses from a DIO module. 
     These are used to improve the accuracy of the time stamps of the messages published.
+        - `/rtcm` *(rtcm_msgs/Message)*: *(optional)* RTCM correction messages, e.g. from an NTRIP client, written
+    to the receiver as they arrive.  Only subscribed to if `correction_device` is set.
     3. **ROS Topic Publications**
         - `/bestpos` *(novatel_gps_msgs/NovatelPosition)*: [BESTPOS](http://docs.novatel.com/OEM7/Content/Logs/BESTPOS.htm) logs
         - `/bestutm` *(novatel_gps_msgs/NovatelUtmPosition)*: [BESTUTM](http://docs.novatel.com/OEM7/Content/Logs/BESTUTM.htm) logs

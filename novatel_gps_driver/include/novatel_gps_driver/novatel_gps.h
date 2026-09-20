@@ -33,6 +33,7 @@
 // std libraries
 #include <chrono>
 #include <map>
+#include <mutex>
 #include <set>
 #include <queue>
 #include <string>
@@ -314,6 +315,55 @@ namespace novatel_gps_driver
        * @return True on success
        */
       bool Connect(const std::string& device, ConnectionType connection, NovatelMessageOpts const& opts);
+
+      /**
+       * @brief Opens a second, write-only connection for RTCM corrections.
+       *
+       * Independent of the connection the driver reads logs over: Disconnect() leaves
+       * it open, so reconnecting to the receiver doesn't interrupt corrections.
+       *
+       * A receiver port that takes corrections is set to INTERFACEMODE ... RTCMV3,
+       * which stops it accepting NovAtel commands, so corrections normally go to a
+       * different port than the one the driver requests logs on.  Nothing is read
+       * from this connection and no configuration is sent to it.
+       * See https://github.com/swri-robotics/novatel_gps_driver/issues/97.
+       *
+       * @param device A serial device (e.g. "/dev/ttyUSB1") or, for TCP and UDP, a
+       * "host:port" the receiver is listening on.
+       * @param connection SERIAL, TCP or UDP.
+       * @param serial_baud The baud rate to use for a serial correction port.
+       * @return true if the port was opened.
+       */
+      bool ConnectCorrectionPort(const std::string& device, ConnectionType connection,
+                                 int32_t serial_baud);
+
+      /**
+       * @brief Sends corrections over the connection the driver already has, for a
+       * receiver with only one usable port.  That port has to accept both NovAtel
+       * commands and corrections, which means INTERFACEMODE ... AUTO.
+       */
+      void UseConnectionForCorrections();
+
+      /**
+       * @brief Whether corrections can currently be written.
+       */
+      bool IsCorrectionPortConnected() const;
+
+      /**
+       * @brief Writes correction data to the correction port.
+       *
+       * Callable from any thread.  On a write error the port is closed, so
+       * corrections stop until the driver reconnects.
+       *
+       * @param data The bytes of one correction message.
+       * @return true if all of the data was written.
+       */
+      bool WriteCorrections(const std::vector<uint8_t>& data);
+
+      /**
+       * @brief Closes the correction port, if one is open.
+       */
+      void DisconnectCorrectionPort();
 
       /**
        * Disconnects from a connected device
@@ -629,6 +679,10 @@ namespace novatel_gps_driver
 
       /**
        * @brief Writes the given string of characters to a connected NovAtel device.
+       *
+       * Callable from any thread: the driver's own thread writes log requests while
+       * ROS callbacks (the freset service) write from the executor thread, so this
+       * serializes them rather than letting two writes interleave on the connection.
        * @param command A string to transmit.
        * @return true if we successfully wrote all of the data, false otherwise.
        */
@@ -668,6 +722,14 @@ namespace novatel_gps_driver
        * @return false if it failed to create a connection, true otherwise.
        */
       bool CreateIpConnection(const std::string& endpoint, NovatelMessageOpts const& opts);
+
+      /**
+       * @brief Connects the correction port to a receiver listening on an IP endpoint.
+       * @param endpoint A "host:port" specification; both parts are required.
+       * @param connection TCP or UDP.
+       * @return false if it failed to create a connection, true otherwise.
+       */
+      bool CreateCorrectionIpConnection(const std::string& endpoint, ConnectionType connection);
 
       /**
        * @brief Establishes a serial port connection with a NovAtel device.
@@ -918,6 +980,21 @@ namespace novatel_gps_driver
       // Binary message IDs that have been warned about as unexpected, so each is only
       // warned about once rather than every time it arrives
       std::set<uint16_t> unexpected_binary_message_ids_;
+
+      // Serializes Write() so writes from the driver's thread and from ROS callbacks
+      // can't interleave on the same connection.
+      std::mutex write_mutex_;
+
+      // Write-only connection for RTCM corrections, and the mutex that serializes
+      // opening, closing and writing it.  INVALID means "no correction port open";
+      // correction_shares_connection_ means corrections go over the main connection.
+      ConnectionType correction_connection_;
+      bool correction_shares_connection_;
+      swri_serial_util::SerialPort correction_serial_;
+      boost::asio::ip::tcp::socket correction_tcp_socket_;
+      std::shared_ptr<boost::asio::ip::udp::socket> correction_udp_socket_;
+      std::shared_ptr<boost::asio::ip::udp::endpoint> correction_udp_endpoint_;
+      std::mutex correction_mutex_;
 
       // The most recent INSPVAX, kept so GetFixMessages() can prefer its azimuth
       // (a true direction of travel) over BESTVEL's Doppler-derived track_ground

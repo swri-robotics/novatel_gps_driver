@@ -36,6 +36,8 @@
  *
  * <b>Topics Subscribed:</b>
  *
+ * \e rtcm <tt>rtcm_msgs/Message</tt> - RTCM corrections to send to the receiver
+ *    (only subscribed to if correction_device is set)
  * \e gps_sync <tt>builtin_interfaces/Time</tt> - Timestamped sync pulses
  *    from a DIO module (optional). These are used to improve the accuracy of
  *    the time stamps of the messages published.
@@ -122,6 +124,20 @@
  *
  * \e connection_type <tt>str</tt> - "serial", "udp", "tcp", or "pcap" as
  *    appropriate for the Novatel device connected. ["serial"]
+ * \e correction_connection_type <tt>str</tt> - "serial", "udp" or "tcp" for the
+ *    correction port. [the value of connection_type]
+ * \e correction_device <tt>str</tt> - The device RTCM corrections received on the
+ *    rtcm topic are written to: a serial device, or a "host:port" for TCP and UDP.
+ *    The port has to be set to INTERFACEMODE ... RTCMV3, which stops it accepting
+ *    NovAtel commands, so this is normally not the port the driver reads logs
+ *    from.  Set it to the same string as device to send corrections over the
+ *    driver's own connection, which needs INTERFACEMODE ... AUTO.  Empty means
+ *    corrections are not sent and the rtcm topic is not subscribed to. [""]
+ * \e correction_reconnect_delay_s <tt>dbl</tt> - How long to wait, in seconds,
+ *    between attempts to open a correction port that could not be opened. A value
+ *    that isn't positive is ignored. [5.0]
+ * \e correction_serial_baud <tt>int</tt> - The baud rate of a serial correction
+ *    port. [the value of serial_baud]
  * \e configure_commands <tt>str[]</tt> - Receiver commands to send on connect,
  *    one command per entry and no line endings, for configuration the driver has
  *    no parameter of its own for; e.g. ["CONNECTIMU COM3 HG1700_AG58",
@@ -278,6 +294,7 @@
 #include <novatel_gps_msgs/srv/novatel_freset.hpp>
 
 #include <nmea_msgs/msg/sentence.hpp>
+#include <rtcm_msgs/msg/message.hpp>
 
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <sensor_msgs/msg/time_reference.hpp>
@@ -303,6 +320,19 @@ namespace novatel_gps_driver
     void SyncCallback(const builtin_interfaces::msg::Time::ConstSharedPtr& sync);
 
     /**
+     * @brief Sends a received RTCM correction message to the receiver.
+     * https://github.com/swri-robotics/novatel_gps_driver/issues/97
+     */
+    void RtcmCallback(const rtcm_msgs::msg::Message::ConstSharedPtr& rtcm);
+
+    /**
+     * @brief Opens the port RTCM corrections are written to, if one is configured,
+     * is not already open, and hasn't been tried in the last
+     * correction_reconnect_delay_s seconds.
+     */
+    void ConnectCorrectionPort();
+
+    /**
      * Main spin loop connects to device, then reads data from it and publishes
      * messages.
      */
@@ -316,6 +346,14 @@ namespace novatel_gps_driver
     std::string connection_type_;
     /// The baud rate used for serial connection
     int32_t serial_baud_;
+    /// The device RTCM corrections are written to; empty to not send any
+    std::string correction_device_;
+    /// The correction port's connection type, ("serial", "tcp", or "udp")
+    std::string correction_connection_type_;
+    /// The baud rate used for a serial correction port
+    int32_t correction_serial_baud_;
+    /// How long to wait between attempts to open a correction port that isn't there
+    double correction_reconnect_delay_s_;
     double polling_period_;
     bool publish_gpgsa_;
     bool publish_gpgsv_;
@@ -388,6 +426,11 @@ namespace novatel_gps_driver
     rclcpp::Service<novatel_gps_msgs::srv::NovatelFRESET>::SharedPtr reset_service_;
 
     NovatelGps::ConnectionType connection_;
+    NovatelGps::ConnectionType correction_connection_;
+    /// When the last attempt to open the correction port was made
+    std::chrono::steady_clock::time_point last_correction_attempt_;
+    /// Whether the current run of correction port failures has been logged already
+    bool correction_error_logged_;
     NovatelGps gps_;
 
     std::thread thread_;
@@ -395,6 +438,7 @@ namespace novatel_gps_driver
 
     /// Subscriber to listen for sync times from a DIO
     rclcpp::Subscription<builtin_interfaces::msg::Time>::SharedPtr sync_sub_;
+    rclcpp::Subscription<rtcm_msgs::msg::Message>::SharedPtr rtcm_sub_;
     rclcpp::Time last_sync_;
     /// Buffer of sync message time stamps
     boost::circular_buffer<rclcpp::Time> sync_times_;
