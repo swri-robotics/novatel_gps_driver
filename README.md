@@ -232,6 +232,12 @@ Nodelets
             - Default: `false`
         - `publish_nmea_messages`: `true` to publish novatel_gps_msgs/Gpgga and novatel_gps_msgs/Gprmc messages.
             - Default: `false`
+        - `publish_nmea_sentences`: `true` to publish every NMEA sentence the receiver sends as an
+        nmea_msgs/Sentence message on the `nmea_sentence` topic, unparsed and exactly as it arrived.
+            - Sentences the driver has no parser for are published too, but which sentences the receiver
+            sends is still controlled by the `publish_gpgsa`, `publish_gpgsv`, `publish_gphdt` and
+            `publish_nmea_messages` parameters.
+            - Default: `false`
         - `publish_novatel_dual_antenna_heading`: `true` to publish novatel_gps_msgs/NovatelDualAntennaHeading messages.
             - Default: `false`
         - `publish_novatel_heading2`: `true` to publish novatel_gps_msgs/NovatelHeading2 messages.
@@ -340,6 +346,8 @@ Nodelets
             - **Note**: Earlier versions published these as novatel_gps_msgs/Inspvax and novatel_gps_msgs/Insstdev, which
             decoded the extended solution status incorrectly.  Those messages are still defined so old recordings can be
             played back.
+        - `/nmea_sentence` *([nmea_msgs/Sentence](http://docs.ros.org/api/nmea_msgs/html/msg/Sentence.html))*: Every NMEA
+        sentence the receiver sends, republished unparsed and exactly as it arrived, for consumers that read NMEA directly
         - `/insupdatestatus` *(novatel_gps_msgs/NovatelInsUpdateStatus)*: [INSUPDATESTATUS](https://docs.novatel.com/OEM7/Content/SPAN_Logs/INSUPDATESTATUS.htm) logs
         - `/psrdop2` *(novatel_gps_msgs/NovatelPsrdop2)*: [PSRDOP2](https://docs.novatel.com/OEM7/Content/Logs/PSRDOP2.htm) logs
         - `/range` *(novatel_gps_msgs/Range)*: [RANGE](http://docs.novatel.com/OEM7/Content/Logs/RANGE.htm) logs

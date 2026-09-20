@@ -338,6 +338,41 @@ TEST_F(NovatelGpsTestSuite, testRawImuxLogs)
   }
 }
 
+// Replays the NMEA capture from test/make_imu_sync_pcaps.py and checks that every
+// sentence reaches the raw sentence buffer as it was sent, including the GPVTG the
+// driver has no parser for, and that the NovAtel ASCII log in the same capture
+// doesn't.
+//
+// https://github.com/swri-robotics/novatel_gps_driver/issues/92
+TEST_F(NovatelGpsTestSuite, testNmeaSentencesRepublishedVerbatim)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  std::string path = GetPackagePrefix("novatel_gps_driver");
+  ASSERT_TRUE(gps.Connect(path + "/test/nmea-sentences.pcap", novatel_gps_driver::NovatelGps::PCAP));
+
+  std::vector<nmea_msgs::msg::Sentence::UniquePtr> sentences;
+  while (gps.IsConnected() && gps.ProcessData() == novatel_gps_driver::NovatelGps::READ_SUCCESS)
+  {
+    std::vector<nmea_msgs::msg::Sentence::UniquePtr> tmp_sentences;
+    gps.GetNmeaSentences(tmp_sentences);
+    std::move(std::make_move_iterator(tmp_sentences.begin()),
+        std::make_move_iterator(tmp_sentences.end()),
+        std::back_inserter(sentences));
+  }
+
+  ASSERT_EQ(3u, sentences.size());
+  EXPECT_EQ("$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,1048.47,M,-16.27,M,08,AAAA*60",
+            sentences[0]->sentence);
+  EXPECT_EQ("$GPRMC,144326.00,A,5107.0017737,N,11402.3291611,W,0.080,323.3,210307,0.0,E,A*20",
+            sentences[1]->sentence);
+  EXPECT_EQ("$GPVTG,172.516,T,155.295,M,0.049,N,0.090,K,D*2B", sentences[2]->sentence);
+  for (const auto& sentence : sentences)
+  {
+    EXPECT_NE(rclcpp::Time(sentence->header.stamp), rclcpp::Time(0, 0, RCL_ROS_TIME));
+  }
+}
+
 TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
 {
   novatel_gps_driver::NovatelGps gps(*this);

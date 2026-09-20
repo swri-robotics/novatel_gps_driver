@@ -66,6 +66,7 @@ namespace novatel_gps_driver
       publish_novatel_insupdatestatus_(false),
       publish_rawimux_(false),
       publish_nmea_messages_(false),
+      publish_nmea_sentences_(false),
       publish_range_messages_(false),
       publish_time_messages_(false),
       publish_time_reference_(false),
@@ -125,6 +126,7 @@ namespace novatel_gps_driver
                                                                publish_novatel_insupdatestatus_);
     publish_rawimux_ = this->declare_parameter("publish_rawimux", publish_rawimux_);
     publish_nmea_messages_ = this->declare_parameter("publish_nmea_messages", publish_nmea_messages_);
+    publish_nmea_sentences_ = this->declare_parameter("publish_nmea_sentences", publish_nmea_sentences_);
     publish_range_messages_ = this->declare_parameter("publish_range_messages", publish_range_messages_);
     publish_time_messages_ = this->declare_parameter("publish_time_messages", publish_time_messages_);
     publish_time_reference_ = this->declare_parameter("publish_time_reference", publish_time_reference_);
@@ -213,6 +215,10 @@ namespace novatel_gps_driver
     {
       gpgga_pub_ = this->create_publisher<novatel_gps_msgs::msg::Gpgga>("gpgga", rclcpp::QoS(100));
       gprmc_pub_ = this->create_publisher<novatel_gps_msgs::msg::Gprmc>("gprmc", rclcpp::QoS(100));
+    }
+    if (publish_nmea_sentences_)
+    {
+      nmea_sentence_pub_ = this->create_publisher<nmea_msgs::msg::Sentence>("nmea_sentence", rclcpp::QoS(100));
     }
 
     if (publish_gpgsa_)
@@ -714,6 +720,18 @@ namespace novatel_gps_driver
         msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
         msg->header.frame_id = frame_id_;
         gprmc_pub_->publish(std::move(msg));
+      }
+    }
+
+    if (publish_nmea_sentences_)
+    {
+      std::vector<nmea_msgs::msg::Sentence::UniquePtr> nmea_sentences;
+      gps_.GetNmeaSentences(nmea_sentences);
+      for (auto& msg : nmea_sentences)
+      {
+        msg->header.stamp = rclcpp::Time(msg->header.stamp, this->get_clock()->get_clock_type()) + sync_offset;
+        msg->header.frame_id = frame_id_;
+        nmea_sentence_pub_->publish(std::move(msg));
       }
     }
 

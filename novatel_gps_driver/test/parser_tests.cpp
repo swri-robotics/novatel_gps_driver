@@ -1134,6 +1134,76 @@ TEST(ParserTestSuite, testValidatePositiveParameterClearsEarlierWarning)
   EXPECT_EQ("", warning);
 }
 
+// Raw NMEA sentences, republished as nmea_msgs/Sentence.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/92
+
+TEST(ParserTestSuite, testExtractorKeepsRawNmeaSentence)
+{
+  std::string sentence_str = "$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,"
+                             "1048.47,M,-16.27,M,08,AAAA*60\r\n";
+
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(1, nmea_sentences.size());
+  // The "$" and the checksum are stripped from the tokenized body, but the raw
+  // sentence keeps them, and drops only the line ending.
+  EXPECT_EQ("GPGGA", nmea_sentences.front().id);
+  EXPECT_EQ("$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,1048.47,M,-16.27,M,08,AAAA*60",
+            nmea_sentences.front().raw);
+}
+
+// A receiver configured outside the driver can send sentences it has no parser for;
+// those are worth republishing too.
+TEST(ParserTestSuite, testExtractorKeepsRawSentenceOfUnparsedType)
+{
+  std::string sentence_str = "$GPVTG,172.516,T,155.295,M,0.049,N,0.090,K,D*2B\r\n";
+
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(1, nmea_sentences.size());
+  EXPECT_EQ("GPVTG", nmea_sentences.front().id);
+  EXPECT_EQ("$GPVTG,172.516,T,155.295,M,0.049,N,0.090,K,D*2B", nmea_sentences.front().raw);
+}
+
+// Each sentence in a batch keeps its own text.
+TEST(ParserTestSuite, testExtractorKeepsRawSentencesSeparately)
+{
+  std::string sentence_str = "$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,"
+                             "1048.47,M,-16.27,M,08,AAAA*60\r\n"
+                             "$GPHDT,275.432,T*30\r\n";
+
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  extractor.ExtractCompleteMessages(sentence_str, nmea_sentences, novatel_sentences,
+                                    binary_messages, remaining);
+
+  ASSERT_EQ(2, nmea_sentences.size());
+  EXPECT_EQ("$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,1048.47,M,-16.27,M,08,AAAA*60",
+            nmea_sentences[0].raw);
+  EXPECT_EQ("$GPHDT,275.432,T*30", nmea_sentences[1].raw);
+}
+
 TEST(ParserTestSuite, testDmiConfigCommandEnablesEachSource)
 {
   EXPECT_EQ("DMICONFIG DMI1 ENABLE EXT_COUNT\r\n", novatel_gps_driver::BuildDmiConfigCommand("EXT_COUNT"));

@@ -76,6 +76,9 @@
  *    published if `publish_gphdt` is set `true`)
  * \e gprmc <tt>novatel_gps_msgs/Gprmc</tt> - Raw GPRMC data for debugging (only
  *    published if `publish_nmea_messages` is set `true`)
+ * \e nmea_sentence <tt>nmea_msgs/Sentence</tt> - Every NMEA sentence the receiver
+ *    sends, republished as it arrived. (only published if
+ *    `publish_nmea_sentences` is set `true`)
  * \e heading2 <tt>novatel_gps_msgs/NovatelHeading2</tt> - Heading derived from a
  *    second antenna. (only published if `publish_novatel_heading2` is set `true`)
  * \e imu <tt>sensor_msgs/Imu</tt> - CORRIMUDATA logs converted to Imu messages.
@@ -188,6 +191,11 @@
  *    messages even when the fix status is STATUS_NO_FIX [false]
  * \e publish_nmea_messages <tt>bool</tt> - If set true, the driver publishes
  *    GPGGA and GPRMC messages (see Topics Published) [false]
+ * \e publish_nmea_sentences <tt>bool</tt> - If set true, the driver publishes
+ *    every NMEA sentence it receives as nmea_msgs/Sentence, unparsed (see Topics
+ *    Published).  Which sentences the receiver sends is controlled by the
+ *    publish_gpgsa, publish_gpgsv, publish_gphdt and publish_nmea_messages
+ *    parameters. [false]
  * \e publish_novatel_dual_antenna_heading <tt>bool</tt> - If set true, the driver
  *    publishes Novatel DUALANTENNAHEADING messages (see Topics Published) [false]
  * \e publish_novatel_heading2 <tt>bool</tt> - If set true, the driver publishes
@@ -262,6 +270,8 @@
 #include <novatel_gps_msgs/msg/clock_steering.hpp>
 #include <novatel_gps_msgs/srv/novatel_freset.hpp>
 
+#include <nmea_msgs/msg/sentence.hpp>
+
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <sensor_msgs/msg/time_reference.hpp>
 
@@ -321,6 +331,7 @@ namespace novatel_gps_driver
     bool publish_novatel_insupdatestatus_;
     bool publish_rawimux_;
     bool publish_nmea_messages_;
+    bool publish_nmea_sentences_;
     bool publish_range_messages_;
     bool publish_time_messages_;
     bool publish_time_reference_;
@@ -357,6 +368,7 @@ namespace novatel_gps_driver
     rclcpp::Publisher<novatel_gps_msgs::msg::Gpgsa>::SharedPtr gpgsa_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gphdt>::SharedPtr gphdt_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Gprmc>::SharedPtr gprmc_pub_;
+    rclcpp::Publisher<nmea_msgs::msg::Sentence>::SharedPtr nmea_sentence_pub_;
     rclcpp::Publisher<novatel_gps_msgs::msg::Range>::SharedPtr range_pub_;
 #if NOVATEL_GPS_DRIVER_HAS_NOVATEL_TIME_MSG
     rclcpp::Publisher<novatel_gps_msgs::msg::NovatelTime>::SharedPtr time_pub_;

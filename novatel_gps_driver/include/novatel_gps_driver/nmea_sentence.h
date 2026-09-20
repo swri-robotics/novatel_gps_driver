@@ -42,6 +42,9 @@ namespace novatel_gps_driver
   {
     std::string id;
     std::vector<std::string> body;
+    /// The sentence as it was received, from the "$" through the checksum, with
+    /// no line ending.  Kept so it can be republished verbatim.
+    std::string raw;
   };
 }
 

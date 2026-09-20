@@ -27,6 +27,10 @@ For https://github.com/swri-robotics/novatel_gps_driver/issues/39 there's a capt
 of RAWIMUX logs in ASCII and binary, and RAWIMUSX in binary, followed by a log the
 driver doesn't parse repeated several times.
 
+For https://github.com/swri-robotics/novatel_gps_driver/issues/92 there's a capture
+of NMEA sentences, including a type the driver has no parser for, which it still
+republishes as nmea_msgs/Sentence.
+
 Each NovAtel log is placed in its own TCP segment on port 3001, matching the framing
 NovatelGps::ReadData expects from a pcap connection.
 
@@ -246,6 +250,24 @@ def rawimux_payload(seconds, imu_type):
                        1, -2, 3, -4, 5, -6)
 
 
+# NMEA sentences.  The driver republishes each one exactly as it arrived, so these
+# carry distinctive values a test can match on, and GPVTG is a type the driver has
+# no parser for.
+def nmea_sentence(body):
+    """An NMEA sentence: '$BODY*XX\\r\\n', with the XOR checksum NMEA uses."""
+    checksum = 0
+    for char in body:
+        checksum ^= ord(char)
+    return ('$%s*%02X\r\n' % (body, checksum)).encode('ascii')
+
+
+NMEA_BODIES = [
+    'GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,1048.47,M,-16.27,M,08,AAAA',
+    'GPRMC,144326.00,A,5107.0017737,N,11402.3291611,W,0.080,323.3,210307,0.0,E,A',
+    'GPVTG,172.516,T,155.295,M,0.049,N,0.090,K,D',
+]
+
+
 # --- pcap / TCP framing ----------------------------------------------------
 
 SRC_IP = bytes((192, 168, 74, 10))
@@ -350,6 +372,13 @@ def main():
         long_message(RAWDMI_ID, start_ms, rawdmi_payload(RAWDMI_BINARY_TICKS)),
         long_message(INSUPDATESTATUS_ID, start_ms, insupdatestatus_payload(DMI_USED)),
     ])
+
+    # NMEA sentences, followed by a NovAtel ASCII log that must not be mistaken for
+    # one.  A receiver sends these only when the matching logs are requested, but the
+    # driver republishes whatever arrives.
+    nmea_msgs = [nmea_sentence(body) for body in NMEA_BODIES]
+    nmea_msgs.append(ascii_message('BESTPOSA', START_SECONDS, bestpos_fields()))
+    write_pcap('nmea-sentences.pcap', nmea_msgs)
 
 
 if __name__ == '__main__':
