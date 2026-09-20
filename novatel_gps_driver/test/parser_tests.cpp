@@ -910,9 +910,8 @@ TEST(ParserTestSuite, testInsUpdateStatusAsciiParsing)
   EXPECT_EQ(24, msg->num_dop);
   EXPECT_EQ("INACTIVE", msg->dmi_update_status);
   EXPECT_EQ("USED", msg->align_update_status);
-  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status.original_mask);
-  EXPECT_TRUE(msg->extended_solution_status.ins_solution_converged);
-  EXPECT_EQ("KINEMATIC", msg->extended_solution_status.alignment_type);
+  // INSUPDATESTATUS keeps the status word raw; INSPVAX and INSSTDEV decode it.
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
   EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
   EXPECT_TRUE(msg->ins_enabled_updates &
               novatel_gps_msgs::msg::NovatelInsUpdateStatus::INS_UPDATE_WHEEL_SENSOR);
@@ -943,9 +942,8 @@ TEST(ParserTestSuite, testInsUpdateStatusBinaryParsing)
   EXPECT_EQ(24, msg->num_dop);
   EXPECT_EQ("USED", msg->dmi_update_status);
   EXPECT_EQ("BAD_MISC", msg->align_update_status);
-  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status.original_mask);
-  EXPECT_TRUE(msg->extended_solution_status.ins_solution_converged);
-  EXPECT_EQ("KINEMATIC", msg->extended_solution_status.alignment_type);
+  // INSUPDATESTATUS keeps the status word raw; INSPVAX and INSSTDEV decode it.
+  EXPECT_EQ(0x0b0020c3u, msg->extended_solution_status);
   EXPECT_EQ(0x007ff3bfu, msg->ins_enabled_updates);
 }
 

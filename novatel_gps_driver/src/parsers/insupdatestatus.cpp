@@ -98,7 +98,7 @@ namespace novatel_gps_driver
       throw ParseException(error.str());
     }
     ros_msg->align_update_status = ALIGN_UPDATE_STATUSES[align_status];
-    GetInsExtendedSolutionStatusMessage(ParseUInt32(&bin_msg.data_[24]), ros_msg->extended_solution_status);
+    ros_msg->extended_solution_status = ParseUInt32(&bin_msg.data_[24]);
     ros_msg->ins_enabled_updates = ParseUInt32(&bin_msg.data_[28]);
 
     return ros_msg;
@@ -125,9 +125,7 @@ namespace novatel_gps_driver
     valid = valid && ParseInt32(sentence.body[3], msg->num_dop);
     msg->dmi_update_status = sentence.body[4];
     msg->align_update_status = sentence.body[5];
-    uint32_t extended_solution_status = 0;
-    valid = valid && ParseUInt32(sentence.body[6], extended_solution_status, 16);
-    GetInsExtendedSolutionStatusMessage(extended_solution_status, msg->extended_solution_status);
+    valid = valid && ParseUInt32(sentence.body[6], msg->extended_solution_status, 16);
     valid = valid && ParseUInt32(sentence.body[7], msg->ins_enabled_updates, 16);
     // skip two reserved fields
 
