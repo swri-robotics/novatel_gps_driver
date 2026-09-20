@@ -52,6 +52,7 @@ namespace novatel_gps_driver
   const std::string NovatelMessageExtractor::NOVATEL_ASCII_FLAGS = "$#";
   const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES = "\xAA\x44\x12";
   const std::string NovatelMessageExtractor::NOVATEL_BINARY_SYNC_BYTES2 = "\xAA\x44\x13";
+  const std::string NovatelMessageExtractor::RTCM3_PREAMBLE = "\xD3";
   const std::string NovatelMessageExtractor::NOVATEL_ENDLINE = "\r\n";
   
   NovatelMessageExtractor::NovatelMessageExtractor(rclcpp::Logger logger) :
@@ -228,6 +229,62 @@ namespace novatel_gps_driver
     return static_cast<int32_t>(msg.header_.header_length_ + data_length + 4);
   }
 
+  uint32_t NovatelMessageExtractor::CalculateCrc24Q(const uint8_t* buffer, size_t length)
+  {
+    uint32_t crc = 0;
+    for (size_t i = 0; i < length; i++)
+    {
+      crc ^= static_cast<uint32_t>(buffer[i]) << 16u;
+      for (int bit = 0; bit < 8; bit++)
+      {
+        crc <<= 1u;
+        if (crc & 0x1000000u)
+        {
+          crc ^= RTCM3_CRC24Q_POLYNOMIAL;
+        }
+      }
+    }
+    return crc & 0xFFFFFFu;
+  }
+
+  int32_t NovatelMessageExtractor::GetRtcm3FrameLength(const std::string& str, size_t start_idx)
+  {
+    // Preamble, six reserved bits, then a 10-bit payload length.
+    if (start_idx + 3 > str.length())
+    {
+      return -1;
+    }
+    auto reserved_and_length = static_cast<uint8_t>(str[start_idx + 1]);
+    if ((reserved_and_length & 0xFCu) != 0)
+    {
+      return -2;
+    }
+    size_t payload_length = (static_cast<size_t>(reserved_and_length & 0x03u) << 8u) |
+                            static_cast<uint8_t>(str[start_idx + 2]);
+    if (payload_length > RTCM3_MAX_PAYLOAD_LENGTH)
+    {
+      return -2;
+    }
+    size_t frame_length = payload_length + RTCM3_FRAME_OVERHEAD;
+    if (start_idx + frame_length > str.length())
+    {
+      return -1;
+    }
+
+    // The CRC covers the preamble, the length bytes and the payload.
+    const auto* frame = reinterpret_cast<const uint8_t*>(&str[start_idx]);
+    uint32_t crc = CalculateCrc24Q(frame, frame_length - 3);
+    uint32_t frame_crc = (static_cast<uint32_t>(frame[frame_length - 3]) << 16u) |
+                         (static_cast<uint32_t>(frame[frame_length - 2]) << 8u) |
+                         static_cast<uint32_t>(frame[frame_length - 1]);
+    if (crc != frame_crc)
+    {
+      return -2;
+    }
+
+    return static_cast<int32_t>(frame_length);
+  }
+
   int32_t NovatelMessageExtractor::GetNovatelSentence(
       const std::string& str,
       size_t start_idx,
@@ -394,16 +451,47 @@ namespace novatel_gps_driver
       size_t ascii_end_idx;
       size_t invalid_ascii_idx;
       size_t binary_start_idx = input.find(NOVATEL_BINARY_SYNC_BYTES.substr(0, 2), sentence_start);
+      size_t rtcm_start_idx = input.find(RTCM3_PREAMBLE, sentence_start);
 
       FindAsciiSentence(input, sentence_start, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
       RCLCPP_DEBUG(this->logger_, "Binary start: %lu   ASCII start / end / invalid: %lu / %lu / %lu",
                 binary_start_idx, ascii_start_idx, ascii_end_idx, invalid_ascii_idx);
 
-      if (binary_start_idx == std::string::npos && ascii_start_idx == std::string::npos)
+      if (binary_start_idx == std::string::npos && ascii_start_idx == std::string::npos &&
+          rtcm_start_idx == std::string::npos)
       {
-        // If we don't see either a binary or an ASCII message, just give up.
+        // If we don't see a binary, an ASCII or an RTCM message, just give up.
         break;
+      }
+
+      if (rtcm_start_idx != std::string::npos &&
+          (binary_start_idx == std::string::npos || rtcm_start_idx < binary_start_idx) &&
+          (ascii_start_idx == std::string::npos || rtcm_start_idx < ascii_start_idx))
+      {
+        // A receiver exchanging RTCM 3 corrections on this port mixes those frames into
+        // the stream.  They are binary, so their contents can look like the start of a
+        // NovAtel message; step over a whole frame rather than parse into one.
+        // https://github.com/swri-robotics/novatel_gps_driver/issues/97
+        int32_t result = GetRtcm3FrameLength(input, rtcm_start_idx);
+        if (result > 0)
+        {
+          sentence_start = rtcm_start_idx + static_cast<size_t>(result);
+          RCLCPP_DEBUG(this->logger_, "Skipped an RTCM 3 frame with %u bytes.", result);
+        }
+        else if (result == -1)
+        {
+          // The frame is not all here yet; wait for the rest of it.
+          remaining = input.substr(rtcm_start_idx);
+          RCLCPP_DEBUG(this->logger_, "RTCM 3 frame was incomplete, waiting for more.");
+          break;
+        }
+        else
+        {
+          // Not a frame after all, so keep looking from the next byte.
+          sentence_start = rtcm_start_idx + 1;
+        }
+        continue;
       }
 
       if (ascii_start_idx == std::string::npos ||
@@ -416,7 +504,7 @@ namespace novatel_gps_driver
         if (result > 0)
         {
           binary_messages.push_back(cur_msg);
-          sentence_start += binary_start_idx + result;
+          sentence_start = binary_start_idx + static_cast<size_t>(result);
           RCLCPP_DEBUG(this->logger_, "Parsed a binary message with %u bytes.", result);
         }
         else if (result == -1)

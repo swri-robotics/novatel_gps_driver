@@ -1087,6 +1087,144 @@ TEST(ParserTestSuite, testClockSteeringBinaryWrongLength)
   EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
 }
 
+// RTCM 3 correction frames mixed into the stream, and the messages around them.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/97
+
+namespace
+{
+  // Frames built independently of the driver's own CRC-24Q code.
+  const uint8_t RTCM3_FRAME[] = {
+    0xD3, 0x00, 0x0A, 0x3E, 0xD0, 0x00, 0x03, 0x8C, 0x44, 0x90, 0x00, 0x00,
+    0x00, 0xB8, 0x31, 0xD9,
+  };
+  // A frame whose payload holds both NovAtel binary sync sequences and the '#' and
+  // '$' that start an ASCII message.
+  const uint8_t RTCM3_FRAME_WITH_SYNC_BYTES[] = {
+    0xD3, 0x00, 0x0C, 0x3E, 0xAA, 0x44, 0x12, 0x1C, 0x23, 0x24, 0x00, 0xAA,
+    0x44, 0x13, 0xFF, 0x3D, 0xAE, 0x73,
+  };
+  const uint8_t NOVATEL_BINARY_MESSAGE[] = {
+    0xAA, 0x44, 0x12, 0x1C, 0x2A, 0x00, 0x00, 0x20, 0x08, 0x00, 0x00, 0x00,
+    0x00, 0x14, 0x41, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x61, 0x90, 0xCE, 0x52,
+  };
+
+  const std::string GPGGA_SENTENCE =
+      "$GPGGA,134658.00,5106.9792,N,11402.3003,W,2,09,1.0,"
+      "1048.47,M,-16.27,M,08,AAAA*60\r\n";
+  const std::string BESTPOSA_SENTENCE =
+      "#BESTPOSA,ICOM1,0,87.5,FINESTEERING,1956,157432.000,00000800,7145,6938;"
+      "SOL_COMPUTED,SINGLE,29.44391220792,-98.61476921244,261.4344,-26.0000,WGS84,2.1382,"
+      "3.1092,4.0429,\"\",0.000,0.000,8,8,8,8,0,06,00,03*ecf2202b\r\n";
+
+  std::string Bytes(const uint8_t* bytes, size_t length)
+  {
+    return std::string(reinterpret_cast<const char*>(bytes), length);
+  }
+}
+
+TEST(ParserTestSuite, testExtractorSkipsRtcm3Frames)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  std::string input = Bytes(RTCM3_FRAME, sizeof(RTCM3_FRAME)) + BESTPOSA_SENTENCE +
+                      Bytes(RTCM3_FRAME, sizeof(RTCM3_FRAME)) + GPGGA_SENTENCE;
+
+  ASSERT_TRUE(extractor.ExtractCompleteMessages(input, nmea_sentences, novatel_sentences,
+                                                binary_messages, remaining));
+
+  EXPECT_EQ(1u, novatel_sentences.size());
+  EXPECT_EQ(1u, nmea_sentences.size());
+  EXPECT_EQ(0u, binary_messages.size());
+  EXPECT_EQ("", remaining);
+}
+
+// The bytes inside a frame are arbitrary, so they can look like the start of a
+// NovAtel message; the whole frame has to be stepped over as a unit.
+TEST(ParserTestSuite, testExtractorSkipsRtcm3FrameContainingSyncBytes)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  std::string input = Bytes(RTCM3_FRAME_WITH_SYNC_BYTES, sizeof(RTCM3_FRAME_WITH_SYNC_BYTES)) +
+                      GPGGA_SENTENCE;
+
+  ASSERT_TRUE(extractor.ExtractCompleteMessages(input, nmea_sentences, novatel_sentences,
+                                                binary_messages, remaining));
+
+  EXPECT_EQ(1u, nmea_sentences.size());
+  EXPECT_EQ(0u, novatel_sentences.size());
+  EXPECT_EQ(0u, binary_messages.size());
+  EXPECT_EQ("", remaining);
+}
+
+TEST(ParserTestSuite, testExtractorWaitsForIncompleteRtcm3Frame)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  std::string partial_frame = Bytes(RTCM3_FRAME, sizeof(RTCM3_FRAME) - 4);
+  std::string input = GPGGA_SENTENCE + partial_frame;
+
+  ASSERT_TRUE(extractor.ExtractCompleteMessages(input, nmea_sentences, novatel_sentences,
+                                                binary_messages, remaining));
+
+  EXPECT_EQ(1u, nmea_sentences.size());
+  EXPECT_EQ(partial_frame, remaining);
+}
+
+// A lone 0xD3 byte in the stream is not a frame, and must not swallow what follows.
+TEST(ParserTestSuite, testExtractorIgnoresInvalidRtcm3Preamble)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  std::string input = std::string("\xD3\x00\x0A", 3) + GPGGA_SENTENCE;
+
+  ASSERT_TRUE(extractor.ExtractCompleteMessages(input, nmea_sentences, novatel_sentences,
+                                                binary_messages, remaining));
+
+  EXPECT_EQ(1u, nmea_sentences.size());
+  EXPECT_EQ(0u, binary_messages.size());
+  EXPECT_EQ("", remaining);
+}
+
+// A binary message that follows another message in the same buffer.
+TEST(ParserTestSuite, testExtractorParsesBinaryMessageAfterAsciiSentence)
+{
+  novatel_gps_driver::NovatelMessageExtractor extractor(logger);
+  std::vector<novatel_gps_driver::NmeaSentence> nmea_sentences;
+  std::vector<novatel_gps_driver::NovatelSentence> novatel_sentences;
+  std::vector<novatel_gps_driver::BinaryMessage> binary_messages;
+  std::string remaining;
+
+  std::string input = GPGGA_SENTENCE +
+                      Bytes(NOVATEL_BINARY_MESSAGE, sizeof(NOVATEL_BINARY_MESSAGE)) +
+                      BESTPOSA_SENTENCE;
+
+  ASSERT_TRUE(extractor.ExtractCompleteMessages(input, nmea_sentences, novatel_sentences,
+                                                binary_messages, remaining));
+
+  EXPECT_EQ(1u, nmea_sentences.size());
+  EXPECT_EQ(1u, binary_messages.size());
+  EXPECT_EQ(1u, novatel_sentences.size());
+  EXPECT_EQ("", remaining);
+}
+
 // User-supplied receiver configuration commands.
 // https://github.com/swri-robotics/novatel_gps_driver/issues/12
 

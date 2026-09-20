@@ -24,6 +24,7 @@
   <depend>novatel_gps_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
+  <depend>rtcm_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>swri_math_util</depend>
   <depend>swri_serial_util</depend>

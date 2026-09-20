@@ -116,13 +116,14 @@ TEST_F(NovatelGpsTestSuite, testGpsFixParsing)
         std::back_inserter(fix_messages));
   }
 
-  ASSERT_EQ(24, fix_messages.size());
+  // One fix per BESTPOS/BESTVEL pair; the capture holds 33 of each.
+  ASSERT_EQ(33, fix_messages.size());
 
-  // The driver doesn't get a BESTVEL for the first BESTPOS in this capture, so
-  // it's published without speed & track once the next BESTVEL shows up.
+  // Every BESTPOS in this capture has a BESTVEL logged at the same time, the first
+  // one included; speed combines the horizontal and vertical components.
   EXPECT_DOUBLE_EQ(fix_messages[0]->time, 412623.4);
-  EXPECT_TRUE(std::isnan(fix_messages[0]->speed));
-  EXPECT_TRUE(std::isnan(fix_messages[0]->track));
+  EXPECT_DOUBLE_EQ(fix_messages[0]->speed, 0.025154091375098837);
+  EXPECT_DOUBLE_EQ(fix_messages[0]->track, 56.304537721880898);
 
   EXPECT_DOUBLE_EQ(fix_messages[1]->latitude, 29.443917634921949);
   EXPECT_DOUBLE_EQ(fix_messages[1]->longitude, -98.614755510637181);
@@ -389,7 +390,8 @@ TEST_F(NovatelGpsTestSuite, testCorrImuDataParsing)
     imu_messages.insert(imu_messages.end(), tmp_messages.begin(), tmp_messages.end());
   }
 
-  ASSERT_EQ(26, imu_messages.size());
+  // The capture holds 29 CORRIMUDATA logs.
+  ASSERT_EQ(29, imu_messages.size());
 
   novatel_gps_driver::CorrImuDataParser::MessageType msg = imu_messages.front();
   EXPECT_EQ(1820, msg->gps_week_num);
@@ -656,6 +658,59 @@ TEST_F(NovatelGpsTestSuite, testImuOrientationHeadingMatchesAzimuth)
   // A compass heading is measured clockwise from North, which is what azimuth is.
   const double heading_degrees = std::atan2(east, north) / DEGREES_TO_RADIANS;
   EXPECT_NEAR(AZIMUTH_DEG, heading_degrees, 1e-9);
+}
+
+// The write-only port RTCM corrections are sent to.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/97
+
+TEST_F(NovatelGpsTestSuite, testCorrectionPortWritesWhatItIsGiven)
+{
+  // Stand in for a receiver listening on one of its IP ports.
+  boost::asio::io_context io;
+  boost::asio::ip::tcp::acceptor acceptor(
+      io, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 0));
+  uint16_t port = acceptor.local_endpoint().port();
+
+  novatel_gps_driver::NovatelGps gps(*this);
+  EXPECT_FALSE(gps.IsCorrectionPortConnected());
+
+  ASSERT_TRUE(gps.ConnectCorrectionPort("127.0.0.1:" + std::to_string(port),
+                                        novatel_gps_driver::NovatelGps::TCP, 0));
+  EXPECT_TRUE(gps.IsCorrectionPortConnected());
+
+  boost::asio::ip::tcp::socket receiver(io);
+  acceptor.accept(receiver);
+
+  const std::vector<uint8_t> corrections = {0xD3, 0x00, 0x04, 0x4C, 0xE0, 0x00, 0x80, 0xED, 0xED, 0xD6};
+  ASSERT_TRUE(gps.WriteCorrections(corrections));
+
+  std::vector<uint8_t> received(corrections.size());
+  boost::asio::read(receiver, boost::asio::buffer(received));
+  EXPECT_EQ(corrections, received);
+
+  gps.DisconnectCorrectionPort();
+  EXPECT_FALSE(gps.IsCorrectionPortConnected());
+}
+
+TEST_F(NovatelGpsTestSuite, testCorrectionsAreNotWrittenWithoutAPort)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  EXPECT_FALSE(gps.IsCorrectionPortConnected());
+  EXPECT_FALSE(gps.WriteCorrections({0xD3, 0x00, 0x00}));
+}
+
+TEST_F(NovatelGpsTestSuite, testCorrectionPortRejectsEndpointWithoutAHost)
+{
+  novatel_gps_driver::NovatelGps gps(*this);
+
+  EXPECT_FALSE(gps.ConnectCorrectionPort("3003", novatel_gps_driver::NovatelGps::TCP, 0));
+  EXPECT_FALSE(gps.IsCorrectionPortConnected());
+  EXPECT_NE(gps.ErrorMsg().find("host"), std::string::npos);
+
+  // A pcap file can't be written to.
+  EXPECT_FALSE(gps.ConnectCorrectionPort("capture.pcap", novatel_gps_driver::NovatelGps::PCAP, 0));
+  EXPECT_FALSE(gps.IsCorrectionPortConnected());
 }
 
 int main(int argc, char **argv)

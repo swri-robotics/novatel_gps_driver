@@ -14,6 +14,7 @@ find_package(nmea_msgs REQUIRED)
 find_package(novatel_gps_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(rtcm_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(swri_math_util REQUIRED)
 find_package(swri_serial_util REQUIRED)
@@ -116,6 +117,7 @@ endif()
 target_link_libraries(${PROJECT_NAME}_nodes
   PUBLIC
     ${PROJECT_NAME}
+    ${rtcm_msgs_TARGETS}
   PRIVATE
     rclcpp_components::component
     swri_math_util::swri_math_util
@@ -179,6 +181,7 @@ ament_export_dependencies(
   nmea_msgs
   novatel_gps_msgs
   rclcpp
+  rtcm_msgs
   sensor_msgs
   swri_serial_util
 )
