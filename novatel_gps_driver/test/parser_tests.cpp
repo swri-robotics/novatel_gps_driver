@@ -28,6 +28,7 @@
 // *****************************************************************************
 
 #include <novatel_gps_driver/parsers/bestpos.h>
+#include <novatel_gps_driver/parsers/clocksteering.h>
 #include <novatel_gps_driver/parsers/gpgga.h>
 #include <novatel_gps_driver/parsers/gpgsv.h>
 #include <novatel_gps_driver/parsers/gphdt.h>
@@ -979,6 +980,110 @@ TEST(ParserTestSuite, testInsUpdateStatusBinaryInvalidAlignStatus)
   message.header_.time_status_ = 20;
   message.data_.resize(novatel_gps_driver::InsUpdateStatusParser::BINARY_LENGTH, 0);
   PutUInt32(message.data_, 20, 6);
+
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+// Binary CLOCKSTEERING support.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/64
+
+// The example log from https://docs.novatel.com/OEM7/Content/Logs/CLOCKSTEERING.htm
+TEST(ParserTestSuite, testClockSteeringAsciiParsing)
+{
+  novatel_gps_driver::ClockSteeringParser parser;
+  auto sentences = ExtractNovatelSentences(
+      "#CLOCKSTEERINGA,USB1,0,64.0,FINESTEERING,2209,502647.507,02000020,0f61,16809;"
+      "INTERNAL,SECOND_ORDER,11000,6888.960937500,0.029999999,0.621999979,0.357,-0.027*5368cd23\r\n");
+  ASSERT_EQ(1, sentences.size());
+  ASSERT_EQ(parser.GetMessageName() + "A", sentences.front().id);
+
+  auto msg = parser.ParseAscii(sentences.front());
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("INTERNAL", msg->source);
+  EXPECT_EQ("SECOND_ORDER", msg->steering_state);
+  EXPECT_EQ(11000u, msg->period);
+  EXPECT_DOUBLE_EQ(6888.9609375, msg->pulse_width);
+  EXPECT_DOUBLE_EQ(0.029999999, msg->bandwidth);
+  EXPECT_FLOAT_EQ(0.621999979f, msg->slope);
+  EXPECT_DOUBLE_EQ(0.357, msg->offset);
+  EXPECT_DOUBLE_EQ(-0.027, msg->drift_rate);
+}
+
+TEST(ParserTestSuite, testClockSteeringBinaryParsing)
+{
+  novatel_gps_driver::ClockSteeringParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.header_.message_id_ = novatel_gps_driver::ClockSteeringParser::MESSAGE_ID;
+  message.data_.resize(novatel_gps_driver::ClockSteeringParser::BINARY_LENGTH, 0);
+  const double pulse_width = 6888.9609375;
+  const double bandwidth = 0.029999999;
+  const float slope = 0.621999979f;
+  const double offset = 0.357;
+  const double drift_rate = -0.027;
+  PutUInt32(message.data_, 0, 1);  // EXTERNAL
+  PutUInt32(message.data_, 4, 1);  // SECOND_ORDER
+  PutUInt32(message.data_, 8, 11000);
+  std::memcpy(&message.data_[12], &pulse_width, sizeof(pulse_width));
+  std::memcpy(&message.data_[20], &bandwidth, sizeof(bandwidth));
+  std::memcpy(&message.data_[28], &slope, sizeof(slope));
+  std::memcpy(&message.data_[32], &offset, sizeof(offset));
+  std::memcpy(&message.data_[40], &drift_rate, sizeof(drift_rate));
+
+  auto msg = parser.ParseBinary(message);
+
+  ASSERT_NE(msg.get(), nullptr);
+  EXPECT_EQ("EXTERNAL", msg->source);
+  EXPECT_EQ("SECOND_ORDER", msg->steering_state);
+  EXPECT_EQ(11000u, msg->period);
+  EXPECT_DOUBLE_EQ(pulse_width, msg->pulse_width);
+  EXPECT_DOUBLE_EQ(bandwidth, msg->bandwidth);
+  EXPECT_FLOAT_EQ(slope, msg->slope);
+  EXPECT_DOUBLE_EQ(offset, msg->offset);
+  EXPECT_DOUBLE_EQ(drift_rate, msg->drift_rate);
+}
+
+TEST(ParserTestSuite, testClockSteeringBinarySteeringStates)
+{
+  novatel_gps_driver::ClockSteeringParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.data_.resize(novatel_gps_driver::ClockSteeringParser::BINARY_LENGTH, 0);
+
+  const std::vector<std::pair<uint32_t, std::string>> states = {
+    {0, "FIRST_ORDER"},
+    {1, "SECOND_ORDER"},
+    {2, "CALIBRATE_HIGH"},
+    {3, "CALIBRATE_LOW"},
+    {4, "CALIBRATE_CENTER"}
+  };
+  for (const auto& state : states)
+  {
+    SCOPED_TRACE(state.first);
+    PutUInt32(message.data_, 4, state.first);
+    auto msg = parser.ParseBinary(message);
+    EXPECT_EQ("INTERNAL", msg->source);
+    EXPECT_EQ(state.second, msg->steering_state);
+  }
+
+  PutUInt32(message.data_, 4, 5);
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testClockSteeringBinaryInvalidSource)
+{
+  novatel_gps_driver::ClockSteeringParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.data_.resize(novatel_gps_driver::ClockSteeringParser::BINARY_LENGTH, 0);
+  PutUInt32(message.data_, 0, 2);
+
+  EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+TEST(ParserTestSuite, testClockSteeringBinaryWrongLength)
+{
+  novatel_gps_driver::ClockSteeringParser parser;
+  novatel_gps_driver::BinaryMessage message;
+  message.data_.resize(novatel_gps_driver::ClockSteeringParser::BINARY_LENGTH - 8, 0);
 
   EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
 }
