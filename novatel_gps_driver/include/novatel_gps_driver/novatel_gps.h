@@ -211,6 +211,31 @@ namespace novatel_gps_driver
    */
   std::string BuildDmiConfigCommand(const std::string& source);
 
+  /// The longest configuration command BuildConfigureCommand() will accept.  NovAtel
+  /// doesn't document one limit that holds for every command, so this is only a sanity
+  /// check to keep a malformed parameter from being sent to the receiver.
+  constexpr size_t MAX_CONFIGURE_COMMAND_LENGTH = 500;
+
+  /**
+   * @brief Prepares a user-supplied receiver configuration command for sending.
+   *
+   * The driver sends these on connect so a receiver can be set up (CONNECTIMU,
+   * SETIMUORIENTATION, INTERFACEMODE, ...) without a Windows tool.  The command is
+   * passed through as typed, apart from the checks below, because the driver can't
+   * know every command a receiver supports.
+   * See https://github.com/swri-robotics/novatel_gps_driver/issues/12.
+   *
+   * @param command One command, without a line ending; surrounding whitespace is
+   * trimmed.
+   * @param[out] warning Why the command was rejected, or a caution about a command
+   * that is sent anyway; empty if there is nothing to report.
+   * @return The command with the trailing "\r\n" the receiver expects, or an empty
+   * string if it is empty, holds a line ending (which would run more than one command
+   * from a single entry), holds an unprintable character, or is longer than
+   * MAX_CONFIGURE_COMMAND_LENGTH.
+   */
+  std::string BuildConfigureCommand(const std::string& command, std::string& warning);
+
   /**
    * @brief Checks a rate or period parameter before the driver divides by it.
    *
@@ -555,6 +580,20 @@ namespace novatel_gps_driver
       bool SetDmiSource(const std::string& source);
 
       /**
+       * @brief Sets the configuration commands Configure() sends on connect, after
+       * the driver's own configuration commands and before it requests any logs.
+       * Call before Connect().
+       *
+       * They are re-sent every time the driver reconnects, so a receiver that was
+       * power cycled comes back configured.  Commands that can't be sent safely are
+       * dropped with a warning; see BuildConfigureCommand().
+       * See https://github.com/swri-robotics/novatel_gps_driver/issues/12.
+       *
+       * @param commands One receiver command per entry, without line endings.
+       */
+      void SetConfigureCommands(const std::vector<std::string>& commands);
+
+      /**
        * @brief Processes any data that has been received from the device since the last time
        * this message was called.  May result in any number of messages being placed in the
        * individual message buffers.
@@ -894,6 +933,9 @@ namespace novatel_gps_driver
       // DMICONFIG command Configure() sends on connect, built by SetDmiSource.
       // Empty means "not configured, don't send."
       std::string dmi_config_command_;
+      // Arbitrary receiver commands Configure() sends on connect, built by
+      // SetConfigureCommands. Empty means "not configured, don't send."
+      std::vector<std::string> configure_commands_;
   };
 }
 

@@ -287,6 +287,24 @@ namespace novatel_gps_driver
     return true;
   }
 
+  void NovatelGps::SetConfigureCommands(const std::vector<std::string>& commands)
+  {
+    configure_commands_.clear();
+    for (const auto& command : commands)
+    {
+      std::string warning;
+      std::string built = BuildConfigureCommand(command, warning);
+      if (!warning.empty())
+      {
+        RCLCPP_WARN(node_.get_logger(), "%s", warning.c_str());
+      }
+      if (!built.empty())
+      {
+        configure_commands_.push_back(built);
+      }
+    }
+  }
+
   NovatelGps::ReadResult NovatelGps::ProcessData()
   {
     RequestImuTypeIfDue();
@@ -1836,6 +1854,59 @@ namespace novatel_gps_driver
     return "";
   }
 
+  std::string BuildConfigureCommand(const std::string& command, std::string& warning)
+  {
+    warning.clear();
+
+    const size_t first = command.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos)
+    {
+      warning = "Ignoring an empty configure_commands entry.";
+      return "";
+    }
+    const std::string trimmed = command.substr(first, command.find_last_not_of(" \t\r\n") - first + 1);
+
+    std::stringstream message;
+    if (trimmed.find_first_of("\r\n") != std::string::npos)
+    {
+      message << "Ignoring the configure_commands entry \"" << trimmed << "\": it contains a line "
+                 "ending, so it would send more than one command.  Give each command its own entry.";
+      warning = message.str();
+      return "";
+    }
+    for (const char c : trimmed)
+    {
+      if (std::isprint(static_cast<unsigned char>(c)) == 0)
+      {
+        message << "Ignoring a configure_commands entry: it contains a character the receiver "
+                   "can't read as part of an ASCII command.";
+        warning = message.str();
+        return "";
+      }
+    }
+    if (trimmed.length() > MAX_CONFIGURE_COMMAND_LENGTH)
+    {
+      message << "Ignoring a configure_commands entry that is " << trimmed.length()
+              << " characters long; the limit is " << MAX_CONFIGURE_COMMAND_LENGTH << ".";
+      warning = message.str();
+      return "";
+    }
+
+    // Commands that outlive the driver are worth saying out loud, but they are the
+    // operator's to send.
+    std::string verb = trimmed.substr(0, trimmed.find_first_of(" \t"));
+    std::transform(verb.begin(), verb.end(), verb.begin(),
+                   [](unsigned char c) { return std::toupper(c); });
+    if (verb == "SAVECONFIG" || verb == "FRESET")
+    {
+      message << "The configure_commands entry \"" << trimmed << "\" changes the receiver's "
+                 "non-volatile configuration, which outlasts this node.";
+      warning = message.str();
+    }
+
+    return trimmed + "\r\n";
+  }
+
   double ValidatePositiveParameter(const std::string& name, double value, double fallback,
                                    std::string& warning)
   {
@@ -1996,6 +2067,21 @@ namespace novatel_gps_driver
     if (!dmi_config_command_.empty())
     {
       configured = configured && Write(dmi_config_command_);
+    }
+
+    // Whatever else the user asked to send, after the driver's own configuration so
+    // it can be overridden, and before any logs are requested so the receiver is set
+    // up by the time data starts arriving.
+    // https://github.com/swri-robotics/novatel_gps_driver/issues/12
+    // Nothing can be sent to a capture file, so don't claim it was.
+    if (connection_ != PCAP)
+    {
+      for (const auto& command : configure_commands_)
+      {
+        RCLCPP_INFO(node_.get_logger(), "Sending configuration command: %s",
+                    command.substr(0, command.find_first_of("\r\n")).c_str());
+        configured = configured && Write(command);
+      }
     }
 
     for(const auto& option : opts)

@@ -149,6 +149,20 @@ Nodelets
         - `connection_type`: Type of physical connection to the device
             - One of `serial`, `tcp`, `udp`, or `pcap`
             - Default: `serial`
+        - `configure_commands`: Receiver commands the driver sends on connect, one command per entry with no line
+        endings, for configuration it has no parameter of its own for.  See the
+        [OEM7 command reference](https://docs.novatel.com/OEM7/Content/Commands/Commands.htm).
+            - e.g. `["CONNECTIMU COM3 HG1700_AG58", "SETIMUORIENTATION 5"]`
+            - Sent after the commands the driver builds from its own parameters (`dmi_source`,
+            `ins_translation_ant1_offset`, `ins_rotation_rbv`, ...) and before it requests any logs, so they can
+            override those settings without interfering with logging.
+            - Re-sent every time the driver reconnects, so a receiver that was power cycled comes back configured.
+            - An entry that is empty, holds a line ending, holds an unprintable character, or is longer than 500
+            characters is dropped with a warning.  Anything else is passed through as typed, so a command that
+            writes the receiver's non-volatile configuration (`SAVECONFIG`, `FRESET`) will do exactly that; the
+            driver logs a warning when it sends one.
+            - Ignored for `pcap` connections, which can't be written to.
+            - Default: Empty
         - `device`: Location of device connection.
             - For `serial` connections, the device node; e. g., `/dev/ttyUSB0`
             - For `tcp` or `udp` connections, a `host:port` specification.
