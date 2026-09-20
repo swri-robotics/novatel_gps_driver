@@ -1087,6 +1087,93 @@ TEST(ParserTestSuite, testClockSteeringBinaryWrongLength)
   EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
 }
 
+// User-supplied receiver configuration commands.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/12
+
+TEST(ParserTestSuite, testConfigureCommandIsPassedThroughWithTerminator)
+{
+  std::string warning;
+
+  EXPECT_EQ("CONNECTIMU COM3 HG1700_AG58\r\n",
+            novatel_gps_driver::BuildConfigureCommand("CONNECTIMU COM3 HG1700_AG58", warning));
+  EXPECT_EQ("", warning);
+
+  // Commands aren't case-normalized; the receiver accepts either.
+  EXPECT_EQ("setimuorientation 5\r\n",
+            novatel_gps_driver::BuildConfigureCommand("setimuorientation 5", warning));
+  EXPECT_EQ("", warning);
+}
+
+TEST(ParserTestSuite, testConfigureCommandTrimsSurroundingWhitespace)
+{
+  std::string warning;
+
+  EXPECT_EQ("SETIMUORIENTATION 5\r\n",
+            novatel_gps_driver::BuildConfigureCommand("  SETIMUORIENTATION 5\r\n", warning));
+  EXPECT_EQ("", warning);
+}
+
+TEST(ParserTestSuite, testConfigureCommandRejectsEmptyEntry)
+{
+  std::string warning;
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand("", warning));
+  EXPECT_NE(warning.find("empty"), std::string::npos);
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand("   \t ", warning));
+  EXPECT_NE(warning.find("empty"), std::string::npos);
+}
+
+// One entry must be one command, so a line ending can't be used to send a second.
+TEST(ParserTestSuite, testConfigureCommandRejectsEmbeddedLineEnding)
+{
+  std::string warning;
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand(
+      "SETIMUORIENTATION 5\r\nFRESET STANDARD", warning));
+  EXPECT_NE(warning.find("line ending"), std::string::npos);
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand("LOG BESTPOSA ONTIME 1\nUNLOGALL", warning));
+  EXPECT_NE(warning.find("line ending"), std::string::npos);
+}
+
+TEST(ParserTestSuite, testConfigureCommandRejectsUnprintableCharacters)
+{
+  std::string warning;
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand(std::string("SETIMUORIENTATION\0005", 18), warning));
+  EXPECT_NE("", warning);
+}
+
+TEST(ParserTestSuite, testConfigureCommandRejectsOverlongCommand)
+{
+  std::string warning;
+  const std::string too_long(novatel_gps_driver::MAX_CONFIGURE_COMMAND_LENGTH + 1, 'A');
+
+  EXPECT_EQ("", novatel_gps_driver::BuildConfigureCommand(too_long, warning));
+  EXPECT_NE("", warning);
+
+  const std::string longest(novatel_gps_driver::MAX_CONFIGURE_COMMAND_LENGTH, 'A');
+  EXPECT_EQ(longest + "\r\n", novatel_gps_driver::BuildConfigureCommand(longest, warning));
+  EXPECT_EQ("", warning);
+}
+
+// Commands that outlive the node are sent, but not silently.
+TEST(ParserTestSuite, testConfigureCommandWarnsAboutPersistentCommands)
+{
+  std::string warning;
+
+  EXPECT_EQ("SAVECONFIG\r\n", novatel_gps_driver::BuildConfigureCommand("SAVECONFIG", warning));
+  EXPECT_NE("", warning);
+
+  EXPECT_EQ("freset standard\r\n", novatel_gps_driver::BuildConfigureCommand("freset standard", warning));
+  EXPECT_NE("", warning);
+
+  EXPECT_EQ("LOG BESTPOSA ONTIME 1\r\n",
+            novatel_gps_driver::BuildConfigureCommand("LOG BESTPOSA ONTIME 1", warning));
+  EXPECT_EQ("", warning);
+}
+
 // Guards on the rate parameters the diagnostics divide by.
 // https://github.com/swri-robotics/novatel_gps_driver/issues/44
 

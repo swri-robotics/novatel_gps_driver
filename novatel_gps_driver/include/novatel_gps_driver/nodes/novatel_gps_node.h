@@ -122,6 +122,13 @@
  *
  * \e connection_type <tt>str</tt> - "serial", "udp", "tcp", or "pcap" as
  *    appropriate for the Novatel device connected. ["serial"]
+ * \e configure_commands <tt>str[]</tt> - Receiver commands to send on connect,
+ *    one command per entry and no line endings, for configuration the driver has
+ *    no parameter of its own for; e.g. ["CONNECTIMU COM3 HG1700_AG58",
+ *    "SETIMUORIENTATION 5"]. They are sent after the driver's own configuration
+ *    commands and before it requests any logs, and are re-sent on every
+ *    reconnect. A command that can't be sent safely is dropped with a warning.
+ *    [[]]
  * \e device <tt>str</tt> - The path to the device, e.g. /dev/ttyUSB0 for
  *    serial connections or "192.168.1.10:3001" for IP.
  *    [""]

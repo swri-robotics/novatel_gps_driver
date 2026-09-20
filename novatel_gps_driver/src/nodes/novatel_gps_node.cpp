@@ -190,6 +190,13 @@ namespace novatel_gps_driver
     publish_wheel_sensor_diagnostic_ = this->declare_parameter("publish_wheel_sensor_diagnostic",
                                                                wheel_sensor_enabled);
 
+    // Receiver commands to send on connect, one per entry, for configuration the
+    // driver has no parameter of its own for; e.g. "CONNECTIMU COM3 HG1700_AG58" or
+    // "SETIMUORIENTATION 5".  Sent after the commands above and before any logs are
+    // requested. https://github.com/swri-robotics/novatel_gps_driver/issues/12
+    gps_.SetConfigureCommands(
+        this->declare_parameter("configure_commands", std::vector<std::string>()));
+
     // Reset Service
     reset_service_ = this->create_service<novatel_gps_msgs::srv::NovatelFRESET>("freset",
                                                                                 std::bind(
