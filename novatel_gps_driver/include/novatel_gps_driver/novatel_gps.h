@@ -209,6 +209,23 @@ namespace novatel_gps_driver
    */
   std::string BuildDmiConfigCommand(const std::string& source);
 
+  /**
+   * @brief Checks a rate or period parameter before the driver divides by it.
+   *
+   * A polling_period of 0 makes the expected_rate that defaults from it infinite,
+   * and a non-positive expected_rate makes every rate diagnostic report an error,
+   * so fall back to the default rather than use a value that can't be right.
+   * See https://github.com/swri-robotics/novatel_gps_driver/issues/44.
+   *
+   * @param name The parameter's name, for the warning message.
+   * @param value The value the parameter was given.
+   * @param fallback The value to use in its place if it isn't usable.
+   * @param[out] warning Why the value was replaced, or empty if it was kept.
+   * @return value if it is positive and finite, otherwise fallback.
+   */
+  double ValidatePositiveParameter(const std::string& name, double value, double fallback,
+                                   std::string& warning);
+
   /// The secondary-antenna fault bits decoded from an RXSTATUS log's AUX2 status word.
   struct DualAntennaStatus
   {

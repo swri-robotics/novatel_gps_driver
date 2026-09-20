@@ -1823,6 +1823,22 @@ namespace novatel_gps_driver
     return "";
   }
 
+  double ValidatePositiveParameter(const std::string& name, double value, double fallback,
+                                   std::string& warning)
+  {
+    warning.clear();
+    if (value > 0.0 && std::isfinite(value))
+    {
+      return value;
+    }
+
+    std::stringstream message;
+    message << name << " must be a positive number, but it was set to " << value
+            << "; using " << fallback << " instead.";
+    warning = message.str();
+    return fallback;
+  }
+
   std::string CheckImuLogRate(double log_rate, double sample_rate)
   {
     if (log_rate <= 0.0 || sample_rate <= 0.0)
