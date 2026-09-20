@@ -196,7 +196,7 @@ namespace novatel_gps_driver
     RCLCPP_DEBUG(this->logger_, "Msg ID: %u    Data start / length: %u / %u",
               msg.header_.message_id_, data_start, data_length);
 
-    if (data_start + data_length + 4 > str.length())
+    if (static_cast<size_t>(data_start) + data_length + 4 > str.length())
     {
       RCLCPP_DEBUG(this->logger_, "Not enough data.");
       return -1;

@@ -91,11 +91,11 @@ namespace novatel_gps_driver
       gps_insufficient_data_warnings_(0),
       publish_rate_warnings_(0),
       measurement_count_(0),
+      last_published_(get_clock()->get_clock_type()),
       aux1stat_(-1),
       aux2stat_(-1),
       aux3stat_(-1),
       aux4stat_(-1),
-      last_published_(get_clock()->get_clock_type()),
       imu_frame_id_(""),
       frame_id_(""),
       on_loop_(false)
@@ -583,7 +583,7 @@ namespace novatel_gps_driver
   /**
    * @brief Service request to reset the gps through FRESET
    */
-  bool NovatelGpsNode::resetService(const std::shared_ptr<rmw_request_id_t> request_header,
+  bool NovatelGpsNode::resetService(const std::shared_ptr<rmw_request_id_t> /* request_header */,
                                     const novatel_gps_msgs::srv::NovatelFRESET::Request::SharedPtr req,
                                     const novatel_gps_msgs::srv::NovatelFRESET::Response::SharedPtr res)
   {

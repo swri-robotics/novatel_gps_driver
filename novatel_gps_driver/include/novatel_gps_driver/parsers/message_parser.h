@@ -84,7 +84,7 @@ namespace novatel_gps_driver
      * @param[in] bin_msg The message to convert.
      * @return A valid ROS message pointer.
      */
-    virtual T ParseBinary(const BinaryMessage& bin_msg) noexcept(false)
+    virtual T ParseBinary(const BinaryMessage& /* bin_msg */) noexcept(false)
     {
       throw ParseException("ParseBinary not implemented.");
     };
@@ -97,7 +97,7 @@ namespace novatel_gps_driver
      * @param[in] bin_msg The message to convert.
      * @return A valid ROS message pointer.
      */
-    virtual T ParseAscii(const NovatelSentence& sentence) noexcept(false)
+    virtual T ParseAscii(const NovatelSentence& /* sentence */) noexcept(false)
     {
       throw ParseException("ParseAscii not implemented.");
     };
@@ -110,7 +110,7 @@ namespace novatel_gps_driver
      * @param[in] bin_msg The message to convert.
      * @return A valid ROS message pointer.
      */
-    virtual T ParseAscii(const NmeaSentence& sentence) noexcept(false)
+    virtual T ParseAscii(const NmeaSentence& /* sentence */) noexcept(false)
     {
       throw ParseException("ParseAscii not implemented.");
     };
