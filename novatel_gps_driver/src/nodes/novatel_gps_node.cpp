@@ -132,8 +132,23 @@ namespace novatel_gps_driver
     publish_diagnostics_ = this->declare_parameter("publish_diagnostics", publish_diagnostics_);
     publish_sync_diagnostic_ = this->declare_parameter("publish_sync_diagnostic", publish_sync_diagnostic_);
     publish_dual_antenna_diagnostic_ = this->declare_parameter("publish_dual_antenna_diagnostic", publish_dual_antenna_diagnostic_);
+    // The defaults set in the initializer list, kept in case a parameter is unusable.
+    const double default_polling_period = polling_period_;
+    std::string parameter_warning;
     polling_period_ = this->declare_parameter("polling_period", polling_period_);
+    polling_period_ = ValidatePositiveParameter("polling_period", polling_period_,
+                                                default_polling_period, parameter_warning);
+    if (!parameter_warning.empty())
+    {
+      RCLCPP_WARN(this->get_logger(), "%s", parameter_warning.c_str());
+    }
     expected_rate_ = this->declare_parameter("expected_rate", 1.0 / polling_period_);
+    expected_rate_ = ValidatePositiveParameter("expected_rate", expected_rate_,
+                                               1.0 / polling_period_, parameter_warning);
+    if (!parameter_warning.empty())
+    {
+      RCLCPP_WARN(this->get_logger(), "%s", parameter_warning.c_str());
+    }
     reconnect_delay_s_ = this->declare_parameter("reconnect_delay_s", reconnect_delay_s_);
     use_binary_messages_ = this->declare_parameter("use_binary_messages", use_binary_messages_);
     span_frame_to_ros_frame_ = this->declare_parameter("span_frame_to_ros_frame", span_frame_to_ros_frame_);

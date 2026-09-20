@@ -39,6 +39,7 @@
 #include <novatel_gps_driver/parsers/dual_antenna_heading.h>
 
 #include <gtest/gtest.h>
+#include <cmath>
 #include <cstring>
 #include <utility>
 #include <novatel_gps_driver/parsers/inspva.h>
@@ -1086,6 +1087,51 @@ TEST(ParserTestSuite, testClockSteeringBinaryWrongLength)
   message.data_.resize(novatel_gps_driver::ClockSteeringParser::BINARY_LENGTH - 8, 0);
 
   EXPECT_THROW(parser.ParseBinary(message), novatel_gps_driver::ParseException);
+}
+
+// Guards on the rate parameters the diagnostics divide by.
+// https://github.com/swri-robotics/novatel_gps_driver/issues/44
+
+TEST(ParserTestSuite, testValidatePositiveParameterKeepsUsableValue)
+{
+  std::string warning;
+
+  EXPECT_DOUBLE_EQ(0.1, novatel_gps_driver::ValidatePositiveParameter("polling_period", 0.1, 0.05, warning));
+  EXPECT_EQ("", warning);
+}
+
+TEST(ParserTestSuite, testValidatePositiveParameterRejectsNonPositiveValues)
+{
+  std::string warning;
+
+  EXPECT_DOUBLE_EQ(0.05, novatel_gps_driver::ValidatePositiveParameter("polling_period", 0.0, 0.05, warning));
+  EXPECT_NE(warning.find("polling_period"), std::string::npos);
+
+  EXPECT_DOUBLE_EQ(20.0, novatel_gps_driver::ValidatePositiveParameter("expected_rate", -1.0, 20.0, warning));
+  EXPECT_NE(warning.find("expected_rate"), std::string::npos);
+}
+
+// A polling_period of 0 would otherwise make the expected_rate that defaults from
+// it infinite, and every rate diagnostic an error.
+TEST(ParserTestSuite, testValidatePositiveParameterRejectsNonFiniteValues)
+{
+  std::string warning;
+
+  EXPECT_DOUBLE_EQ(20.0, novatel_gps_driver::ValidatePositiveParameter(
+      "expected_rate", 1.0 / 0.0, 20.0, warning));
+  EXPECT_NE(warning.find("expected_rate"), std::string::npos);
+
+  EXPECT_DOUBLE_EQ(20.0, novatel_gps_driver::ValidatePositiveParameter(
+      "expected_rate", std::nan(""), 20.0, warning));
+  EXPECT_NE(warning.find("expected_rate"), std::string::npos);
+}
+
+TEST(ParserTestSuite, testValidatePositiveParameterClearsEarlierWarning)
+{
+  std::string warning = "a warning from an earlier parameter";
+
+  EXPECT_DOUBLE_EQ(20.0, novatel_gps_driver::ValidatePositiveParameter("expected_rate", 20.0, 1.0, warning));
+  EXPECT_EQ("", warning);
 }
 
 TEST(ParserTestSuite, testDmiConfigCommandEnablesEachSource)

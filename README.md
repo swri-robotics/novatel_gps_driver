@@ -212,9 +212,11 @@ Nodelets
             - This will be set as the period for `GPGGA`, `GPRMC`, `GPGSA`, `BESTPOS`, 
             and `BESTVEL` logs.
             - Default: `0.05` (20 Hz)
+            - A value that is non-positive is ignored, and the default is used instead.
         - `expected_rate`: Expected publish rate of GPS messages.
             - If time between GPS message stamps is greater than 1.5 times the excepted publish rate, diagnostic warning is published.
             - Default: Based on `polling_period` parameter: `20.0` (20Hz)
+            - A value that isn't a positive number is ignored, and the default is used instead.
         - `publish_clocksteering`: `true` to publish novatel_gps_msgs/ClockSteering messages.
             - Default: `false`
         - `publish_diagnostics`: `true` to publish node diagnostics.

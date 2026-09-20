@@ -130,7 +130,7 @@
  *    leaving the receiver's existing configuration in place. Requires OEM7
  *    firmware 7.07 or newer. [""]
  * \e expected_rate <tt>dbl</tt> - Expected publish rate, in Hz, used by the
- *    rate diagnostic. [1.0 / polling_period]
+ *    rate diagnostic.  A value that isn't positive is ignored. [1.0 / polling_period]
  * \e frame_id <tt>str</tt> - The TF frame ID to set in all published message
  *    headers. [""]
  * \e gpsfix_sync_tol <tt>dbl</tt> - Maximum difference, in seconds, between the
@@ -166,7 +166,8 @@
  * \e loop <tt>bool</tt> - Replay the PCAP file in a loop. Only effective when
  *    `connection_type` is "pcap". [false]
  * \e polling_period <tt>dbl</tt> - The number of seconds in between messages
- *    requested from the GPS. (Does not affect time messages) [0.05]
+ *    requested from the GPS. (Does not affect time messages)  A value that isn't
+ *    positive is ignored. [0.05]
  * \e publish_clocksteering <tt>bool</tt> - If set to true, the driver publishes
  *    Novatel ClockSteering messages [false]
  * \e publish_diagnostics <tt>bool</tt> - If set true, the driver publishes
