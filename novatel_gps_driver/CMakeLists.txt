@@ -9,6 +9,7 @@ find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(gps_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(nmea_msgs REQUIRED)
 find_package(novatel_gps_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
@@ -81,6 +82,7 @@ target_link_libraries(${PROJECT_NAME}
   ${diagnostic_updater_TARGETS}
   ${gps_msgs_TARGETS}
   ${nav_msgs_TARGETS}
+  ${nmea_msgs_TARGETS}
   ${novatel_gps_msgs_TARGETS}
   rclcpp::rclcpp
   ${rclcpp_components_TARGETS}

@@ -464,6 +464,9 @@ namespace novatel_gps_driver
             {
               nmea_sentences.emplace_back(NmeaSentence());
               VectorizeNmeaSentence(cur_sentence, nmea_sentences.back());
+              // GetNmeaSentence() strips the "$" and checksum unless it was asked to
+              // keep them, so take the sentence's original text from the input.
+              nmea_sentences.back().raw = input.substr(ascii_start_idx, ascii_len);
               sentence_start = ascii_end_idx;
             }
             else if (result < 0)

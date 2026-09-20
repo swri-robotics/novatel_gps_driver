@@ -59,6 +59,8 @@
 
 #include <pcap.h>
 
+#include <nmea_msgs/msg/sentence.hpp>
+
 // Local include files
 #include <novatel_gps_driver/novatel_message_extractor.h>
 #include <novatel_gps_driver/parsers/bestpos.h>
@@ -304,6 +306,15 @@ namespace novatel_gps_driver
        * @param[out] fix_messages New GPSFix messages.
        */
       void GetFixMessages(std::vector<gps_msgs::msg::GPSFix::UniquePtr>& fix_messages);
+      /**
+       * @brief Provides every NMEA sentence that has been received since the last
+       * time this was called, as it arrived from the receiver.
+       *
+       * Every valid sentence is provided, including the types the driver has no
+       * parser for; see https://github.com/swri-robotics/novatel_gps_driver/issues/92.
+       * @param[out] nmea_sentences New NMEA sentences.
+       */
+      void GetNmeaSentences(std::vector<nmea_msgs::msg::Sentence::UniquePtr>& nmea_sentences);
       /**
        * @brief Provides any GPGGA messages that have been received since the
        * last time this was called.
@@ -810,6 +821,7 @@ namespace novatel_gps_driver
       boost::circular_buffer<novatel_gps_driver::ClockSteeringParser::MessageType> clocksteering_msgs_;
       boost::circular_buffer<novatel_gps_driver::CorrImuDataParser::MessageType> corrimudata_msgs_;
       boost::circular_buffer<novatel_gps_driver::CorrImusParser::MessageType> corrimus_msgs_;
+      boost::circular_buffer<nmea_msgs::msg::Sentence::UniquePtr> nmea_sentences_;
       boost::circular_buffer<novatel_gps_driver::GpggaParser::MessageType> gpgga_msgs_;
       boost::circular_buffer<novatel_gps_driver::GpgsaParser::MessageType> gpgsa_msgs_;
       boost::circular_buffer<novatel_gps_driver::GpgsvParser::MessageType> gpgsv_msgs_;

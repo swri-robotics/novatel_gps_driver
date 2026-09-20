@@ -21,6 +21,7 @@
   <depend>gps_msgs</depend>
   <depend>libpcap</depend>
   <depend>nav_msgs</depend>
+  <depend>nmea_msgs</depend>
   <depend>novatel_gps_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>

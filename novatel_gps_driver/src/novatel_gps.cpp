@@ -66,6 +66,7 @@ namespace novatel_gps_driver
       clocksteering_msgs_(MAX_BUFFER_SIZE),
       corrimudata_msgs_(MAX_BUFFER_SIZE),
       corrimus_msgs_(MAX_BUFFER_SIZE),
+      nmea_sentences_(MAX_BUFFER_SIZE),
       gpgga_msgs_(MAX_BUFFER_SIZE),
       gpgsa_msgs_(MAX_BUFFER_SIZE),
       gpgsv_msgs_(MAX_BUFFER_SIZE),
@@ -337,6 +338,13 @@ namespace novatel_gps_driver
 
     for(const auto& sentence : nmea_sentences)
     {
+      // Buffer every sentence before parsing it, so that the types the driver has
+      // no parser for are still republished.
+      auto raw_sentence = std::make_unique<nmea_msgs::msg::Sentence>();
+      raw_sentence->header.stamp = stamp;
+      raw_sentence->sentence = sentence.raw;
+      nmea_sentences_.push_back(std::move(raw_sentence));
+
       try
       {
         NovatelGps::ReadResult result = ParseNmeaSentence(sentence, stamp, most_recent_utc_time);
@@ -589,6 +597,11 @@ namespace novatel_gps_driver
     psrdop2_messages.clear();
     psrdop2_messages.insert(psrdop2_messages.end(), psrdop2_msgs_.begin(), psrdop2_msgs_.end());
     psrdop2_msgs_.clear();
+  }
+
+  void NovatelGps::GetNmeaSentences(std::vector<nmea_msgs::msg::Sentence::UniquePtr>& nmea_sentences)
+  {
+    DrainQueue(nmea_sentences_, nmea_sentences);
   }
 
   void NovatelGps::GetGpggaMessages(std::vector<novatel_gps_driver::GpggaParser::MessageType>& gpgga_messages)
