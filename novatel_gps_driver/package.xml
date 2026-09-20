@@ -20,13 +20,11 @@
   <depend>diagnostic_updater</depend>
   <depend>gps_msgs</depend>
   <depend>libpcap</depend>
-  <depend>nav_msgs</depend>
   <depend>nmea_msgs</depend>
   <depend>novatel_gps_msgs</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>sensor_msgs</depend>
-  <depend>std_msgs</depend>
   <depend>swri_math_util</depend>
   <depend>swri_serial_util</depend>
   <depend>tf2</depend>

@@ -68,7 +68,7 @@ novatel_gps_driver::RangeParser::ParseBinary(const novatel_gps_driver::BinaryMes
 
   ros_msg->numb_of_observ = num_obs;
   ros_msg->info.reserve(num_obs);
-  for(int i = 0; i < num_obs; i++)
+  for (uint32_t i = 0; i < num_obs; i++)
   {
     size_t obs_offset = 4 + i * BINARY_OBSERVATION_SIZE;
 
@@ -112,7 +112,7 @@ novatel_gps_driver::RangeParser::ParseAscii(const novatel_gps_driver::NovatelSen
   bool valid = true;
   valid &= ParseInt32(sentence.body[0], msg->numb_of_observ, 10);
   msg->info.resize(numb_of_observ);
-  for (int i = 0, index = 0; index < numb_of_observ; i += 10, index++)
+  for (uint32_t i = 0, index = 0; index < numb_of_observ; i += 10, index++)
   {
     valid &= ParseUInt16(sentence.body[i + 1], msg->info[index].prn_number, 10);
     valid &= ParseUInt16(sentence.body[i + 2], msg->info[index].glofreq, 10);

@@ -717,7 +717,7 @@ namespace novatel_gps_driver
     DrainQueue(insupdatestatus_msgs_, insupdatestatus_msgs);
   }
 
-  bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& opts)
+  bool NovatelGps::CreatePcapConnection(const std::string& device, NovatelMessageOpts const& /* opts */)
   {
     RCLCPP_INFO(node_.get_logger(), "Opening pcap file: %s", device.c_str());
 
@@ -1736,7 +1736,7 @@ namespace novatel_gps_driver
           Disconnect();
         }
         RCLCPP_DEBUG(node_.get_logger(), "Wrote %lu bytes.", written);
-        return written == (int32_t) command.length();
+        return written == command.length();
       }
       catch (std::exception& e)
       {
