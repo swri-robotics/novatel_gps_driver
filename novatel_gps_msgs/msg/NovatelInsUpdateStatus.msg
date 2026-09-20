@@ -25,7 +25,12 @@ string dmi_update_status
 # USED, or BAD_MISC
 string align_update_status
 
-NovatelInsExtendedSolutionStatus extended_solution_status
+# The INS extended solution status word, left undecoded.  It uses the SPAN
+# extended solution status bit table linked from the INSUPDATESTATUS reference
+# above, which differs from the GNSS one in NovatelExtendedSolutionStatus.
+# INSPVAX and INSSTDEV decode that word into NovatelInsExtendedSolutionStatus,
+# but this message keeps the raw word so existing recordings still play back.
+uint32 extended_solution_status
 
 # Bit mask of the updates enabled in the INS filter.
 uint32 ins_enabled_updates
