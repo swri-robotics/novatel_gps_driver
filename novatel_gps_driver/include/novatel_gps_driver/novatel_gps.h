@@ -55,9 +55,9 @@
 #include <sensor_msgs/msg/imu.hpp>
 
 // Other libraries
+#include <nmea_msgs/msg/sentence.hpp>
 #include <swri_serial_util/serial_port.h>
 #include <pcap.h>
-#include <nmea_msgs/msg/sentence.hpp>
 
 // Local include files
 #include <novatel_gps_driver/novatel_message_extractor.h>
