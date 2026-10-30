@@ -2,8 +2,8 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+5.1.0 (2026-10-30)
+------------------
 * Include cmath for M_PI constant (`#161 <https://github.com/swri-robotics/novatel_gps_driver/issues/161>`_)
 * Adding RTCM3 support (`#160 <https://github.com/swri-robotics/novatel_gps_driver/issues/160>`_)
 * Modernizing CMake, adding additional checking, and cleaning up resulting build warnings

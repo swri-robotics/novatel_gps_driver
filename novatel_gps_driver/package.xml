@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <package format="3">
   <name>novatel_gps_driver</name>
-  <version>5.0.0</version>
+  <version>5.1.0</version>
   <description>
   Driver for NovAtel receivers
   </description>
