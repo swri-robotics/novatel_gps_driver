@@ -32,10 +32,11 @@
 
 // std libraries
 #include <chrono>
+#include <cmath>
 #include <map>
 #include <mutex>
-#include <set>
 #include <queue>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -49,17 +50,13 @@
 
 // Messages
 #include <gps_msgs/msg/gps_fix.hpp>
-
 #include <novatel_gps_msgs/msg/gpgga.hpp>
 #include <novatel_gps_msgs/msg/gprmc.hpp>
-
 #include <sensor_msgs/msg/imu.hpp>
 
 // Other libraries
 #include <swri_serial_util/serial_port.h>
-
 #include <pcap.h>
-
 #include <nmea_msgs/msg/sentence.hpp>
 
 // Local include files
