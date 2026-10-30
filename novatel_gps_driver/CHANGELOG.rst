@@ -2,6 +2,37 @@
 Changelog for package novatel_oem628
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Include cmath for M_PI constant (`#161 <https://github.com/swri-robotics/novatel_gps_driver/issues/161>`_)
+* Adding RTCM3 support (`#160 <https://github.com/swri-robotics/novatel_gps_driver/issues/160>`_)
+* Modernizing CMake, adding additional checking, and cleaning up resulting build warnings
+* Adds ability to send configuration commands on startup (`#157 <https://github.com/swri-robotics/novatel_gps_driver/issues/157>`_)
+  Implements https://github.com/swri-robotics/novatel_gps_driver/issues/12.
+* Fixing INS decoding
+* Adding option to publish raw NMEA sentences
+* Adding parameter sanitization
+* Adding binary clocksteering support
+* Check binary body length before reading entry counts in RANGE, TRACKSTAT, and PSRDOP2 (`#151 <https://github.com/swri-robotics/novatel_gps_driver/issues/151>`_)
+* Request the IMU type with repeated 'log rawimuxa once' instead of the invalid ontime trigger
+* Add RAWIMUX/RAWIMUSX support and stop repeating IMU type and unknown-log messages (`#149 <https://github.com/swri-robotics/novatel_gps_driver/issues/149>`_)
+* Fixing how IMU data is interpreted
+* Decode INS extended solution status with the INS bit table in INSPVAX… (`#147 <https://github.com/swri-robotics/novatel_gps_driver/issues/147>`_)
+  * Decode INS extended solution status with the INS bit table in INSPVAX, INSSTDEV, and INSUPDATESTATUS
+  * Adding new messages so new behavior does not break old logs
+* Add wheel sensor support via DMICONFIG, RAWDMI, and INSUPDATESTATUS (`#146 <https://github.com/swri-robotics/novatel_gps_driver/issues/146>`_)
+* Recover and keep publishing is bestpos messages are too far behind GP… (`#145 <https://github.com/swri-robotics/novatel_gps_driver/issues/145>`_)
+* Fix inverted second-antenna power state in RXSTATUS diagnostic (fixes `#79 <https://github.com/swri-robotics/novatel_gps_driver/issues/79>`_) (`#144 <https://github.com/swri-robotics/novatel_gps_driver/issues/144>`_)
+* Adding support for SETINSTRANSLATION and SETINSROTATION (`#143 <https://github.com/swri-robotics/novatel_gps_driver/issues/143>`_)
+* Fix RAWIMUXA's one-shot IMU-rate detection race (`#98 <https://github.com/swri-robotics/novatel_gps_driver/issues/98>`_) and make it unit-testable (`#142 <https://github.com/swri-robotics/novatel_gps_driver/issues/142>`_)
+* Prefer INSPVAX azimuth over BESTVEL track_ground for GPSFix::track
+* Request DualAntennaHeading logs with onnew and make it testable (fixes `#78 <https://github.com/swri-robotics/novatel_gps_driver/issues/78>`_) (`#140 <https://github.com/swri-robotics/novatel_gps_driver/issues/140>`_)
+* Fix IMU frame conversion and covariance math (fixes `#114 <https://github.com/swri-robotics/novatel_gps_driver/issues/114>`_) (`#139 <https://github.com/swri-robotics/novatel_gps_driver/issues/139>`_)
+* Fix INS status decoding in binary INSPVAX logs (`#138 <https://github.com/swri-robotics/novatel_gps_driver/issues/138>`_)
+* Unifying rolling and other development branches (`#137 <https://github.com/swri-robotics/novatel_gps_driver/issues/137>`_)
+* Adding fix that caused popping empty queues and time data not being populated (`#136 <https://github.com/swri-robotics/novatel_gps_driver/issues/136>`_)
+* Contributors: David Anthony, vpfkfl753
+
 5.0.0 (2026-08-23)
 ------------------
 * rolling compatibility updates (`#131 <https://github.com/swri-robotics/novatel_gps_driver/issues/131>`_)

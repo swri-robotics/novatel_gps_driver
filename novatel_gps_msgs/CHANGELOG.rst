@@ -2,6 +2,17 @@
 Changelog for package novatel_gps_msgs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Fixing INS decoding
+* Add RAWIMUX/RAWIMUSX support and stop repeating IMU type and unknown-log messages (`#149 <https://github.com/swri-robotics/novatel_gps_driver/issues/149>`_)
+* Decode INS extended solution status with the INS bit table in INSPVAX… (`#147 <https://github.com/swri-robotics/novatel_gps_driver/issues/147>`_)
+  * Decode INS extended solution status with the INS bit table in INSPVAX, INSSTDEV, and INSUPDATESTATUS
+  * Adding new messages so new behavior does not break old logs
+* Add wheel sensor support via DMICONFIG, RAWDMI, and INSUPDATESTATUS (`#146 <https://github.com/swri-robotics/novatel_gps_driver/issues/146>`_)
+* Unifying rolling and other development branches (`#137 <https://github.com/swri-robotics/novatel_gps_driver/issues/137>`_)
+* Contributors: David Anthony
+
 5.0.0 (2026-08-23)
 ------------------
 * rolling compatibility updates (`#131 <https://github.com/swri-robotics/novatel_gps_driver/issues/131>`_)
